@@ -6,8 +6,8 @@ export async function POST(req: Request) {
     const body = await req.json()
 
     const supabase = createClient(
-      'https://flmtpjfnmjgvyzgolmug.supabase.co',
-      'sb_secret_wORGSS38CpZgtbEG7O_ySA_IMBh4Z1n'
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
     const {
@@ -78,22 +78,19 @@ export async function POST(req: Request) {
       `⚠️ Genel Sorun: ${main_problem}\n` +
       `❗ En Büyük Eksik: ${main_missing}`
 
-    const tgRes = await fetch(
-      'https://api.telegram.org/bot7939742915:AAEB-uZUCOYOkQELLUCj365-CBD3a63Rj1I/sendMessage',
+    await fetch(
+      `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          chat_id: '1978934719',
+          chat_id: process.env.TELEGRAM_CHAT_ID,
           text: telegramMessage,
         }),
       }
     )
 
-    const tgData = await tgRes.json()
-    console.log('TELEGRAM RESPONSE:', tgData)
-
-    return NextResponse.json({ success: true, telegram: tgData })
+    return NextResponse.json({ success: true })
   } catch (error) {
     return NextResponse.json(
       {

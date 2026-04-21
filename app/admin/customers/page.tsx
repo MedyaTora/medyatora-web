@@ -5,8 +5,8 @@ import { createClient } from '@supabase/supabase-js'
 
 export default async function CustomersPage() {
   const supabase = createClient(
-    'https://flmtpjfnmjgvyzgolmug.supabase.co',
-    'sb_secret_wORGSS38CpZgtbEG7O_ySA_IMBh4Z1n'
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
   const { data, error } = await supabase
