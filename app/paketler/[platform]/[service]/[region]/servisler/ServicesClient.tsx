@@ -43,8 +43,8 @@ function ServiceCard({ item }: CardProps) {
       return 0;
     }
 
-    return Math.floor((quantityNumber / 1000) * item.costPrice);
-  }, [quantityNumber, item.min, item.max, item.costPrice]);
+    return Math.floor((quantityNumber / 1000) * item.costPriceTl);
+  }, [quantityNumber, item.min, item.max, item.costPriceTl]);
 
   const isBelowMin = quantity !== "" && quantityNumber < item.min;
   const isAboveMax = quantity !== "" && quantityNumber > item.max;
@@ -110,7 +110,7 @@ function ServiceCard({ item }: CardProps) {
 
         <div className="mt-3 flex flex-wrap gap-2">
           <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-            {item.guarantee}
+            {item.guaranteeLabel}
           </span>
         </div>
       </div>
@@ -118,7 +118,7 @@ function ServiceCard({ item }: CardProps) {
       <div className="space-y-2 text-sm text-gray-600">
         <p>Minimum: {item.min}</p>
         <p>Maksimum: {item.max}</p>
-        <p>Alış Fiyatımız: {item.costPrice} TL</p>
+        <p>Alış Fiyatımız: {item.costPriceTl} TL</p>
         <p>Satış Fiyatımız: {item.salePrice} TL</p>
       </div>
 
@@ -186,7 +186,7 @@ export default function ServicesClient({ items }: Props) {
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {items.map((item) => (
-        <ServiceCard key={item.siteCode} item={item} />
+        <ServiceCard key={`${item.siteCode}-${item.id}`} item={item} />
       ))}
     </div>
   );
