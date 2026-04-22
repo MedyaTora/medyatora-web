@@ -89,3 +89,17 @@ export function mapDbServiceToOrderItem(row: DbServiceRow): OrderServiceItem {
     originalName: row.original_name,
   };
 }
+
+export type ServiceCardItem = OrderServiceItem;
+
+type GetInstagramServicesParams = {
+  serviceSlug: string;
+  region: "turk" | "rus" | "yabanci";
+  country?: string;
+};
+
+export function getInstagramServices(
+  _params: GetInstagramServicesParams
+): ServiceCardItem[] {
+  return [];
+}
