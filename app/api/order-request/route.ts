@@ -1,3 +1,4 @@
+import https from "https";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
@@ -17,6 +18,58 @@ function createOrderNumber() {
     now.getDate()
   ).padStart(2, "0")}`;
   return `MT-ORD-${datePart}-${random}`;
+}
+
+async function sendTelegramMessage(text: string) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+
+  if (!token || !chatId) {
+    throw new Error("Telegram token veya chat id eksik.");
+  }
+
+  const body = JSON.stringify({
+    chat_id: chatId,
+    text,
+  });
+
+  return await new Promise<string>((resolve, reject) => {
+    const req = https.request(
+      {
+        hostname: "api.telegram.org",
+        path: `/bot${token}/sendMessage`,
+        method: "POST",
+        family: 4,
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": Buffer.byteLength(body),
+        },
+      },
+      (res) => {
+        let data = "";
+
+        res.on("data", (chunk) => {
+          data += chunk;
+        });
+
+        res.on("end", () => {
+          if (!res.statusCode || res.statusCode < 200 || res.statusCode >= 300) {
+            reject(new Error(`Telegram HTTP ${res.statusCode}: ${data}`));
+            return;
+          }
+
+          resolve(data);
+        });
+      }
+    );
+
+    req.on("error", (err) => {
+      reject(err);
+    });
+
+    req.write(body);
+    req.end();
+  });
 }
 
 export async function POST(req: Request) {
@@ -90,14 +143,14 @@ export async function POST(req: Request) {
     }
 
     const lines = rows
-    .map(
-      (item: any, index: number) =>
-        `${index + 1}. ${item.service_title}\n` +
-        `   Miktar: ${item.quantity}\n` +
-        `   Toplam Satış: ${item.total_price} ${currency}\n` +
-        `   Hedef: ${item.target_username || "-"}`
-    )
-    .join("\n\n");
+      .map(
+        (item: any, index: number) =>
+          `${index + 1}. ${item.service_title}\n` +
+          `   Miktar: ${item.quantity}\n` +
+          `   Toplam Satış: ${item.total_price} ${currency}\n` +
+          `   Hedef: ${item.target_username || "-"}`
+      )
+      .join("\n\n");
 
     const orderNumberLines = (insertedRows || [])
       .map((row: any) => `• ${row.order_number}`)
@@ -107,56 +160,39 @@ export async function POST(req: Request) {
     const totalCost = rows.reduce((sum, item) => sum + Number(item.total_cost_price || 0), 0);
 
     const telegramMessage =
-    `🛒 Yeni sipariş alındı\n\n` +
-    `🧾 Batch Kodu: ${batchCode}\n` +
-    `👤 Ad Soyad: ${full_name}\n` +
-    `📞 Telefon: ${phone_number}\n` +
-    `📩 İletişim Türü: ${contact_type}\n` +
-    `📨 İletişim Bilgisi: ${contact_value}\n` +
-    `💱 Para Birimi: ${currency}\n` +
-    `📦 Ürün Sayısı: ${rows.length}\n` +
-    `💰 Toplam Alış: ${totalCost} ${currency}\n` +
-    `🏷️ Toplam Satış: ${totalSale} ${currency}\n\n` +
-    `🔢 Sipariş Numaraları:\n${orderNumberLines}\n\n` +
-    `${lines}`;
+      `🛒 Yeni sipariş alındı\n\n` +
+      `🧾 Batch Kodu: ${batchCode}\n` +
+      `👤 Ad Soyad: ${full_name}\n` +
+      `📞 Telefon: ${phone_number}\n` +
+      `📩 İletişim Türü: ${contact_type}\n` +
+      `📨 İletişim Bilgisi: ${contact_value}\n` +
+      `💱 Para Birimi: ${currency}\n` +
+      `📦 Ürün Sayısı: ${rows.length}\n` +
+      `💰 Toplam Alış: ${totalCost} ${currency}\n` +
+      `🏷️ Toplam Satış: ${totalSale} ${currency}\n\n` +
+      `🔢 Sipariş Numaraları:\n${orderNumberLines}\n\n` +
+      `${lines}`;
 
     let telegramWarning: string | null = null;
 
     try {
-      const telegramResponse = await fetch(
-        `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            chat_id: process.env.TELEGRAM_CHAT_ID,
-            text: telegramMessage,
-          }),
-        }
-      );
-    
-      const telegramText = await telegramResponse.text();
+      const telegramText = await sendTelegramMessage(telegramMessage);
       console.error("TELEGRAM RAW RESPONSE:", telegramText);
-    
-      if (!telegramResponse.ok) {
-        telegramWarning = `Telegram gönderimi başarısız: ${telegramResponse.status} ${telegramText}`;
-        console.error(telegramWarning);
-      } else {
-        try {
-          const telegramJson = JSON.parse(telegramText);
-          if (!telegramJson.ok) {
-            telegramWarning = `Telegram API hata döndü: ${telegramText}`;
-            console.error(telegramWarning);
-          }
-        } catch {
-          telegramWarning = `Telegram cevabı JSON parse edilemedi: ${telegramText}`;
+
+      try {
+        const telegramJson = JSON.parse(telegramText);
+        if (!telegramJson.ok) {
+          telegramWarning = `Telegram API hata döndü: ${telegramText}`;
           console.error(telegramWarning);
         }
+      } catch {
+        telegramWarning = `Telegram cevabı JSON parse edilemedi: ${telegramText}`;
+        console.error(telegramWarning);
       }
     } catch (telegramError) {
       telegramWarning =
         telegramError instanceof Error
-          ? `Telegram fetch hatası: ${telegramError.message}`
+          ? `Telegram gönderim hatası: ${telegramError.message}`
           : "Telegram gönderiminde bilinmeyen hata oluştu";
       console.error(telegramWarning);
     }
