@@ -134,9 +134,10 @@ export async function POST(req: Request) {
           }),
         }
       );
-
+    
       const telegramText = await telegramResponse.text();
-
+      console.error("TELEGRAM RAW RESPONSE:", telegramText);
+    
       if (!telegramResponse.ok) {
         telegramWarning = `Telegram gönderimi başarısız: ${telegramResponse.status} ${telegramText}`;
         console.error(telegramWarning);
@@ -148,7 +149,8 @@ export async function POST(req: Request) {
             console.error(telegramWarning);
           }
         } catch {
-          console.warn("Telegram cevabı JSON parse edilemedi:", telegramText);
+          telegramWarning = `Telegram cevabı JSON parse edilemedi: ${telegramText}`;
+          console.error(telegramWarning);
         }
       }
     } catch (telegramError) {
