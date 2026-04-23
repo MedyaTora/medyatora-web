@@ -90,24 +90,14 @@ export async function POST(req: Request) {
     }
 
     const lines = rows
-      .map(
-        (item: any, index: number) =>
-          `${index + 1}. ${item.service_title}\n` +
-          `   Platform: ${item.platform}\n` +
-          `   Kategori: ${item.category}\n` +
-          `   Servis No: ${item.site_code}\n` +
-          `   Hedef Kullanıcı: ${item.target_username || "-"}\n` +
-          `   Hedef Link: ${item.target_link || "-"}\n` +
-          `   Not: ${item.order_note || "-"}\n` +
-          `   Miktar: ${item.quantity}\n` +
-          `   1000 Adet Alış: ${item.unit_cost_price} ${currency}\n` +
-          `   1000 Adet Satış: ${item.unit_price} ${currency}\n` +
-          `   Toplam Alış: ${item.total_cost_price} ${currency}\n` +
-          `   Toplam Satış: ${item.total_price} ${currency}\n` +
-          `   Garanti: ${item.guarantee_label}\n` +
-          `   Hız: ${item.speed}`
-      )
-      .join("\n\n");
+    .map(
+      (item: any, index: number) =>
+        `${index + 1}. ${item.service_title}\n` +
+        `   Miktar: ${item.quantity}\n` +
+        `   Toplam Satış: ${item.total_price} ${currency}\n` +
+        `   Hedef: ${item.target_username || "-"}`
+    )
+    .join("\n\n");
 
     const orderNumberLines = (insertedRows || [])
       .map((row: any) => `• ${row.order_number}`)
@@ -117,18 +107,18 @@ export async function POST(req: Request) {
     const totalCost = rows.reduce((sum, item) => sum + Number(item.total_cost_price || 0), 0);
 
     const telegramMessage =
-      `🛒 Yeni sipariş alındı\n\n` +
-      `🧾 Batch Kodu: ${batchCode}\n` +
-      `👤 Ad Soyad: ${full_name}\n` +
-      `📞 Telefon: ${phone_number}\n` +
-      `📩 İletişim Türü: ${contact_type}\n` +
-      `📨 İletişim Bilgisi: ${contact_value}\n` +
-      `💱 Para Birimi: ${currency}\n` +
-      `📦 Ürün Sayısı: ${rows.length}\n` +
-      `💰 Toplam Alış: ${totalCost} ${currency}\n` +
-      `🏷️ Toplam Satış: ${totalSale} ${currency}\n\n` +
-      `🔢 Sipariş Numaraları:\n${orderNumberLines}\n\n` +
-      `${lines}`;
+    `🛒 Yeni sipariş alındı\n\n` +
+    `🧾 Batch Kodu: ${batchCode}\n` +
+    `👤 Ad Soyad: ${full_name}\n` +
+    `📞 Telefon: ${phone_number}\n` +
+    `📩 İletişim Türü: ${contact_type}\n` +
+    `📨 İletişim Bilgisi: ${contact_value}\n` +
+    `💱 Para Birimi: ${currency}\n` +
+    `📦 Ürün Sayısı: ${rows.length}\n` +
+    `💰 Toplam Alış: ${totalCost} ${currency}\n` +
+    `🏷️ Toplam Satış: ${totalSale} ${currency}\n\n` +
+    `🔢 Sipariş Numaraları:\n${orderNumberLines}\n\n` +
+    `${lines}`;
 
     let telegramWarning: string | null = null;
 
