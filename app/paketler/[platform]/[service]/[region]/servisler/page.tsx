@@ -70,9 +70,9 @@ export default async function RegionServicesPage({
   const selectedCountry =
     region === "yabanci" && country && country !== "all" ? country : undefined;
 
-  const items: ServiceCardItem[] =
+    const items: ServiceCardItem[] =
     platform === "instagram"
-      ? getInstagramServices({
+      ? await getInstagramServices({
           serviceSlug: service,
           region,
           country: selectedCountry,

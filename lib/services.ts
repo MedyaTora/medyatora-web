@@ -1,3 +1,5 @@
+import { createClient } from "@supabase/supabase-js";
+
 export type OrderServiceItem = {
   id: number;
   siteCode: number;
@@ -98,8 +100,170 @@ type GetInstagramServicesParams = {
   country?: string;
 };
 
-export function getInstagramServices(
-  _params: GetInstagramServicesParams
-): ServiceCardItem[] {
-  return [];
+function normalizeText(value: string | null | undefined) {
+  return (value || "")
+    .toLocaleLowerCase("tr-TR")
+    .replace(/ı/g, "i")
+    .replace(/ğ/g, "g")
+    .replace(/ü/g, "u")
+    .replace(/ş/g, "s")
+    .replace(/ö/g, "o")
+    .replace(/ç/g, "c");
+}
+
+function includesAny(text: string, keywords: string[]) {
+  return keywords.some((keyword) => text.includes(keyword));
+}
+
+function matchesRegion(originalName: string, region: "turk" | "rus" | "yabanci") {
+  const text = normalizeText(originalName);
+
+  const turkKeywords = [
+    "turk",
+    "turkiye",
+    "turkish",
+    "turkiye hedefli",
+    "turk hedefli",
+  ];
+
+  const rusKeywords = [
+    "rus",
+    "russian",
+    "rusya",
+    "russia",
+  ];
+
+  const foreignKeywords = [
+    "abd",
+    "amerika",
+    "usa",
+    "united states",
+    "almanya",
+    "germany",
+    "fransa",
+    "france",
+    "hindistan",
+    "india",
+    "italya",
+    "italy",
+    "kanada",
+    "canada",
+    "brezilya",
+    "brazil",
+    "arap",
+    "arab",
+    "avrupa",
+    "europe",
+    "pakistan",
+    "iran",
+    "ispanya",
+    "spain",
+    "avustralya",
+    "australia",
+    "azerbaycan",
+    "azerbaijan",
+    "yabanci",
+    "foreign",
+    "global",
+    "worldwide",
+    "international",
+  ];
+
+  if (region === "turk") {
+    return includesAny(text, turkKeywords);
+  }
+
+  if (region === "rus") {
+    return includesAny(text, rusKeywords);
+  }
+
+  if (region === "yabanci") {
+    const isTurk = includesAny(text, turkKeywords);
+    const isRus = includesAny(text, rusKeywords);
+    const isForeign = includesAny(text, foreignKeywords);
+
+    return isForeign || (!isTurk && !isRus);
+  }
+
+  return true;
+}
+
+function matchesCountry(originalName: string, country?: string) {
+  if (!country) return true;
+
+  const text = normalizeText(originalName);
+
+  const countryKeywords: Record<string, string[]> = {
+    abd: ["abd", "amerika", "usa", "united states"],
+    almanya: ["almanya", "germany"],
+    fransa: ["fransa", "france"],
+    hindistan: ["hindistan", "india"],
+    italya: ["italya", "italy"],
+    kanada: ["kanada", "canada"],
+    brezilya: ["brezilya", "brazil"],
+    arap: ["arap", "arab", "uae", "dubai", "saudi"],
+    avrupa: ["avrupa", "europe", "eu"],
+    pakistan: ["pakistan"],
+    iran: ["iran"],
+    ispanya: ["ispanya", "spain"],
+    avustralya: ["avustralya", "australia"],
+    azerbaycan: ["azerbaycan", "azerbaijan"],
+  };
+
+  const keywords = countryKeywords[country];
+  if (!keywords) return true;
+
+  return includesAny(text, keywords);
+}
+
+export async function getInstagramServices({
+  serviceSlug,
+  region,
+  country,
+}: GetInstagramServicesParams): Promise<ServiceCardItem[]> {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
+  const { data, error } = await supabase
+    .from("services")
+    .select(`
+      id,
+      panel_service_id,
+      site_code,
+      platform,
+      category,
+      original_name,
+      clean_title,
+      subtitle,
+      guarantee,
+      guarantee_label,
+      min,
+      max,
+      speed,
+      level,
+      description,
+      tl_cost_price,
+      usd_cost_price,
+      tl_sale_price,
+      usd_sale_price,
+      rub_sale_price
+    `)
+    .eq("is_active", true)
+    .eq("platform", "instagram")
+    .eq("category", serviceSlug)
+    .order("panel_service_id", { ascending: true });
+
+  if (error) {
+    console.error("Instagram servisleri çekilemedi:", error.message);
+    return [];
+  }
+
+  const rows = (data || []) as DbServiceRow[];
+
+  return rows
+    .filter((row) => matchesRegion(row.original_name, region))
+    .filter((row) => matchesCountry(row.original_name, country))
+    .map(mapDbServiceToOrderItem);
 }
