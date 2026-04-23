@@ -43,43 +43,74 @@ export type DbServiceRow = {
   speed: string;
   level: string;
   description: string;
-
   tl_cost_price: number;
   usd_cost_price: number;
-
   tl_sale_price: number;
   usd_sale_price: number;
   rub_sale_price: number;
 };
 
+export type ServiceCardItem = OrderServiceItem;
+
+type RegionType = "turk" | "rus" | "yabanci";
+
+type GetPlatformServicesParams = {
+  platform: string;
+  serviceSlug: string;
+  region: RegionType;
+  country?: string;
+};
+
+type GetInstagramServicesParams = {
+  serviceSlug: string;
+  region: RegionType;
+  country?: string;
+};
+
+function createAdminSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error("Supabase environment variables eksik.");
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey);
+}
+
+function safeNumber(value: unknown) {
+  const num = Number(value || 0);
+  return Number.isFinite(num) ? num : 0;
+}
+
 export function mapDbServiceToOrderItem(row: DbServiceRow): OrderServiceItem {
-  const usdCost = Number(row.usd_cost_price || 0);
-  const tlCost = Number(row.tl_cost_price || 0);
+  const usdCost = safeNumber(row.usd_cost_price);
+  const tlCost = safeNumber(row.tl_cost_price);
+  const tlSale = safeNumber(row.tl_sale_price);
+  const usdSale = safeNumber(row.usd_sale_price);
+  const rubSale = safeNumber(row.rub_sale_price);
 
   const rubCost =
-    row.usd_sale_price && row.rub_sale_price
-      ? Number(
-          ((usdCost * Number(row.rub_sale_price || 0)) /
-            Number(row.usd_sale_price || 1)).toFixed(4)
-        )
+    usdCost > 0 && usdSale > 0 && rubSale > 0
+      ? Number(((usdCost * rubSale) / usdSale).toFixed(4))
       : 0;
 
   return {
     id: row.panel_service_id,
-    siteCode: row.site_code,
-    platform: row.platform,
-    category: row.category,
-    title: row.clean_title,
-    subtitle: row.subtitle,
-    guarantee: row.guarantee,
-    guaranteeLabel: row.guarantee_label,
-    min: row.min,
-    max: row.max,
+    siteCode: safeNumber(row.site_code),
+    platform: row.platform || "",
+    category: row.category || "",
+    title: row.clean_title || "Servis",
+    subtitle: row.subtitle || "",
+    guarantee: Boolean(row.guarantee),
+    guaranteeLabel: row.guarantee_label || "Garantisiz",
+    min: safeNumber(row.min),
+    max: safeNumber(row.max),
 
-    salePrice: Number(row.tl_sale_price || 0),
-    salePriceTl: Number(row.tl_sale_price || 0),
-    salePriceUsd: Number(row.usd_sale_price || 0),
-    salePriceRub: Number(row.rub_sale_price || 0),
+    salePrice: tlSale,
+    salePriceTl: tlSale,
+    salePriceUsd: usdSale,
+    salePriceRub: rubSale,
 
     costPriceTl: tlCost,
     costPriceUsd: usdCost,
@@ -88,17 +119,9 @@ export function mapDbServiceToOrderItem(row: DbServiceRow): OrderServiceItem {
     speed: row.speed || "Yoğunluğa Göre Değişir",
     level: row.level || "Temel",
     description: row.description || "",
-    originalName: row.original_name,
+    originalName: row.original_name || "",
   };
 }
-
-export type ServiceCardItem = OrderServiceItem;
-
-type GetInstagramServicesParams = {
-  serviceSlug: string;
-  region: "turk" | "rus" | "yabanci";
-  country?: string;
-};
 
 function normalizeText(value: string | null | undefined) {
   return (value || "")
@@ -115,7 +138,7 @@ function includesAny(text: string, keywords: string[]) {
   return keywords.some((keyword) => text.includes(keyword));
 }
 
-function matchesRegion(originalName: string, region: "turk" | "rus" | "yabanci") {
+function matchesRegion(originalName: string, region: RegionType) {
   const text = normalizeText(originalName);
 
   const turkKeywords = [
@@ -216,15 +239,11 @@ function matchesCountry(originalName: string, country?: string) {
   return includesAny(text, keywords);
 }
 
-export async function getInstagramServices({
-  serviceSlug,
-  region,
-  country,
-}: GetInstagramServicesParams): Promise<ServiceCardItem[]> {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+async function fetchServicesFromDb(params: {
+  platform: string;
+  category: string;
+}): Promise<DbServiceRow[]> {
+  const supabase = createAdminSupabaseClient();
 
   const { data, error } = await supabase
     .from("services")
@@ -251,19 +270,44 @@ export async function getInstagramServices({
       rub_sale_price
     `)
     .eq("is_active", true)
-    .eq("platform", "instagram")
-    .eq("category", serviceSlug)
+    .eq("platform", params.platform)
+    .eq("category", params.category)
     .order("panel_service_id", { ascending: true });
 
   if (error) {
-    console.error("Instagram servisleri çekilemedi:", error.message);
+    console.error("Servisler çekilemedi:", error.message);
     return [];
   }
 
-  const rows = (data || []) as DbServiceRow[];
+  return (data || []) as DbServiceRow[];
+}
+
+export async function getPlatformServices({
+  platform,
+  serviceSlug,
+  region,
+  country,
+}: GetPlatformServicesParams): Promise<ServiceCardItem[]> {
+  const rows = await fetchServicesFromDb({
+    platform,
+    category: serviceSlug,
+  });
 
   return rows
     .filter((row) => matchesRegion(row.original_name, region))
     .filter((row) => matchesCountry(row.original_name, country))
     .map(mapDbServiceToOrderItem);
+}
+
+export async function getInstagramServices({
+  serviceSlug,
+  region,
+  country,
+}: GetInstagramServicesParams): Promise<ServiceCardItem[]> {
+  return getPlatformServices({
+    platform: "instagram",
+    serviceSlug,
+    region,
+    country,
+  });
 }

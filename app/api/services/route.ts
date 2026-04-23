@@ -2,16 +2,86 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { mapDbServiceToOrderItem, type DbServiceRow } from "@/lib/services";
 
+const ALLOWED_PLATFORMS = new Set([
+  "instagram",
+  "tiktok",
+  "youtube",
+  "telegram",
+  "facebook",
+  "x",
+  "spotify",
+  "twitch",
+  "kick",
+  "discord",
+  "snapchat",
+  "pinterest",
+  "linkedin",
+  "reddit",
+  "threads",
+  "apple-music",
+  "soundcloud",
+  "audiomack",
+  "deezer",
+  "shazam",
+  "boomplay",
+  "steam",
+  "xbox",
+  "vk",
+  "rutube",
+  "ok-ru",
+  "dzen",
+  "github",
+  "tumblr",
+  "bluesky",
+  "vimeo",
+  "google-review",
+  "google-maps",
+  "whatsapp",
+]);
+
+const ALLOWED_CATEGORIES = new Set([
+  "takipci",
+  "begeni",
+  "yorum",
+  "izlenme",
+  "kaydetme",
+  "abone",
+  "uye",
+  "reaksiyon",
+  "retweet",
+]);
+
 export async function GET(req: NextRequest) {
   try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return NextResponse.json(
+        { error: "Supabase environment variables eksik." },
+        { status: 500 }
+      );
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
     const { searchParams } = new URL(req.url);
-    const platform = searchParams.get("platform");
-    const category = searchParams.get("category");
+    const platform = searchParams.get("platform")?.trim() || null;
+    const category = searchParams.get("category")?.trim() || null;
+
+    if (platform && !ALLOWED_PLATFORMS.has(platform)) {
+      return NextResponse.json(
+        { error: "Geçersiz platform parametresi." },
+        { status: 400 }
+      );
+    }
+
+    if (category && !ALLOWED_CATEGORIES.has(category)) {
+      return NextResponse.json(
+        { error: "Geçersiz kategori parametresi." },
+        { status: 400 }
+      );
+    }
 
     let query = supabase
       .from("services")
@@ -40,25 +110,45 @@ export async function GET(req: NextRequest) {
       .eq("is_active", true)
       .order("panel_service_id", { ascending: true });
 
-    if (platform) query = query.eq("platform", platform);
-    if (category) query = query.eq("category", category);
+    if (platform) {
+      query = query.eq("platform", platform);
+    }
+
+    if (category) {
+      query = query.eq("category", category);
+    }
 
     const { data, error } = await query;
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json(
+        { error: "Servisler alınamadı." },
+        { status: 400 }
+      );
     }
 
-    const items = ((data || []) as DbServiceRow[]).map(mapDbServiceToOrderItem);
+    const rows = ((data ?? []) as DbServiceRow[]).filter(
+      (item) =>
+        item.platform &&
+        item.category &&
+        typeof item.min === "number" &&
+        typeof item.max === "number"
+    );
 
-    return NextResponse.json({
-      success: true,
-      items,
-    });
+    const items = rows.map(mapDbServiceToOrderItem);
+
+    return NextResponse.json(
+      {
+        success: true,
+        count: items.length,
+        items,
+      },
+      { status: 200 }
+    );
   } catch (error) {
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : "Sunucu hatası oluştu",
+        error: error instanceof Error ? error.message : "Sunucu hatası oluştu.",
       },
       { status: 500 }
     );

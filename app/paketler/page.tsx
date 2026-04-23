@@ -33,7 +33,7 @@ type CartItem = {
   order_note: string;
 };
 
-const categoryMap: Record<string, CategoryItem[]> = {
+const PLATFORM_CATEGORY_MAP: Record<string, CategoryItem[]> = {
   instagram: [
     { slug: "takipci", name: "Takipçi" },
     { slug: "begeni", name: "Beğeni" },
@@ -129,7 +129,11 @@ function makeCartId() {
 }
 
 export default function PaketlerPage() {
-  const [selectedPlatform, setSelectedPlatform] = useState("instagram");
+  const platforms = getFeaturedPlatforms();
+
+  const [selectedPlatform, setSelectedPlatform] = useState(
+    platforms[0]?.slug || "instagram"
+  );
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedServiceId, setSelectedServiceId] = useState<number | null>(null);
   const [selectedCurrency, setSelectedCurrency] = useState<CurrencyCode>("TL");
@@ -175,11 +179,11 @@ export default function PaketlerPage() {
   }, [selectedLocale]);
 
   const t = getDictionary(selectedLocale);
-  const platforms = getFeaturedPlatforms();
 
   useEffect(() => {
     async function loadServices() {
       setServicesLoading(true);
+      setError("");
 
       try {
         const res = await fetch("/api/services", { cache: "no-store" });
@@ -189,7 +193,7 @@ export default function PaketlerPage() {
           throw new Error(data.error || "Servisler alınamadı.");
         }
 
-        setServices(data.items || []);
+        setServices(Array.isArray(data.items) ? data.items : []);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Servisler yüklenemedi.");
       } finally {
@@ -205,17 +209,29 @@ export default function PaketlerPage() {
   }, [services, selectedPlatform]);
 
   const categories = useMemo(() => {
-    const allCategories = categoryMap[selectedPlatform] ?? [];
-    return allCategories.filter((category) =>
+    const availableCategories = PLATFORM_CATEGORY_MAP[selectedPlatform] ?? [];
+
+    return availableCategories.filter((category) =>
       platformServices.some((service) => service.category === category.slug)
     );
   }, [selectedPlatform, platformServices]);
 
   useEffect(() => {
-    const firstCategory = categories[0]?.slug ?? "";
-    setSelectedCategory(firstCategory);
+    if (!categories.length) {
+      setSelectedCategory("");
+      setSelectedServiceId(null);
+      return;
+    }
+
+    const hasCurrentCategory = categories.some(
+      (category) => category.slug === selectedCategory
+    );
+
+    const nextCategory = hasCurrentCategory ? selectedCategory : categories[0].slug;
+
+    setSelectedCategory(nextCategory);
     setSelectedServiceId(null);
-  }, [selectedPlatform, categories]);
+  }, [categories, selectedCategory]);
 
   const filteredServices = useMemo(() => {
     if (!selectedCategory) return [];
@@ -232,11 +248,24 @@ export default function PaketlerPage() {
       });
   }, [services, selectedPlatform, selectedCategory, selectedCurrency]);
 
+  useEffect(() => {
+    if (!filteredServices.length) {
+      setSelectedServiceId(null);
+      return;
+    }
+
+    const hasCurrentService = filteredServices.some(
+      (service) => service.id === selectedServiceId
+    );
+
+    if (!hasCurrentService) {
+      setSelectedServiceId(filteredServices[0].id);
+    }
+  }, [filteredServices, selectedServiceId]);
+
   const selectedService = useMemo(() => {
     return (
-      filteredServices.find((item) => item.id === selectedServiceId) ??
-      filteredServices[0] ??
-      null
+      filteredServices.find((item) => item.id === selectedServiceId) ?? null
     );
   }, [filteredServices, selectedServiceId]);
 
@@ -336,6 +365,13 @@ export default function PaketlerPage() {
       target_link: targetLink.trim(),
       order_note: orderNote.trim(),
     };
+  };
+
+  const clearStatusMessages = () => {
+    setError("");
+    setCartMessage("");
+    setCreatedOrderNumbers([]);
+    setSuccessOpen(false);
   };
 
   const handleAddToCart = () => {
@@ -492,8 +528,7 @@ export default function PaketlerPage() {
                         type="button"
                         onClick={() => {
                           setSelectedCurrency(currency);
-                          setError("");
-                          setSuccessOpen(false);
+                          clearStatusMessages();
                         }}
                         className={`rounded-full px-4 py-2 text-xs font-semibold transition sm:text-sm ${
                           active
@@ -537,8 +572,7 @@ export default function PaketlerPage() {
                   onClick={() => {
                     setSelectedPlatform(platform.slug);
                     setSelectedServiceId(null);
-                    setError("");
-                    setSuccessOpen(false);
+                    clearStatusMessages();
                   }}
                   className={`group rounded-2xl border px-4 py-4 text-left transition ${
                     active
@@ -579,8 +613,7 @@ export default function PaketlerPage() {
                     onClick={() => {
                       setSelectedCategory(category.slug);
                       setSelectedServiceId(null);
-                      setError("");
-                      setSuccessOpen(false);
+                      clearStatusMessages();
                     }}
                     className={`rounded-full px-4 py-2 text-xs font-semibold transition sm:text-sm ${
                       active
@@ -649,9 +682,7 @@ export default function PaketlerPage() {
                         type="button"
                         onClick={() => {
                           setSelectedServiceId(service.id);
-                          setError("");
-                          setSuccessOpen(false);
-                          setCartMessage("");
+                          clearStatusMessages();
                         }}
                         className={`w-full rounded-2xl border px-4 py-4 text-left transition ${
                           active

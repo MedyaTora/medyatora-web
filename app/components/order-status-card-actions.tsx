@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 
 type Props = {
   id: number;
@@ -26,20 +27,21 @@ export default function OrderStatusCardActions({
 }: Props) {
   const [status, setStatus] = useState(initialStatus || "pending");
   const [startCount, setStartCount] = useState(
-    initialStartCount ? String(initialStartCount) : ""
+    initialStartCount !== null && initialStartCount !== undefined
+      ? String(initialStartCount)
+      : ""
   );
   const [endCount, setEndCount] = useState(
-    initialEndCount ? String(initialEndCount) : ""
+    initialEndCount !== null && initialEndCount !== undefined
+      ? String(initialEndCount)
+      : ""
   );
-  const [completionNote, setCompletionNote] = useState(
-    initialCompletionNote || ""
-  );
-
-  const [loading, setLoading] = useState(false);
+  const [completionNote, setCompletionNote] = useState(initialCompletionNote || "");
   const [message, setMessage] = useState("");
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
 
   async function handleSave() {
-    setLoading(true);
     setMessage("");
 
     try {
@@ -53,7 +55,7 @@ export default function OrderStatusCardActions({
           status,
           start_count: startCount ? Number(startCount) : null,
           end_count: endCount ? Number(endCount) : null,
-          completion_note: completionNote,
+          completion_note: completionNote.trim() || null,
         }),
       });
 
@@ -64,12 +66,16 @@ export default function OrderStatusCardActions({
       }
 
       setMessage("Kaydedildi.");
+
+      startTransition(() => {
+        router.refresh();
+      });
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Bir hata oluştu.");
-    } finally {
-      setLoading(false);
     }
   }
+
+  const disabled = isPending;
 
   return (
     <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-4">
@@ -83,10 +89,15 @@ export default function OrderStatusCardActions({
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-sm text-white outline-none focus:border-emerald-400"
+            disabled={disabled}
+            className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-sm text-white outline-none transition focus:border-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {statusOptions.map((option) => (
-              <option key={option.value} value={option.value} className="bg-[#121826]">
+              <option
+                key={option.value}
+                value={option.value}
+                className="bg-[#121826] text-white"
+              >
                 {option.label}
               </option>
             ))}
@@ -99,7 +110,9 @@ export default function OrderStatusCardActions({
             value={startCount}
             onChange={(e) => setStartCount(e.target.value.replace(/\D/g, ""))}
             placeholder="Örn: 12500"
-            className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-sm text-white outline-none placeholder:text-white/25 focus:border-emerald-400"
+            disabled={disabled}
+            inputMode="numeric"
+            className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-sm text-white outline-none placeholder:text-white/25 transition focus:border-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
           />
         </div>
 
@@ -109,7 +122,9 @@ export default function OrderStatusCardActions({
             value={endCount}
             onChange={(e) => setEndCount(e.target.value.replace(/\D/g, ""))}
             placeholder="Örn: 13000"
-            className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-sm text-white outline-none placeholder:text-white/25 focus:border-emerald-400"
+            disabled={disabled}
+            inputMode="numeric"
+            className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-sm text-white outline-none placeholder:text-white/25 transition focus:border-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
           />
         </div>
 
@@ -119,7 +134,8 @@ export default function OrderStatusCardActions({
             value={completionNote}
             onChange={(e) => setCompletionNote(e.target.value)}
             placeholder="İşlem notu"
-            className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-sm text-white outline-none placeholder:text-white/25 focus:border-emerald-400"
+            disabled={disabled}
+            className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-sm text-white outline-none placeholder:text-white/25 transition focus:border-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
           />
         </div>
       </div>
@@ -128,13 +144,13 @@ export default function OrderStatusCardActions({
         <button
           type="button"
           onClick={handleSave}
-          disabled={loading}
+          disabled={disabled}
           className="rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-black transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {loading ? "Kaydediliyor..." : "Kaydet"}
+          {isPending ? "Kaydediliyor..." : "Kaydet"}
         </button>
 
-        {message && <p className="text-sm text-white/70">{message}</p>}
+        {message ? <p className="text-sm text-white/70">{message}</p> : null}
       </div>
     </div>
   );
