@@ -54,16 +54,16 @@ const ALLOWED_CATEGORIES = new Set([
 export async function GET(req: NextRequest) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    if (!supabaseUrl || !supabaseAnonKey) {
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
       return NextResponse.json(
         { error: "Supabase environment variables eksik." },
         { status: 500 }
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
     const { searchParams } = new URL(req.url);
     const platform = searchParams.get("platform")?.trim() || null;

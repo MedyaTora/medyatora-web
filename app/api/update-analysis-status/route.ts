@@ -32,10 +32,10 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    const id = typeof body?.id === "string" ? Number(body.id) : Number(body?.id);
+    const id = typeof body?.id === "string" ? body.id.trim() : "";
     const status = body?.status;
 
-    if (!Number.isFinite(id) || !status) {
+    if (!id || !status) {
       return NextResponse.json(
         { error: "Geçerli başvuru id ve status gerekli." },
         { status: 400 }

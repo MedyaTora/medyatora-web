@@ -11,9 +11,9 @@ type PackageItem = {
 
 export default async function PackagesSection() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-  if (!supabaseUrl || !supabaseAnonKey) {
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
     return (
       <section id="packages" className="px-6 pb-16 max-w-6xl mx-auto">
         <div className="rounded-3xl border border-red-500/20 bg-red-500/10 p-6 text-red-300">
@@ -23,7 +23,7 @@ export default async function PackagesSection() {
     )
   }
 
-  const supabase = createClient(supabaseUrl, supabaseAnonKey)
+  const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
 
   const { data, error } = await supabase
     .from('packages')

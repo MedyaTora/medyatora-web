@@ -4,7 +4,7 @@ export const revalidate = 0;
 import { createClient } from "@supabase/supabase-js";
 
 type CustomerRow = {
-  id: number;
+  id: string;
   created_at: string;
   full_name: string | null;
   username: string | null;
@@ -19,8 +19,8 @@ type CustomerRow = {
 };
 
 type AnalysisHistoryRow = {
-  id: number;
-  customer_id: number;
+  id: string;
+  customer_id: string;
   coupon_code: string | null;
   package_type: string | null;
   package_price: number | null;
@@ -95,9 +95,9 @@ export default async function CustomerDetailPage({
     return <ErrorScreen message="Supabase environment variables eksik." />;
   }
 
-  const customerId = Number(params.id);
+  const customerId = params.id?.trim();
 
-  if (!Number.isFinite(customerId)) {
+  if (!customerId) {
     return <ErrorScreen message="Geçersiz müşteri id." />;
   }
 
@@ -172,12 +172,9 @@ export default async function CustomerDetailPage({
               </p>
             </div>
 
-            <a
-              href={`/admin/customers/${customerData.id}`}
-              className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2.5 text-sm font-medium text-emerald-300"
-            >
+            <span className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2.5 text-sm font-medium text-emerald-300">
               ID: {customerData.id}
-            </a>
+            </span>
           </div>
 
           <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">

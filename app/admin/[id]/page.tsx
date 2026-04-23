@@ -17,7 +17,7 @@ type CustomerInfo = {
 };
 
 type AnalysisRequestDetailRow = {
-  id: number;
+  id: string;
   coupon_code: string | null;
   package_type: string | null;
   package_price: number | null;
@@ -103,9 +103,9 @@ export default async function AnalysisDetailPage({
     return <ErrorScreen message="Supabase environment variables eksik." />;
   }
 
-  const analysisId = Number(params.id);
+  const analysisId = params.id?.trim();
 
-  if (!Number.isFinite(analysisId)) {
+  if (!analysisId) {
     return <ErrorScreen message="Geçersiz kayıt id." />;
   }
 
@@ -187,12 +187,9 @@ export default async function AnalysisDetailPage({
               </p>
             </div>
 
-            <a
-              href={`/admin/${item.id}`}
-              className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2.5 text-sm font-medium text-emerald-300"
-            >
+            <span className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2.5 text-sm font-medium text-emerald-300">
               ID: {item.id}
-            </a>
+            </span>
           </div>
 
           <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
