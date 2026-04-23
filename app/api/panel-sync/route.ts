@@ -68,8 +68,26 @@ function detectPlatform(service: PanelService): string {
   if (text.includes("tiktok") || text.includes("tik tok")) return "tiktok";
   if (text.includes("youtube") || text.includes("yt")) return "youtube";
   if (text.includes("telegram")) return "telegram";
+  if (text.includes("spotify")) return "spotify";
   if (text.includes("facebook") || text.includes("fb")) return "facebook";
-  if (text.includes("twitter") || text.includes("x ")) return "x";
+
+  if (
+    text.includes("twitter") ||
+    text.includes(" x ") ||
+    text.startsWith("x ") ||
+    text.includes("x/twitter")
+  ) {
+    return "x";
+  }
+
+  if (text.includes("twitch")) return "twitch";
+  if (text.includes("kick")) return "kick";
+  if (text.includes("discord")) return "discord";
+  if (text.includes("snapchat") || text.includes("snap chat")) return "snapchat";
+  if (text.includes("pinterest")) return "pinterest";
+  if (text.includes("linkedin") || text.includes("linkedin")) return "linkedin";
+  if (text.includes("reddit")) return "reddit";
+  if (text.includes("threads")) return "threads";
 
   return "other";
 }
@@ -311,7 +329,7 @@ async function syncPanelServices() {
     throw new Error("Panel services cevabı dizi değil.");
   }
 
-  const items = panelServices
+  const normalizedItems = panelServices
     .map((service) => {
       const platform = detectPlatform(service);
       const category = detectCategory(service);
@@ -353,33 +371,94 @@ async function syncPanelServices() {
     })
     .filter(Boolean);
 
-  const { error } = await supabase
+  const items = normalizedItems as Array<{
+    panel_service_id: number;
+    site_code: number;
+    platform: string;
+    category: string;
+    original_name: string;
+    clean_title: string;
+    subtitle: string;
+    guarantee: boolean;
+    guarantee_label: string;
+    min: number;
+    max: number;
+    speed: string;
+    level: string;
+    description: string;
+    usd_cost_price: number;
+    tl_cost_price: number;
+    tl_sale_price: number;
+    usd_sale_price: number;
+    rub_sale_price: number;
+    refill: boolean;
+    cancel: boolean;
+    dripfeed: boolean;
+    is_active: boolean;
+    last_synced_at: string;
+  }>;
+
+  const syncedIds = items.map((item) => item.panel_service_id);
+
+  const { error: upsertError } = await supabase
     .from("services")
     .upsert(items, { onConflict: "panel_service_id" });
 
-  if (error) {
+  if (upsertError) {
     await supabase.from("sync_logs").insert([
       {
         sync_type: "panel_services_sync",
         status: "failed",
-        message: error.message,
+        message: upsertError.message,
         total_fetched: panelServices.length,
         total_inserted: 0,
         total_updated: 0,
       },
     ]);
 
-    throw new Error(error.message);
+    throw new Error(upsertError.message);
+  }
+
+  let deactivatedCount = 0;
+
+  if (syncedIds.length > 0) {
+    const { data: activeServices, error: activeError } = await supabase
+      .from("services")
+      .select("panel_service_id")
+      .eq("is_active", true);
+
+    if (activeError) {
+      throw new Error(`Aktif servisler okunamadı: ${activeError.message}`);
+    }
+
+    const activeIds = (activeServices || []).map((row) => row.panel_service_id as number);
+    const idsToDeactivate = activeIds.filter((id) => !syncedIds.includes(id));
+
+    if (idsToDeactivate.length > 0) {
+      const { error: deactivateError } = await supabase
+        .from("services")
+        .update({
+          is_active: false,
+          last_synced_at: new Date().toISOString(),
+        })
+        .in("panel_service_id", idsToDeactivate);
+
+      if (deactivateError) {
+        throw new Error(`Eski servisler pasife alınamadı: ${deactivateError.message}`);
+      }
+
+      deactivatedCount = idsToDeactivate.length;
+    }
   }
 
   await supabase.from("sync_logs").insert([
     {
       sync_type: "panel_services_sync",
       status: "success",
-      message: `Panel servisleri senkronize edildi. TRY: ${tryRate}, RUB: ${rubRate}`,
+      message: `Panel servisleri senkronize edildi. TRY: ${tryRate}, RUB: ${rubRate}. Pasife alınan servis: ${deactivatedCount}`,
       total_fetched: panelServices.length,
       total_inserted: items.length,
-      total_updated: 0,
+      total_updated: deactivatedCount,
     },
   ]);
 
@@ -387,6 +466,7 @@ async function syncPanelServices() {
     success: true,
     totalFetched: panelServices.length,
     totalSynced: items.length,
+    totalDeactivated: deactivatedCount,
     tryRate,
     rubRate,
   };
