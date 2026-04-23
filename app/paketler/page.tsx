@@ -3,12 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { OrderServiceItem } from "@/lib/services";
 import { getDictionary, type Locale } from "@/lib/i18n";
-
-type PlatformItem = {
-  slug: string;
-  name: string;
-  emoji: string;
-};
+import { getFeaturedPlatforms } from "@/lib/platforms";
 
 type CategoryItem = {
   slug: string;
@@ -37,15 +32,6 @@ type CartItem = {
   target_link: string;
   order_note: string;
 };
-
-const platforms: PlatformItem[] = [
-  { slug: "instagram", name: "Instagram", emoji: "📸" },
-  { slug: "tiktok", name: "TikTok", emoji: "🎵" },
-  { slug: "youtube", name: "YouTube", emoji: "▶️" },
-  { slug: "telegram", name: "Telegram", emoji: "✈️" },
-  { slug: "facebook", name: "Facebook", emoji: "📘" },
-  { slug: "x", name: "X / Twitter", emoji: "𝕏" },
-];
 
 const categoryMap: Record<string, CategoryItem[]> = {
   instagram: [
@@ -189,6 +175,7 @@ export default function PaketlerPage() {
   }, [selectedLocale]);
 
   const t = getDictionary(selectedLocale);
+  const platforms = getFeaturedPlatforms();
 
   useEffect(() => {
     async function loadServices() {
@@ -560,7 +547,7 @@ export default function PaketlerPage() {
                   }`}
                 >
                   <div className="text-xl sm:text-2xl">{platform.emoji}</div>
-                  <div className="mt-2 text-sm font-semibold sm:text-base">{platform.name}</div>
+                  <div className="mt-2 text-sm font-semibold sm:text-base">{platform.title}</div>
                 </button>
               );
             })}
