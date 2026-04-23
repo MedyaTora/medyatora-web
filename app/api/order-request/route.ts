@@ -130,22 +130,50 @@ export async function POST(req: Request) {
       `🔢 Sipariş Numaraları:\n${orderNumberLines}\n\n` +
       `${lines}`;
 
-    await fetch(
-      `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: process.env.TELEGRAM_CHAT_ID,
-          text: telegramMessage,
-        }),
+    let telegramWarning: string | null = null;
+
+    try {
+      const telegramResponse = await fetch(
+        `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: process.env.TELEGRAM_CHAT_ID,
+            text: telegramMessage,
+          }),
+        }
+      );
+
+      const telegramText = await telegramResponse.text();
+
+      if (!telegramResponse.ok) {
+        telegramWarning = `Telegram gönderimi başarısız: ${telegramResponse.status} ${telegramText}`;
+        console.error(telegramWarning);
+      } else {
+        try {
+          const telegramJson = JSON.parse(telegramText);
+          if (!telegramJson.ok) {
+            telegramWarning = `Telegram API hata döndü: ${telegramText}`;
+            console.error(telegramWarning);
+          }
+        } catch {
+          console.warn("Telegram cevabı JSON parse edilemedi:", telegramText);
+        }
       }
-    );
+    } catch (telegramError) {
+      telegramWarning =
+        telegramError instanceof Error
+          ? `Telegram fetch hatası: ${telegramError.message}`
+          : "Telegram gönderiminde bilinmeyen hata oluştu";
+      console.error(telegramWarning);
+    }
 
     return NextResponse.json({
       success: true,
       batchCode,
       orderNumbers: insertedRows?.map((row: any) => row.order_number) || [],
+      telegramWarning,
     });
   } catch (error) {
     return NextResponse.json(
