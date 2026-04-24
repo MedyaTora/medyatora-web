@@ -78,20 +78,25 @@ const contactTypes: ContactType[] = ["Telegram", "WhatsApp", "Instagram", "E-pos
 const TELEGRAM_USERNAME = "medyatora";
 const WHATSAPP_NUMBER = "905530739292";
 
-function buildTelegramLink(orderNumbers: string[]) {
-  const text = encodeURIComponent(
-    `Merhaba, MedyaTora üzerinden sipariş verdim.\n\nSipariş numaram:\n${orderNumbers.join("\n")}`
-  );
+function buildOrderMessage(orderNumbers: string[]) {
+  return `Merhaba, MedyaTora üzerinden sipariş verdim.
 
-  return `https://t.me/${TELEGRAM_USERNAME}?text=${text}`;
+Sipariş numaram:
+${orderNumbers.join("\n")}
+
+Ödeme ve işlem adımlarını öğrenmek istiyorum.`;
+}
+
+function buildTelegramLink(orderNumbers: string[]) {
+  return `https://t.me/${TELEGRAM_USERNAME}?text=${encodeURIComponent(
+    buildOrderMessage(orderNumbers)
+  )}`;
 }
 
 function buildWhatsappLink(orderNumbers: string[]) {
-  const text = encodeURIComponent(
-    `Merhaba, MedyaTora üzerinden sipariş verdim.\n\nSipariş numaram:\n${orderNumbers.join("\n")}`
-  );
-
-  return `https://wa.me/${WHATSAPP_NUMBER}?text=${text}`;
+  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+    buildOrderMessage(orderNumbers)
+  )}`;
 }
 
 function detectInitialLocale(): Locale {
@@ -1178,31 +1183,35 @@ export default function PaketlerPage() {
 
             <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
               <p className="text-sm font-semibold text-white">
-                Sipariş takibi için bize yazın
+                Ödeme ve işlem adımı için bize yazın
               </p>
 
               <p className="mt-1 text-sm leading-6 text-white/60">
-                Sipariş numaranız otomatik mesajın içine eklenecek. Telegram veya WhatsApp üzerinden hızlıca iletişime geçebilirsiniz.
+                Sipariş numaranız otomatik mesajın içine eklenecek. Seçtiğiniz para birimine göre en uygun ödeme iletişim kanalına yönlendirileceksiniz.
               </p>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <a
-                  href={buildTelegramLink(createdOrderNumbers)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-2xl bg-sky-500 px-5 py-3 text-center text-sm font-bold text-black transition hover:bg-sky-400"
-                >
-                  Telegram’dan Yaz
-                </a>
+                {(selectedCurrency === "TL" || selectedCurrency === "USD") && (
+                  <a
+                    href={buildWhatsappLink(createdOrderNumbers)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-2xl bg-emerald-500 px-5 py-3 text-center text-sm font-bold text-black transition hover:bg-emerald-400"
+                  >
+                    WhatsApp’tan Ödeme Bilgisi Al
+                  </a>
+                )}
 
-                <a
-                  href={buildWhatsappLink(createdOrderNumbers)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-2xl bg-emerald-500 px-5 py-3 text-center text-sm font-bold text-black transition hover:bg-emerald-400"
-                >
-                  WhatsApp’tan Yaz
-                </a>
+                {(selectedCurrency === "RUB" || selectedCurrency === "USD") && (
+                  <a
+                    href={buildTelegramLink(createdOrderNumbers)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-2xl bg-sky-500 px-5 py-3 text-center text-sm font-bold text-black transition hover:bg-sky-400"
+                  >
+                    Telegram’dan Ödeme Bilgisi Al
+                  </a>
+                )}
               </div>
             </div>
 
