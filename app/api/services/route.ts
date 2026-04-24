@@ -108,6 +108,11 @@ export async function GET(req: NextRequest) {
         rub_sale_price
       `)
       .eq("is_active", true)
+      .gt("tl_sale_price", 0)
+      .gt("usd_sale_price", 0)
+      .gt("rub_sale_price", 0)
+      .gt("min", 0)
+      .gt("max", 0)
       .order("panel_service_id", { ascending: true });
 
     if (platform) {
@@ -134,17 +139,17 @@ export async function GET(req: NextRequest) {
         typeof item.min === "number" &&
         typeof item.max === "number"
     );
-    
+
     const items = rows
-    .map(mapDbServiceToOrderItem)
-    .filter(
-      (item) =>
-        item.salePriceTl > 0 &&
-        item.salePriceUsd > 0 &&
-        item.salePriceRub > 0 &&
-        item.min > 0 &&
-        item.max > 0
-    );
+      .map(mapDbServiceToOrderItem)
+      .filter(
+        (item) =>
+          item.salePriceTl > 0 &&
+          item.salePriceUsd > 0 &&
+          item.salePriceRub > 0 &&
+          item.min > 0 &&
+          item.max > 0
+      );
 
     return NextResponse.json(
       {
@@ -152,7 +157,12 @@ export async function GET(req: NextRequest) {
         count: items.length,
         items,
       },
-      { status: 200 }
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "public, max-age=60, stale-while-revalidate=300",
+        },
+      }
     );
   } catch (error) {
     return NextResponse.json(

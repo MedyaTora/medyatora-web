@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 type Props = {
   id: number;
@@ -18,6 +17,20 @@ const statusOptions = [
   { value: "cancelled", label: "İptal" },
 ];
 
+// 🔥 NUMARANI BURAYA YAZ
+const WHATSAPP_NUMBER = "905XXXXXXXXX";
+
+// 🔥 TELEGRAM USERNAME
+const TELEGRAM_USERNAME = "medyatora";
+
+function buildWhatsappLink(text: string) {
+  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
+}
+
+function buildTelegramLink(text: string) {
+  return `https://t.me/${TELEGRAM_USERNAME}?text=${encodeURIComponent(text)}`;
+}
+
 export default function OrderStatusCardActions({
   id,
   initialStatus,
@@ -27,21 +40,20 @@ export default function OrderStatusCardActions({
 }: Props) {
   const [status, setStatus] = useState(initialStatus || "pending");
   const [startCount, setStartCount] = useState(
-    initialStartCount !== null && initialStartCount !== undefined
-      ? String(initialStartCount)
-      : ""
+    initialStartCount ? String(initialStartCount) : ""
   );
   const [endCount, setEndCount] = useState(
-    initialEndCount !== null && initialEndCount !== undefined
-      ? String(initialEndCount)
-      : ""
+    initialEndCount ? String(initialEndCount) : ""
   );
-  const [completionNote, setCompletionNote] = useState(initialCompletionNote || "");
+  const [completionNote, setCompletionNote] = useState(
+    initialCompletionNote || ""
+  );
+
+  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
-  const [isPending, startTransition] = useTransition();
-  const router = useRouter();
 
   async function handleSave() {
+    setLoading(true);
     setMessage("");
 
     try {
@@ -55,7 +67,7 @@ export default function OrderStatusCardActions({
           status,
           start_count: startCount ? Number(startCount) : null,
           end_count: endCount ? Number(endCount) : null,
-          completion_note: completionNote.trim() || null,
+          completion_note: completionNote,
         }),
       });
 
@@ -66,16 +78,22 @@ export default function OrderStatusCardActions({
       }
 
       setMessage("Kaydedildi.");
-
-      startTransition(() => {
-        router.refresh();
-      });
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Bir hata oluştu.");
+    } finally {
+      setLoading(false);
     }
   }
 
-  const disabled = isPending;
+  // 🔥 MÜŞTERİYE GİDECEK MESAJ
+  const customerMessage = `Merhaba, siparişiniz tamamlandı 🎉
+
+Başlangıç: ${startCount || "-"}
+Bitiş: ${endCount || "-"}
+
+Not: ${completionNote || "-"}
+
+Teşekkür ederiz 🙏`;
 
   return (
     <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-4">
@@ -89,15 +107,10 @@ export default function OrderStatusCardActions({
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            disabled={disabled}
-            className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-sm text-white outline-none transition focus:border-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-sm text-white outline-none"
           >
             {statusOptions.map((option) => (
-              <option
-                key={option.value}
-                value={option.value}
-                className="bg-[#121826] text-white"
-              >
+              <option key={option.value} value={option.value} className="bg-[#121826]">
                 {option.label}
               </option>
             ))}
@@ -105,53 +118,66 @@ export default function OrderStatusCardActions({
         </div>
 
         <div>
-          <label className="mb-2 block text-xs text-white/50">Başlangıç Miktarı</label>
+          <label className="mb-2 block text-xs text-white/50">Başlangıç</label>
           <input
             value={startCount}
             onChange={(e) => setStartCount(e.target.value.replace(/\D/g, ""))}
-            placeholder="Örn: 12500"
-            disabled={disabled}
-            inputMode="numeric"
-            className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-sm text-white outline-none placeholder:text-white/25 transition focus:border-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-sm text-white"
           />
         </div>
 
         <div>
-          <label className="mb-2 block text-xs text-white/50">Bitiş Miktarı</label>
+          <label className="mb-2 block text-xs text-white/50">Bitiş</label>
           <input
             value={endCount}
             onChange={(e) => setEndCount(e.target.value.replace(/\D/g, ""))}
-            placeholder="Örn: 13000"
-            disabled={disabled}
-            inputMode="numeric"
-            className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-sm text-white outline-none placeholder:text-white/25 transition focus:border-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-sm text-white"
           />
         </div>
 
-        <div className="md:col-span-2 xl:col-span-1">
+        <div>
           <label className="mb-2 block text-xs text-white/50">Not</label>
           <input
             value={completionNote}
             onChange={(e) => setCompletionNote(e.target.value)}
-            placeholder="İşlem notu"
-            disabled={disabled}
-            className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-sm text-white outline-none placeholder:text-white/25 transition focus:border-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-sm text-white"
           />
         </div>
       </div>
 
-      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mt-4 flex flex-wrap gap-3">
         <button
           type="button"
           onClick={handleSave}
-          disabled={disabled}
-          className="rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-black transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={loading}
+          className="rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-black"
         >
-          {isPending ? "Kaydediliyor..." : "Kaydet"}
+          {loading ? "Kaydediliyor..." : "Kaydet"}
         </button>
 
-        {message ? <p className="text-sm text-white/70">{message}</p> : null}
+        {/* 🔥 SADECE COMPLETED OLUNCA ÇIKAR */}
+        {status === "completed" && (
+          <>
+            <a
+              href={buildWhatsappLink(customerMessage)}
+              target="_blank"
+              className="rounded-xl bg-green-500 px-4 py-3 text-sm font-semibold text-black"
+            >
+              WhatsApp Yaz
+            </a>
+
+            <a
+              href={buildTelegramLink(customerMessage)}
+              target="_blank"
+              className="rounded-xl bg-sky-500 px-4 py-3 text-sm font-semibold text-black"
+            >
+              Telegram Yaz
+            </a>
+          </>
+        )}
       </div>
+
+      {message && <p className="mt-3 text-sm text-white/70">{message}</p>}
     </div>
   );
 }

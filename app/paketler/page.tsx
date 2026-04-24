@@ -75,6 +75,25 @@ const currencyOptions: CurrencyCode[] = ["TL", "USD", "RUB"];
 const localeOptions: Locale[] = ["tr", "en", "ru"];
 const contactTypes: ContactType[] = ["Telegram", "WhatsApp", "Instagram", "E-posta"];
 
+const TELEGRAM_USERNAME = "medyatora";
+const WHATSAPP_NUMBER = "905530739292";
+
+function buildTelegramLink(orderNumbers: string[]) {
+  const text = encodeURIComponent(
+    `Merhaba, MedyaTora üzerinden sipariş verdim.\n\nSipariş numaram:\n${orderNumbers.join("\n")}`
+  );
+
+  return `https://t.me/${TELEGRAM_USERNAME}?text=${text}`;
+}
+
+function buildWhatsappLink(orderNumbers: string[]) {
+  const text = encodeURIComponent(
+    `Merhaba, MedyaTora üzerinden sipariş verdim.\n\nSipariş numaram:\n${orderNumbers.join("\n")}`
+  );
+
+  return `https://wa.me/${WHATSAPP_NUMBER}?text=${text}`;
+}
+
 function detectInitialLocale(): Locale {
   if (typeof window === "undefined") return "tr";
 
@@ -186,7 +205,7 @@ export default function PaketlerPage() {
       setError("");
 
       try {
-        const res = await fetch("/api/services", { cache: "no-store" });
+        const res = await fetch("/api/services");
         const data = await res.json();
 
         if (!res.ok) {
@@ -1136,10 +1155,11 @@ export default function PaketlerPage() {
         </div>
       )}
 
-      {successOpen && (
+{successOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
           <div className="w-full max-w-2xl rounded-[28px] border border-white/10 bg-[#121826] p-5 shadow-[0_20px_80px_rgba(0,0,0,0.45)]">
             <h2 className="text-2xl font-bold text-white">Siparişiniz Onaylandı</h2>
+
             <p className="mt-2 text-sm leading-6 text-white/60">
               Siparişiniz başarıyla oluşturuldu. Aşağıdaki sipariş numarası veya numaraları ile bize ulaşabilirsiniz.
             </p>
@@ -1154,6 +1174,36 @@ export default function PaketlerPage() {
                   <p className="mt-1 text-lg font-bold text-white">{number}</p>
                 </div>
               ))}
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+              <p className="text-sm font-semibold text-white">
+                Sipariş takibi için bize yazın
+              </p>
+
+              <p className="mt-1 text-sm leading-6 text-white/60">
+                Sipariş numaranız otomatik mesajın içine eklenecek. Telegram veya WhatsApp üzerinden hızlıca iletişime geçebilirsiniz.
+              </p>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <a
+                  href={buildTelegramLink(createdOrderNumbers)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-2xl bg-sky-500 px-5 py-3 text-center text-sm font-bold text-black transition hover:bg-sky-400"
+                >
+                  Telegram’dan Yaz
+                </a>
+
+                <a
+                  href={buildWhatsappLink(createdOrderNumbers)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-2xl bg-emerald-500 px-5 py-3 text-center text-sm font-bold text-black transition hover:bg-emerald-400"
+                >
+                  WhatsApp’tan Yaz
+                </a>
+              </div>
             </div>
 
             <div className="mt-5 flex justify-end">
