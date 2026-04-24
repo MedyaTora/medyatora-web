@@ -134,8 +134,17 @@ export async function GET(req: NextRequest) {
         typeof item.min === "number" &&
         typeof item.max === "number"
     );
-
-    const items = rows.map(mapDbServiceToOrderItem);
+    
+    const items = rows
+    .map(mapDbServiceToOrderItem)
+    .filter(
+      (item) =>
+        item.salePriceTl > 0 &&
+        item.salePriceUsd > 0 &&
+        item.salePriceRub > 0 &&
+        item.min > 0 &&
+        item.max > 0
+    );
 
     return NextResponse.json(
       {

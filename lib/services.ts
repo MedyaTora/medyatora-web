@@ -294,9 +294,17 @@ export async function getPlatformServices({
   });
 
   return rows
-    .filter((row) => matchesRegion(row.original_name, region))
-    .filter((row) => matchesCountry(row.original_name, country))
-    .map(mapDbServiceToOrderItem);
+  .filter((row) => matchesRegion(row.original_name, region))
+  .filter((row) => matchesCountry(row.original_name, country))
+  .map(mapDbServiceToOrderItem)
+  .filter(
+    (item) =>
+      item.salePriceTl > 0 &&
+      item.salePriceUsd > 0 &&
+      item.salePriceRub > 0 &&
+      item.min > 0 &&
+      item.max > 0
+  );
 }
 
 export async function getInstagramServices({

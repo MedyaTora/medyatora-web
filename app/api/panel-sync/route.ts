@@ -461,10 +461,25 @@ function normalizePanelServices(
       }
 
       const usdCost = Number(service.rate || 0);
+      const min = Number(service.min || 0);
+      const max = Number(service.max || 0);
+
+      if (!Number.isFinite(usdCost) || usdCost <= 0) {
+        return null;
+      }
+
+      if (!Number.isFinite(min) || !Number.isFinite(max) || min <= 0 || max <= 0) {
+        return null;
+      }
+
       const tlCost = Math.floor(usdCost * tryRate);
       const tlSale = calculateSalePrice(tlCost);
       const usdSale = Number((tlSale / tryRate).toFixed(4));
       const rubSale = Number(((tlSale / tryRate) * rubRate).toFixed(4));
+
+      if (tlCost <= 0 || tlSale <= 0 || usdSale <= 0 || rubSale <= 0) {
+        return null;
+      }
 
       return {
         panel_service_id: service.service,
@@ -476,8 +491,8 @@ function normalizePanelServices(
         subtitle: `Ürün Kodu: ${createSiteCode(service.service)}`,
         guarantee: hasGuarantee(service),
         guarantee_label: normalizeGuarantee(service),
-        min: Number(service.min || 0),
-        max: Number(service.max || 0),
+        min,
+        max,
         speed: detectSpeed(service),
         level: detectLevel(service),
         description: buildDescription(service),
