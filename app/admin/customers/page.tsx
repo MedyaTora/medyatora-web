@@ -4,7 +4,7 @@ export const revalidate = 0;
 import { createClient } from "@supabase/supabase-js";
 
 type CustomerRow = {
-  id: number;
+  id: string;
   created_at: string;
   full_name: string | null;
   username: string | null;
@@ -18,6 +18,8 @@ type CustomerRow = {
   contact_value: string | null;
 };
 
+const PAGE_SIZE = 20;
+
 function formatDate(value: string | null | undefined) {
   if (!value) return "-";
 
@@ -26,6 +28,22 @@ function formatDate(value: string | null | undefined) {
   } catch {
     return "-";
   }
+}
+
+function includesText(value: unknown, q: string) {
+  return String(value || "").toLowerCase().includes(q.toLowerCase());
+}
+
+function getPageItems<T>(items: T[], page: number) {
+  const start = (page - 1) * PAGE_SIZE;
+  return items.slice(start, start + PAGE_SIZE);
+}
+
+function buildPageHref(q: string, page: number) {
+  const params = new URLSearchParams();
+  if (q) params.set("q", q);
+  params.set("page", String(page));
+  return `/admin/customers?${params.toString()}`;
 }
 
 function ErrorScreen({ message }: { message: string }) {
@@ -38,24 +56,23 @@ function ErrorScreen({ message }: { message: string }) {
   );
 }
 
-function InfoBox({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-white/40">
-        {label}
-      </p>
-      <p className="break-words text-sm text-white/90">{value}</p>
-    </div>
-  );
-}
-
-export default async function CustomersPage() {
+export default async function CustomersPage({
+  searchParams,
+}: {
+  searchParams?: {
+    q?: string;
+    page?: string;
+  };
+}) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !supabaseServiceRoleKey) {
     return <ErrorScreen message="Supabase environment variables eksik." />;
   }
+
+  const q = searchParams?.q?.trim() || "";
+  const page = Math.max(Number(searchParams?.page || 1), 1);
 
   const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
@@ -83,6 +100,26 @@ export default async function CustomersPage() {
 
   const customers = (data || []) as CustomerRow[];
 
+  const filteredCustomers = customers.filter((item) => {
+    if (!q) return true;
+
+    return (
+      includesText(item.full_name, q) ||
+      includesText(item.username, q) ||
+      includesText(item.account_link, q) ||
+      includesText(item.account_type, q) ||
+      includesText(item.content_type, q) ||
+      includesText(item.contact_type, q) ||
+      includesText(item.contact_value, q) ||
+      includesText(item.main_problem, q) ||
+      includesText(item.main_missing, q) ||
+      includesText(item.id, q)
+    );
+  });
+
+  const totalPages = Math.max(Math.ceil(filteredCustomers.length / PAGE_SIZE), 1);
+  const pageItems = getPageItems(filteredCustomers, page);
+
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#171717_0%,#090909_55%,#050505_100%)] p-4 text-white md:p-8">
       <div className="mx-auto max-w-7xl space-y-8">
@@ -93,14 +130,17 @@ export default async function CustomersPage() {
                 <span className="h-2 w-2 rounded-full bg-emerald-400" />
                 MedyaTora Yönetim
               </div>
+
               <p className="text-xs uppercase tracking-[0.25em] text-white/40">
                 Customers
               </p>
+
               <h1 className="mt-2 text-3xl font-bold tracking-tight md:text-4xl">
                 Müşteriler
               </h1>
+
               <p className="mt-2 max-w-2xl text-sm leading-6 text-white/55">
-                Müşteri kayıtlarını, iletişim bilgilerini ve temel hesap verilerini tek ekrandan takip et.
+                Müşteri kayıtlarını arama ve sayfalama ile daha hızlı takip et.
               </p>
             </div>
 
@@ -111,6 +151,7 @@ export default async function CustomersPage() {
               >
                 Başvurular
               </a>
+
               <a
                 href="/admin/customers"
                 className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/[0.08]"
@@ -121,64 +162,127 @@ export default async function CustomersPage() {
           </div>
         </header>
 
-        <section className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-2xl font-bold tracking-tight">Müşteri Listesi</h2>
-          <span className="text-sm text-white/45">{customers.length} kayıt</span>
-        </section>
+        <form className="rounded-[28px] border border-white/10 bg-white/[0.03] p-5 md:p-6">
+          <div className="grid gap-4 md:grid-cols-[1fr_auto_auto] md:items-end">
+            <div>
+              <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-white/40">
+                Müşteri Ara
+              </label>
+              <input
+                name="q"
+                defaultValue={q}
+                placeholder="İsim, kullanıcı adı, iletişim, hesap linki..."
+                className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white outline-none placeholder:text-white/30"
+              />
+            </div>
 
-        {customers.length === 0 ? (
-          <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-5 text-white/45">
-            Kayıt yok
+            <button className="rounded-2xl bg-white px-5 py-3 text-sm font-bold text-black">
+              Ara
+            </button>
+
+            <a
+              href="/admin/customers"
+              className="rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 text-center text-sm font-semibold text-white/80"
+            >
+              Temizle
+            </a>
           </div>
-        ) : (
-          <div className="grid gap-4">
-            {customers.map((item) => (
-              <div
-                key={item.id}
-                className="rounded-[28px] border border-white/10 bg-white/[0.03] p-5 shadow-[0_10px_30px_rgba(0,0,0,0.2)] md:p-6"
-              >
-                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                  <div className="min-w-0">
-                    <h3 className="text-xl font-semibold tracking-tight">
-                      {item.full_name || "İsimsiz müşteri"}
-                    </h3>
-                    <p className="mt-1 text-sm text-white/45">
+        </form>
+
+        <section className="rounded-[28px] border border-white/10 bg-white/[0.03] p-5 md:p-6">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-2xl font-bold tracking-tight">Müşteri Listesi</h2>
+            <span className="text-sm text-white/45">
+              {filteredCustomers.length} kayıt • Sayfa {page}/{totalPages}
+            </span>
+          </div>
+
+          <div className="mt-5 overflow-x-auto">
+            <table className="w-full min-w-[980px] border-separate border-spacing-y-2 text-left text-sm">
+              <thead className="text-xs uppercase tracking-wide text-white/40">
+                <tr>
+                  <th className="px-3 py-2">Tarih</th>
+                  <th className="px-3 py-2">Müşteri</th>
+                  <th className="px-3 py-2">Kullanıcı</th>
+                  <th className="px-3 py-2">Hesap Türü</th>
+                  <th className="px-3 py-2">İçerik</th>
+                  <th className="px-3 py-2">İletişim</th>
+                  <th className="px-3 py-2">Problem</th>
+                  <th className="px-3 py-2">İşlem</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {pageItems.map((item) => (
+                  <tr key={item.id} className="bg-black/20">
+                    <td className="rounded-l-2xl px-3 py-3 text-white/60">
                       {formatDate(item.created_at)}
-                    </p>
-                  </div>
+                    </td>
 
-                  <a
-                    href={`/admin/customers/${item.id}`}
-                    className="inline-flex items-center rounded-2xl bg-white px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-white/90"
-                  >
-                    Detayı Aç
-                  </a>
-                </div>
+                    <td className="px-3 py-3 font-semibold">
+                      {item.full_name || "İsimsiz müşteri"}
+                    </td>
 
-                <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  <InfoBox label="Kullanıcı Adı" value={item.username || "-"} />
-                  <InfoBox label="Hesap Linki" value={item.account_link || "-"} />
-                  <InfoBox label="Hesap Türü" value={item.account_type || "-"} />
-                  <InfoBox label="İçerik Türü" value={item.content_type || "-"} />
-                  <InfoBox
-                    label="Günlük Paylaşım"
-                    value={
-                      item.daily_post_count !== null && item.daily_post_count !== undefined
-                        ? String(item.daily_post_count)
-                        : "-"
-                    }
-                  />
-                  <InfoBox
-                    label="İletişim"
-                    value={`${item.contact_type || "-"} / ${item.contact_value || "-"}`}
-                  />
-                  <InfoBox label="Ana Problem" value={item.main_problem || "-"} />
-                  <InfoBox label="Ana Eksik" value={item.main_missing || "-"} />
-                </div>
+                    <td className="px-3 py-3 text-white/70">
+                      {item.username || "-"}
+                    </td>
+
+                    <td className="px-3 py-3 text-white/70">
+                      {item.account_type || "-"}
+                    </td>
+
+                    <td className="px-3 py-3 text-white/70">
+                      {item.content_type || "-"}
+                    </td>
+
+                    <td className="px-3 py-3 text-white/70">
+                      {item.contact_type || "-"} / {item.contact_value || "-"}
+                    </td>
+
+                    <td className="max-w-[260px] truncate px-3 py-3 text-white/70">
+                      {item.main_problem || "-"}
+                    </td>
+
+                    <td className="rounded-r-2xl px-3 py-3">
+                      <a
+                        href={`/admin/customers/${item.id}`}
+                        className="rounded-xl bg-white px-3 py-2 text-xs font-bold text-black"
+                      >
+                        Detay
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {pageItems.length === 0 ? (
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-5 text-white/45">
+                Kayıt yok
               </div>
-            ))}
+            ) : null}
           </div>
-        )}
+
+          <div className="mt-5 flex items-center justify-end gap-3">
+            {page > 1 ? (
+              <a
+                href={buildPageHref(q, page - 1)}
+                className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white/80"
+              >
+                ← Önceki
+              </a>
+            ) : null}
+
+            {page < totalPages ? (
+              <a
+                href={buildPageHref(q, page + 1)}
+                className="rounded-xl bg-white px-4 py-2 text-sm font-bold text-black"
+              >
+                Sonraki →
+              </a>
+            ) : null}
+          </div>
+        </section>
       </div>
     </main>
   );
