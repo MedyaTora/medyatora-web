@@ -1330,9 +1330,9 @@ export default function PaketlerPage() {
               <p className="mt-1 text-sm leading-6 text-white/60">
   Sipariş numaranız otomatik mesajın içine eklenecek. Ödeme ve işlem adımları için
   Telegram veya WhatsApp üzerinden bize ulaşabilirsiniz.
-              </p>
+             </p>
 
-             <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
   <a
     href={buildTelegramLink(createdOrderNumbers)}
     target="_blank"
