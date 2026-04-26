@@ -266,14 +266,9 @@ function getGuaranteeLabel(row: DbServiceRow) {
 
   if (days) return `${days} Gün Garantili`;
 
-  if (row.guarantee || normalizeText(row.guarantee_label).includes("garanti")) {
-    return row.guarantee_label && row.guarantee_label !== "Garantisiz"
-      ? row.guarantee_label
-      : "Garantili";
-  }
-
   return "Garantisiz";
 }
+
 
 function getGuaranteeScore(row: DbServiceRow) {
   const days = detectGuaranteeDays(row);
@@ -373,14 +368,14 @@ function buildQualityDescription(level: QualityLevel) {
 
 function buildGuaranteeDescription(guaranteeLabel: string, guaranteeDays: number | null) {
   if (guaranteeLabel === "Garantisiz") {
-    return "Bu paket garantisizdir. Teslimat sonrası düşüş, yavaşlama veya dalgalanma yaşanabilir; yeniden gönderim taahhüdü bulunmaz.";
+    return "Bu hizmet garantisizdir. Teslimat sonrası düşüş, yavaşlama veya dalgalanma yaşanabilir; yeniden gönderim taahhüdü bulunmaz.";
   }
 
   if (guaranteeDays) {
-    return `Bu pakette ${guaranteeDays} gün garanti desteği bulunur. Garanti süresi içinde uygun düşüşlerde destek sağlanabilir.`;
+    return `Bu hizmette ${guaranteeDays} gün garanti desteği bulunur. Garanti süresi içinde uygun düşüşlerde destek sağlanabilir.`;
   }
 
-  return "Bu pakette garanti desteği bulunur. Garanti kapsamı seçilen servisin şartlarına göre değerlendirilir.";
+  return "Bu hizmet garantisizdir. Teslimat sonrası düşüş, yavaşlama veya dalgalanma yaşanabilir; yeniden gönderim taahhüdü bulunmaz.";
 }
 
 function buildCategoryDescription(category: string) {

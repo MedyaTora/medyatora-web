@@ -40,6 +40,8 @@ type OrderRequestRow = {
   contact_value: string | null;
   platform: string | null;
   category: string | null;
+  service_id: number | null;
+  site_code: number | null;
   service_title: string | null;
   quantity: number | null;
   total_price: number | null;
@@ -177,6 +179,8 @@ export default async function AdminPage({
       contact_value,
       platform,
       category,
+      service_id,
+      site_code,
       service_title,
       quantity,
       total_price,
@@ -231,7 +235,9 @@ export default async function AdminPage({
       includesText(item.target_username, q) ||
       includesText(item.target_link, q) ||
       includesText(item.service_title, q) ||
-      includesText(item.platform, q);
+      includesText(item.platform, q) ||
+      includesText(item.service_id, q) ||
+      includesText(item.site_code, q);
 
     return statusOk && platformOk && searchOk;
   });
@@ -557,6 +563,8 @@ function OrderTable({
                 <div className="grid gap-2 text-sm text-white/70 md:grid-cols-2">
                   <MiniInfo label="Telefon" value={item.phone_number || "-"} />
                   <MiniInfo label="İletişim" value={`${item.contact_type || "-"} / ${item.contact_value || "-"}`} />
+                  <MiniInfo label="Panel Servis ID" value={item.service_id ?? "-"} />
+                  <MiniInfo label="Müşteri Ürün Kodu" value={item.site_code ?? "-"} />
                   <MiniInfo label="Ürün" value={item.service_title || "-"} />
                   <MiniInfo label="Hedef" value={item.target_username || item.target_link || "-"} />
                   <MiniInfo label="Miktar" value={item.quantity ?? "-"} />
