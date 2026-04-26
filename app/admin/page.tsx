@@ -564,12 +564,18 @@ function OrderTable({
                 </div>
 
                 <OrderStatusCardActions
-                  id={item.id}
-                  initialStatus={item.status}
-                  initialStartCount={item.start_count}
-                  initialEndCount={item.end_count}
-                  initialCompletionNote={item.completion_note}
-                />
+  id={item.id}
+  initialStatus={item.status}
+  initialStartCount={item.start_count}
+  initialEndCount={item.end_count}
+  initialCompletionNote={item.completion_note}
+  orderNumber={item.order_number}
+  fullName={item.full_name}
+  contactType={item.contact_type}
+  contactValue={item.contact_value}
+  serviceTitle={item.service_title}
+  targetUsername={item.target_username}
+/>
               </div>
             </div>
           ))

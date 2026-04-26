@@ -152,6 +152,145 @@ function makeCartId() {
   return Math.random().toString(36).slice(2, 10);
 }
 
+function OrderBeforeNotice() {
+  return (
+    <section className="rounded-[28px] border border-amber-400/20 bg-amber-400/10 p-4 shadow-[0_10px_40px_rgba(0,0,0,0.25)] backdrop-blur sm:p-5">
+      <div className="mb-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-amber-300">
+          MedyaTora Bilgilendirme Sistemi
+        </p>
+
+        <h2 className="mt-2 text-xl font-bold text-white">
+          Sipariş Öncesi Önemli Bilgilendirme
+        </h2>
+
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-white/65">
+          Sipariş oluşturmadan önce aşağıdaki bilgileri dikkatlice kontrol ediniz.
+          Bu bilgiler işlemin sorunsuz, hızlı ve doğru şekilde tamamlanması için önemlidir.
+        </p>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+          <p className="text-sm font-semibold text-white">💳 Fiyat Bilgisi</p>
+          <p className="mt-2 text-sm leading-6 text-white/60">
+            Tüm fiyatlara KDV + vergiler dahildir. Sipariş ekranında gördüğünüz tutar
+            nihai ödeme tutarıdır.
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+          <p className="text-sm font-semibold text-white">🔓 Profil Durumu</p>
+          <p className="mt-2 text-sm leading-6 text-white/60">
+            İşlem yapılacak profil, gönderi, video veya kanal herkese açık olmalıdır.
+            Gizli ya da erişilemeyen hedeflerde işlem başlatılamaz.
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+          <p className="text-sm font-semibold text-white">⏱️ Başlangıç Süresi</p>
+          <p className="mt-2 text-sm leading-6 text-white/60">
+            Başlangıç süresi servise göre değişebilir. Genellikle işlemler 0-24 saat
+            içinde başlar, yoğunluk durumunda süre uzayabilir.
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+          <p className="text-sm font-semibold text-white">↩️ İade Durumu</p>
+          <p className="mt-2 text-sm leading-6 text-white/60">
+            Ürün tamamlanamazsa ödeme iadesi yapılır. Sipariş başladıktan sonra keyfi
+            iptal/iade yapılamaz.
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+          <p className="text-sm font-semibold text-white">🧾 Sipariş No</p>
+          <p className="mt-2 text-sm leading-6 text-white/60">
+            Sipariş oluşturulduktan sonra size özel sipariş numarası verilir. Destek
+            taleplerinde bu numara ile işlem yapılır.
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+          <p className="text-sm font-semibold text-white">🔗 Link Kontrolü</p>
+          <p className="mt-2 text-sm leading-6 text-white/60">
+            Kullanıcı adı, profil linki, gönderi linki veya kanal bağlantısı doğru
+            girilmelidir. Hatalı bilgi işlem gecikmesine neden olabilir.
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+          <p className="text-sm font-semibold text-white">📦 Teslimat Akışı</p>
+          <p className="mt-2 text-sm leading-6 text-white/60">
+            Bazı servislerde teslimat kademeli ilerleyebilir. Bu durum işlemin daha
+            dengeli ve doğal görünmesi için uygulanır.
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+          <p className="text-sm font-semibold text-white">🛡️ Garanti Bilgisi</p>
+          <p className="mt-2 text-sm leading-6 text-white/60">
+            Garantili servislerde belirtilen süre içinde destek sağlanır. Garanti süresi
+            seçilen servise göre değişir.
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 lg:grid-cols-2">
+        <div className="rounded-2xl border border-amber-400/20 bg-black/20 p-4">
+          <p className="text-sm font-semibold text-white">
+            ⚠️ Dikkat Edilmesi Gerekenler
+          </p>
+
+          <div className="mt-3 space-y-2 text-sm leading-6 text-white/65">
+            <p>• Yanlış kullanıcı adı veya link girilirse işlem gecikebilir.</p>
+            <p>• Sipariş tamamlandıktan sonra profil tekrar gizliye alınabilir.</p>
+            <p>• Minimum ve maksimum sipariş miktarı seçilen servise göre değişir.</p>
+            <p>• Sipariş devam ederken hedef kullanıcı adı veya link değiştirilmemelidir.</p>
+            <p>• Aynı hedefe aynı anda birden fazla benzer sipariş verilmesi önerilmez.</p>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4">
+          <p className="text-sm font-semibold text-white">
+            ✅ Güvenli Sipariş İçin Öneriler
+          </p>
+
+          <div className="mt-3 space-y-2 text-sm leading-6 text-white/65">
+            <p>• Hedef profilin, gönderinin veya kanalın açık olduğundan emin olun.</p>
+            <p>• Sipariş miktarını servis minimum ve maksimum limitlerine göre seçin.</p>
+            <p>• Ödeme sonrası dekontu seçtiğiniz iletişim kanalından bize iletin.</p>
+            <p>• Destek için WhatsApp veya Telegram üzerinden sipariş numaranızı paylaşın.</p>
+            <p>• İşlem tamamlanana kadar içeriği silmeyin veya erişime kapatmayın.</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-2xl border border-sky-400/20 bg-sky-400/10 p-4">
+        <p className="text-sm font-semibold text-white">
+          🌴 Örnek Servis Bilgilendirmesi
+        </p>
+
+        <div className="mt-3 grid gap-3 text-sm leading-6 text-white/65 md:grid-cols-3">
+          <p>
+            <span className="font-semibold text-white">Coğrafi Bölge:</span> Global / Türkiye / Rusya
+          </p>
+          <p>
+            <span className="font-semibold text-white">Başlangıç:</span> Genellikle 0-24 saat
+          </p>
+          <p>
+            <span className="font-semibold text-white">Min - Maks:</span> Seçilen servise göre değişir
+          </p>
+        </div>
+
+        <p className="mt-3 text-sm leading-6 text-white/60">
+          Örnek bağlantı formatı: https://www.instagram.com/p/XXXXXXXX/
+        </p>
+      </div>
+    </section>
+  );
+}
+
 export default function PaketlerPage() {
   const platforms = getFeaturedPlatforms();
 
@@ -569,6 +708,8 @@ export default function PaketlerPage() {
             </div>
           </div>
         </section>
+
+        <OrderBeforeNotice />
 
         <section className="rounded-[28px] border border-white/10 bg-[#121826]/95 p-4 shadow-[0_10px_40px_rgba(0,0,0,0.25)] backdrop-blur sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
