@@ -112,7 +112,7 @@ function TextCard({
 export default async function OrderDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -121,7 +121,8 @@ export default async function OrderDetailPage({
     return <ErrorScreen message="Supabase environment variables eksik." />;
   }
 
-  const orderId = Number(params.id);
+  const resolvedParams = await params;
+  const orderId = Number(resolvedParams.id);
 
   if (!Number.isFinite(orderId) || orderId <= 0) {
     return <ErrorScreen message="Geçersiz sipariş id." />;
