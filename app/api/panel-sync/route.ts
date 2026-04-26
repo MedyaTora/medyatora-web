@@ -74,18 +74,42 @@ function getSearchText(service: PanelService): string {
 function normalizeGuarantee(service: PanelService): string {
   const text = getSearchText(service);
 
-  if (text.includes("7 gün") || text.includes("7 day")) return "7 Gün Garantili";
-  if (text.includes("30 gün") || text.includes("30 day")) return "30 Gün Garantili";
-  if (text.includes("60 gün") || text.includes("60 day")) return "60 Gün Garantili";
-  if (text.includes("90 gün") || text.includes("90 day")) return "90 Gün Garantili";
-
   if (
     text.includes("ömür boyu") ||
+    text.includes("omur boyu") ||
     text.includes("lifetime") ||
+    text.includes("life time") ||
     text.includes("non drop") ||
-    text.includes("düşüş olmaz")
+    text.includes("nondrop") ||
+    text.includes("no drop") ||
+    text.includes("düşüş olmaz") ||
+    text.includes("dusus olmaz") ||
+    text.includes("dusmez") ||
+    text.includes("düşmez")
   ) {
     return "365 Gün Garantili";
+  }
+
+  const dayMatch = text.match(/(\d+)\s*(gün|gun|day|days|день|дней)/i);
+
+  if (dayMatch?.[1]) {
+    const days = Number(dayMatch[1]);
+
+    if (Number.isFinite(days) && days > 0) {
+      if (days >= 365) return "365 Gün Garantili";
+      return `${days} Gün Garantili`;
+    }
+  }
+
+  if (
+    service.refill ||
+    text.includes("refill") ||
+    text.includes("guarantee") ||
+    text.includes("guaranteed") ||
+    text.includes("garanti") ||
+    text.includes("telafi")
+  ) {
+    return "Garantili";
   }
 
   return "Garantisiz";
@@ -153,6 +177,115 @@ function detectCategory(service: PanelService): string {
   const text = getSearchText(service);
 
   if (
+    text.includes("story") ||
+    text.includes("stories") ||
+    text.includes("hikaye") ||
+    text.includes("öykü") ||
+    text.includes("oyku")
+  ) {
+    if (
+      text.includes("view") ||
+      text.includes("views") ||
+      text.includes("izlenme") ||
+      text.includes("görüntü") ||
+      text.includes("goruntu")
+    ) {
+      return "story_izlenme";
+    }
+
+    return "story";
+  }
+
+  if (text.includes("reels") || text.includes("reel")) {
+    if (
+      text.includes("like") ||
+      text.includes("likes") ||
+      text.includes("beğeni") ||
+      text.includes("begeni")
+    ) {
+      return "reels_begeni";
+    }
+
+    if (
+      text.includes("comment") ||
+      text.includes("comments") ||
+      text.includes("yorum")
+    ) {
+      return "reels_yorum";
+    }
+
+    if (
+      text.includes("view") ||
+      text.includes("views") ||
+      text.includes("izlenme") ||
+      text.includes("görüntü") ||
+      text.includes("goruntu")
+    ) {
+      return "reels_izlenme";
+    }
+
+    return "reels";
+  }
+
+  if (text.includes("shorts") || text.includes("short")) {
+    if (
+      text.includes("view") ||
+      text.includes("views") ||
+      text.includes("izlenme")
+    ) {
+      return "shorts_izlenme";
+    }
+
+    if (
+      text.includes("like") ||
+      text.includes("likes") ||
+      text.includes("beğeni") ||
+      text.includes("begeni")
+    ) {
+      return "shorts_begeni";
+    }
+
+    return "shorts";
+  }
+
+  if (
+    text.includes("live") ||
+    text.includes("canlı") ||
+    text.includes("canli") ||
+    text.includes("livestream") ||
+    text.includes("stream")
+  ) {
+    return "canli_yayin";
+  }
+
+  if (
+    text.includes("profile visit") ||
+    text.includes("profile visits") ||
+    text.includes("profil ziyareti") ||
+    text.includes("profil ziyaret")
+  ) {
+    return "profil_ziyareti";
+  }
+
+  if (
+    text.includes("sayfa beğeni") ||
+    text.includes("sayfa begeni") ||
+    text.includes("page like") ||
+    text.includes("page likes")
+  ) {
+    return "sayfa_begenisi";
+  }
+
+  if (
+    text.includes("grup üye") ||
+    text.includes("grup uye") ||
+    text.includes("group member") ||
+    text.includes("group members")
+  ) {
+    return "grup_uyesi";
+  }
+
+  if (
     text.includes("takipçi") ||
     text.includes("takipci") ||
     text.includes("followers") ||
@@ -164,7 +297,8 @@ function detectCategory(service: PanelService): string {
   if (
     text.includes("abone") ||
     text.includes("subscriber") ||
-    text.includes("subscribers")
+    text.includes("subscribers") ||
+    text.includes("subs ")
   ) {
     return "abone";
   }
@@ -198,21 +332,58 @@ function detectCategory(service: PanelService): string {
   if (
     text.includes("kaydet") ||
     text.includes("save") ||
-    text.includes("saves")
+    text.includes("saves") ||
+    text.includes("bookmark") ||
+    text.includes("bookmarks")
   ) {
     return "kaydetme";
   }
 
-  if (text.includes("retweet")) {
+  if (
+    text.includes("paylaşım") ||
+    text.includes("paylasim") ||
+    text.includes("share") ||
+    text.includes("shares")
+  ) {
+    return "paylasim";
+  }
+
+  if (text.includes("repost")) {
+    return "repost";
+  }
+
+  if (text.includes("retweet") || text.includes("rt ")) {
     return "retweet";
   }
 
   if (
     text.includes("reaksiyon") ||
     text.includes("reaction") ||
+    text.includes("reactions") ||
     text.includes("emoji reaction")
   ) {
     return "reaksiyon";
+  }
+
+  if (
+    text.includes("poll") ||
+    text.includes("vote") ||
+    text.includes("votes") ||
+    text.includes("oylama") ||
+    text.includes("anket")
+  ) {
+    return "oylama";
+  }
+
+  if (
+    text.includes("play") ||
+    text.includes("plays") ||
+    text.includes("stream") ||
+    text.includes("streams") ||
+    text.includes("listen") ||
+    text.includes("dinlenme")
+  ) {
+    return "dinlenme";
   }
 
   if (
@@ -220,10 +391,7 @@ function detectCategory(service: PanelService): string {
     text.includes("görüntü") ||
     text.includes("goruntu") ||
     text.includes("views") ||
-    text.includes("view") ||
-    text.includes("reels") ||
-    text.includes("hikaye") ||
-    text.includes("story")
+    text.includes("view")
   ) {
     return "izlenme";
   }
@@ -252,9 +420,26 @@ function buildCleanTitle(service: PanelService): string {
   else if (category === "yorum") parts.push("Yorum");
   else if (category === "izlenme") parts.push("İzlenme");
   else if (category === "kaydetme") parts.push("Kaydetme");
+  else if (category === "paylasim") parts.push("Paylaşım");
+  else if (category === "repost") parts.push("Repost");
   else if (category === "retweet") parts.push("Retweet");
   else if (category === "reaksiyon") parts.push("Reaksiyon");
-  else parts.push("Servis");
+  else if (category === "story_izlenme") parts.push("Story İzlenme");
+  else if (category === "reels_izlenme") parts.push("Reels İzlenme");
+  else if (category === "reels_begeni") parts.push("Reels Beğeni");
+  else if (category === "reels_yorum") parts.push("Reels Yorum");
+  else if (category === "shorts_izlenme") parts.push("Shorts İzlenme");
+  else if (category === "shorts_begeni") parts.push("Shorts Beğeni");
+  else if (category === "canli_yayin") parts.push("Canlı Yayın");
+  else if (category === "profil_ziyareti") parts.push("Profil Ziyareti");
+  else if (category === "sayfa_begenisi") parts.push("Sayfa Beğenisi");
+  else if (category === "grup_uyesi") parts.push("Grup Üyesi");
+  else if (category === "oylama") parts.push("Oylama");
+  else if (category === "dinlenme") parts.push("Dinlenme");
+  else if (category === "story") parts.push("Story");
+  else if (category === "reels") parts.push("Reels");
+  else if (category === "shorts") parts.push("Shorts");
+  else parts.push("Diğer Servis");
 
   if (
     text.includes("morethanpanel türk servisleri") ||
@@ -324,9 +509,9 @@ function detectSpeed(service: PanelService): string {
 function detectLevel(service: PanelService): string {
   const text = getSearchText(service);
 
-  if (text.includes("vip") || text.includes("uhq")) return "Elit";
-  if (text.includes("hq") || text.includes("gerçek") || text.includes("real")) return "Orta";
-  return "Temel";
+  if (text.includes("vip") || text.includes("uhq") || text.includes("premium")) return "Prime";
+  if (text.includes("hq") || text.includes("gerçek") || text.includes("real") || text.includes("verified")) return "Plus";
+  return "Core";
 }
 
 function buildDescription(service: PanelService): string {
@@ -456,10 +641,6 @@ function normalizePanelServices(
       const platform = detectPlatform(service);
       const category = detectCategory(service);
 
-      if (platform === "other" || category === "other") {
-        return null;
-      }
-
       const usdCost = Number(service.rate || 0);
       const min = Number(service.min || 0);
       const max = Number(service.max || 0);
@@ -511,9 +692,7 @@ function normalizePanelServices(
     .filter((item): item is NormalizedServiceRow => item !== null);
 }
 
-async function deactivateMissingServices(
-  syncedIds: number[]
-): Promise<number> {
+async function deactivateMissingServices(syncedIds: number[]): Promise<number> {
   if (syncedIds.length === 0) return 0;
 
   const supabase = createAdminSupabaseClient();

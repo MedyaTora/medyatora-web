@@ -3,12 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { OrderServiceItem } from "@/lib/services";
 import { getDictionary, type Locale } from "@/lib/i18n";
-import { getFeaturedPlatforms } from "@/lib/platforms";
-
-type CategoryItem = {
-  slug: string;
-  name: string;
-};
+import { getAllPlatforms } from "@/lib/platforms";
 
 type CurrencyCode = "TL" | "USD" | "RUB";
 type CheckoutMode = "single" | "cart" | null;
@@ -33,42 +28,64 @@ type CartItem = {
   order_note: string;
 };
 
-const PLATFORM_CATEGORY_MAP: Record<string, CategoryItem[]> = {
-  instagram: [
-    { slug: "takipci", name: "Takipçi" },
-    { slug: "begeni", name: "Beğeni" },
-    { slug: "yorum", name: "Yorum" },
-    { slug: "izlenme", name: "İzlenme" },
-    { slug: "kaydetme", name: "Kaydetme" },
-  ],
-  tiktok: [
-    { slug: "takipci", name: "Takipçi" },
-    { slug: "begeni", name: "Beğeni" },
-    { slug: "yorum", name: "Yorum" },
-    { slug: "izlenme", name: "İzlenme" },
-  ],
-  youtube: [
-    { slug: "abone", name: "Abone" },
-    { slug: "begeni", name: "Beğeni" },
-    { slug: "yorum", name: "Yorum" },
-    { slug: "izlenme", name: "İzlenme" },
-  ],
-  telegram: [
-    { slug: "uye", name: "Üye" },
-    { slug: "izlenme", name: "İzlenme" },
-    { slug: "reaksiyon", name: "Reaksiyon" },
-  ],
-  facebook: [
-    { slug: "takipci", name: "Takipçi" },
-    { slug: "begeni", name: "Beğeni" },
-    { slug: "izlenme", name: "İzlenme" },
-  ],
-  x: [
-    { slug: "takipci", name: "Takipçi" },
-    { slug: "begeni", name: "Beğeni" },
-    { slug: "retweet", name: "Retweet" },
-    { slug: "izlenme", name: "Görüntülenme" },
-  ],
+const CATEGORY_LABELS: Record<string, string> = {
+  takipci: "Takipçi",
+  begeni: "Beğeni",
+  yorum: "Yorum",
+  izlenme: "İzlenme",
+  kaydetme: "Kaydetme",
+  paylasim: "Paylaşım",
+  repost: "Repost",
+  retweet: "Retweet",
+  abone: "Abone",
+  uye: "Üye",
+  reaksiyon: "Reaksiyon",
+  story: "Story",
+  story_izlenme: "Story İzlenme",
+  reels: "Reels",
+  reels_izlenme: "Reels İzlenme",
+  reels_begeni: "Reels Beğeni",
+  reels_yorum: "Reels Yorum",
+  shorts: "Shorts",
+  shorts_izlenme: "Shorts İzlenme",
+  shorts_begeni: "Shorts Beğeni",
+  canli_yayin: "Canlı Yayın",
+  profil_ziyareti: "Profil Ziyareti",
+  sayfa_begenisi: "Sayfa Beğenisi",
+  grup_uyesi: "Grup Üyesi",
+  oylama: "Oylama",
+  dinlenme: "Dinlenme",
+  other: "Diğer",
+};
+
+const CATEGORY_SORT_ORDER: Record<string, number> = {
+  takipci: 1,
+  abone: 2,
+  uye: 3,
+  begeni: 4,
+  yorum: 5,
+  izlenme: 6,
+  reels_izlenme: 7,
+  reels_begeni: 8,
+  reels_yorum: 9,
+  shorts_izlenme: 10,
+  shorts_begeni: 11,
+  story_izlenme: 12,
+  kaydetme: 13,
+  paylasim: 14,
+  repost: 15,
+  retweet: 16,
+  reaksiyon: 17,
+  canli_yayin: 18,
+  profil_ziyareti: 19,
+  sayfa_begenisi: 20,
+  grup_uyesi: 21,
+  oylama: 22,
+  dinlenme: 23,
+  story: 24,
+  reels: 25,
+  shorts: 26,
+  other: 999,
 };
 
 const currencyOptions: CurrencyCode[] = ["TL", "USD", "RUB"];
@@ -77,6 +94,10 @@ const contactTypes: ContactType[] = ["Telegram", "WhatsApp", "Instagram", "E-pos
 
 const TELEGRAM_USERNAME = "medyatora";
 const WHATSAPP_NUMBER = "905530739292";
+
+function getCategoryName(slug: string) {
+  return CATEGORY_LABELS[slug] || slug.replace(/_/g, " ");
+}
 
 function buildOrderMessage(orderNumbers: string[]) {
   return `Merhaba, MedyaTora üzerinden sipariş verdim.
@@ -138,11 +159,68 @@ function getCategoryLabel(name: string, locale: Locale) {
     Yorum: { tr: "Yorum", en: "Comments", ru: "Комментарии" },
     İzlenme: { tr: "İzlenme", en: "Views", ru: "Просмотры" },
     Kaydetme: { tr: "Kaydetme", en: "Saves", ru: "Сохранения" },
+    Paylaşım: { tr: "Paylaşım", en: "Shares", ru: "Репосты" },
+    Repost: { tr: "Repost", en: "Repost", ru: "Репост" },
+    Retweet: { tr: "Retweet", en: "Retweet", ru: "Ретвит" },
     Abone: { tr: "Abone", en: "Subscribers", ru: "Подписчики" },
     Üye: { tr: "Üye", en: "Members", ru: "Участники" },
     Reaksiyon: { tr: "Reaksiyon", en: "Reactions", ru: "Реакции" },
-    Görüntülenme: { tr: "Görüntülenme", en: "Views", ru: "Просмотры" },
-    Retweet: { tr: "Retweet", en: "Retweet", ru: "Ретвит" },
+    Story: { tr: "Story", en: "Story", ru: "История" },
+    "Story İzlenme": {
+      tr: "Story İzlenme",
+      en: "Story Views",
+      ru: "Просмотры историй",
+    },
+    Reels: { tr: "Reels", en: "Reels", ru: "Reels" },
+    "Reels İzlenme": {
+      tr: "Reels İzlenme",
+      en: "Reels Views",
+      ru: "Просмотры Reels",
+    },
+    "Reels Beğeni": {
+      tr: "Reels Beğeni",
+      en: "Reels Likes",
+      ru: "Лайки Reels",
+    },
+    "Reels Yorum": {
+      tr: "Reels Yorum",
+      en: "Reels Comments",
+      ru: "Комментарии Reels",
+    },
+    Shorts: { tr: "Shorts", en: "Shorts", ru: "Shorts" },
+    "Shorts İzlenme": {
+      tr: "Shorts İzlenme",
+      en: "Shorts Views",
+      ru: "Просмотры Shorts",
+    },
+    "Shorts Beğeni": {
+      tr: "Shorts Beğeni",
+      en: "Shorts Likes",
+      ru: "Лайки Shorts",
+    },
+    "Canlı Yayın": {
+      tr: "Canlı Yayın",
+      en: "Live Stream",
+      ru: "Прямой эфир",
+    },
+    "Profil Ziyareti": {
+      tr: "Profil Ziyareti",
+      en: "Profile Visits",
+      ru: "Посещения профиля",
+    },
+    "Sayfa Beğenisi": {
+      tr: "Sayfa Beğenisi",
+      en: "Page Likes",
+      ru: "Лайки страницы",
+    },
+    "Grup Üyesi": {
+      tr: "Grup Üyesi",
+      en: "Group Members",
+      ru: "Участники группы",
+    },
+    Oylama: { tr: "Oylama", en: "Poll / Votes", ru: "Голосования" },
+    Dinlenme: { tr: "Dinlenme", en: "Plays / Streams", ru: "Прослушивания" },
+    Diğer: { tr: "Diğer", en: "Other", ru: "Другое" },
   };
 
   return map[name]?.[locale] || name;
@@ -292,7 +370,7 @@ function OrderBeforeNotice() {
 }
 
 export default function PaketlerPage() {
-  const platforms = getFeaturedPlatforms();
+  const platforms = getAllPlatforms();
 
   const [selectedPlatform, setSelectedPlatform] = useState(
     platforms[0]?.slug || "instagram"
@@ -372,12 +450,27 @@ export default function PaketlerPage() {
   }, [services, selectedPlatform]);
 
   const categories = useMemo(() => {
-    const availableCategories = PLATFORM_CATEGORY_MAP[selectedPlatform] ?? [];
-
-    return availableCategories.filter((category) =>
-      platformServices.some((service) => service.category === category.slug)
+    const uniqueCategories = Array.from(
+      new Set(
+        platformServices
+          .map((service) => service.category)
+          .filter((category): category is string => Boolean(category))
+      )
     );
-  }, [selectedPlatform, platformServices]);
+
+    return uniqueCategories
+      .map((slug) => ({
+        slug,
+        name: getCategoryName(slug),
+      }))
+      .sort((a, b) => {
+        const aOrder = CATEGORY_SORT_ORDER[a.slug] ?? 500;
+        const bOrder = CATEGORY_SORT_ORDER[b.slug] ?? 500;
+
+        if (aOrder !== bOrder) return aOrder - bOrder;
+        return a.name.localeCompare(b.name, "tr");
+      });
+  }, [platformServices]);
 
   useEffect(() => {
     if (!categories.length) {
@@ -427,9 +520,7 @@ export default function PaketlerPage() {
   }, [filteredServices, selectedServiceId]);
 
   const selectedService = useMemo(() => {
-    return (
-      filteredServices.find((item) => item.id === selectedServiceId) ?? null
-    );
+    return filteredServices.find((item) => item.id === selectedServiceId) ?? null;
   }, [filteredServices, selectedServiceId]);
 
   const quantityNumber = quantity ? Number(quantity.replace(/\D/g, "")) : 0;
@@ -1301,7 +1392,7 @@ export default function PaketlerPage() {
         </div>
       )}
 
-{successOpen && (
+      {successOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
           <div className="w-full max-w-2xl rounded-[28px] border border-white/10 bg-[#121826] p-5 shadow-[0_20px_80px_rgba(0,0,0,0.45)]">
             <h2 className="text-2xl font-bold text-white">Siparişiniz Onaylandı</h2>
@@ -1328,29 +1419,29 @@ export default function PaketlerPage() {
               </p>
 
               <p className="mt-1 text-sm leading-6 text-white/60">
-  Sipariş numaranız otomatik mesajın içine eklenecek. Ödeme ve işlem adımları için
-  Telegram veya WhatsApp üzerinden bize ulaşabilirsiniz.
-             </p>
+                Sipariş numaranız otomatik mesajın içine eklenecek. Ödeme ve işlem adımları için
+                Telegram veya WhatsApp üzerinden bize ulaşabilirsiniz.
+              </p>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-  <a
-    href={buildTelegramLink(createdOrderNumbers)}
-    target="_blank"
-    rel="noopener noreferrer"
-    className="rounded-2xl bg-sky-500 px-5 py-3 text-center text-sm font-bold text-black transition hover:bg-sky-400"
-  >
-    Telegram’dan Ödeme Bilgisi Al
-  </a>
+                <a
+                  href={buildTelegramLink(createdOrderNumbers)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-2xl bg-sky-500 px-5 py-3 text-center text-sm font-bold text-black transition hover:bg-sky-400"
+                >
+                  Telegram’dan Ödeme Bilgisi Al
+                </a>
 
-  <a
-    href={buildWhatsappLink(createdOrderNumbers)}
-    target="_blank"
-    rel="noopener noreferrer"
-    className="rounded-2xl bg-emerald-500 px-5 py-3 text-center text-sm font-bold text-black transition hover:bg-emerald-400"
-  >
-    WhatsApp’tan Ödeme Bilgisi Al
-  </a>
-</div>
+                <a
+                  href={buildWhatsappLink(createdOrderNumbers)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-2xl bg-emerald-500 px-5 py-3 text-center text-sm font-bold text-black transition hover:bg-emerald-400"
+                >
+                  WhatsApp’tan Ödeme Bilgisi Al
+                </a>
+              </div>
             </div>
 
             <div className="mt-5 flex justify-end">
