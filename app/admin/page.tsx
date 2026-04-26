@@ -328,18 +328,19 @@ export default async function AdminPage({
               ]}
             />
 
-            <FilterSelect
-              label="Sipariş Durumu"
-              name="orderStatus"
-              defaultValue={orderStatus}
-              options={[
-                ["all", "Tümü"],
-                ["pending", "Bekliyor"],
-                ["processing", "Hazırlanıyor"],
-                ["completed", "Tamamlandı"],
-                ["cancelled", "İptal"],
-              ]}
-            />
+<FilterSelect
+  label="Sipariş Durumu"
+  name="orderStatus"
+  defaultValue={orderStatus}
+  options={[
+    ["all", "Tümü"],
+    ["pending", "Bekliyor"],
+    ["processing", "İşlemde"],
+    ["completed", "Tamamlandı"],
+    ["cancelled", "İptal Edildi"],
+    ["refunded", "İade Edildi"],
+  ]}
+/>
 
             <FilterSelect
               label="Platform"
