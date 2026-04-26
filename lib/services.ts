@@ -347,11 +347,16 @@ function getLevelSortScore(level: QualityLevel) {
   return 30;
 }
 
-function buildServiceTitle(row: DbServiceRow, level: QualityLevel, guaranteeLabel: string, regionLabel: string) {
+function buildServiceTitle(
+  row: DbServiceRow,
+  level: QualityLevel,
+  guaranteeLabel: string,
+  regionLabel: string
+) {
   const platformLabel = getPlatformLabel(row.platform || "");
   const categoryLabel = getCategoryLabel(row.category || "");
 
-  return `${platformLabel} ${categoryLabel} - ${guaranteeLabel} ${regionLabel} ${level} Paket`;
+  return `${platformLabel} ${categoryLabel} - ${level} Kalite - ${guaranteeLabel} - ${regionLabel}`;
 }
 
 function buildQualityDescription(level: QualityLevel) {

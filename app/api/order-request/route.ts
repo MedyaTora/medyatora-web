@@ -91,6 +91,10 @@ function validateItem(item: unknown): item is OrderItemPayload {
   );
 }
 
+function formatNumber(value: number) {
+  return Number.isFinite(value) ? value.toLocaleString("tr-TR") : String(value);
+}
+
 async function sendTelegramMessage(text: string) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
@@ -220,6 +224,7 @@ export async function POST(req: Request) {
     }
 
     const hasInvalidItem = items.some((item) => !validateItem(item));
+
     if (hasInvalidItem) {
       return NextResponse.json(
         { error: "Sipariş ürünlerinden biri geçersiz." },
@@ -228,9 +233,7 @@ export async function POST(req: Request) {
     }
 
     const safeItems = items as OrderItemPayload[];
-
     const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
-
     const batchCode = createBatchCode();
 
     const rows = safeItems.map((item) => ({
@@ -242,8 +245,13 @@ export async function POST(req: Request) {
       contact_value: contactValue,
       platform: item.platform.trim(),
       category: item.category.trim(),
+
+      // Gerçek panel servis ID
       service_id: Number(item.service_id),
+
+      // Müşteriye gösterilen gizlenmiş ürün kodu
       site_code: Number(item.site_code),
+
       service_title: item.service_title.trim(),
       quantity: Number(item.quantity),
       unit_price: Number(item.unit_price),
@@ -262,7 +270,9 @@ export async function POST(req: Request) {
     const { data: insertedRows, error: orderError } = await supabase
       .from("order_requests")
       .insert(rows)
-      .select("order_number, service_title, quantity, total_price, total_cost_price, currency");
+      .select(
+        "order_number, service_id, site_code, service_title, quantity, total_price, total_cost_price, currency"
+      );
 
     if (orderError) {
       return NextResponse.json(
@@ -275,18 +285,32 @@ export async function POST(req: Request) {
       .map(
         (item, index) =>
           `${index + 1}. ${item.service_title}\n` +
-          `   Miktar: ${item.quantity}\n` +
+          `   Panel Servis ID: ${item.service_id}\n` +
+          `   Müşteri Ürün Kodu: ${item.site_code}\n` +
+          `   Platform: ${item.platform}\n` +
+          `   Kategori: ${item.category}\n` +
+          `   Garanti: ${item.guarantee_label}\n` +
+          `   Hız: ${item.speed}\n` +
+          `   Miktar: ${formatNumber(item.quantity)}\n` +
+          `   Birim Satış: ${item.unit_price} ${currency} / 1000\n` +
           `   Toplam Satış: ${item.total_price} ${currency}\n` +
-          `   Hedef: ${item.target_username || "-"}`
+          `   Toplam Alış: ${item.total_cost_price} ${currency}\n` +
+          `   Hedef Kullanıcı: ${item.target_username || "-"}\n` +
+          `   Hedef Link: ${item.target_link || "-"}\n` +
+          `   Not: ${item.order_note || "-"}`
       )
       .join("\n\n");
 
     const orderNumberLines = (insertedRows || [])
-      .map((row) => `• ${row.order_number}`)
+      .map(
+        (row) =>
+          `• ${row.order_number} | Panel ID: ${row.service_id} | Ürün Kodu: ${row.site_code}`
+      )
       .join("\n");
 
     const totalSale = rows.reduce((sum, item) => sum + Number(item.total_price || 0), 0);
     const totalCost = rows.reduce((sum, item) => sum + Number(item.total_cost_price || 0), 0);
+    const totalProfit = totalSale - totalCost;
 
     const telegramMessage =
       `🛒 Yeni sipariş alındı\n\n` +
@@ -298,9 +322,10 @@ export async function POST(req: Request) {
       `💱 Para Birimi: ${currency}\n` +
       `📦 Ürün Sayısı: ${rows.length}\n` +
       `💰 Toplam Alış: ${totalCost} ${currency}\n` +
-      `🏷️ Toplam Satış: ${totalSale} ${currency}\n\n` +
+      `🏷️ Toplam Satış: ${totalSale} ${currency}\n` +
+      `📈 Tahmini Kâr: ${totalProfit} ${currency}\n\n` +
       `🔢 Sipariş Numaraları:\n${orderNumberLines}\n\n` +
-      `${lines}`;
+      `📌 Sipariş Detayları:\n\n${lines}`;
 
     let telegramWarning: string | null = null;
 
@@ -309,6 +334,7 @@ export async function POST(req: Request) {
 
       try {
         const telegramJson = JSON.parse(telegramText);
+
         if (!telegramJson.ok) {
           telegramWarning = "Telegram API sipariş bildirimini kabul etmedi.";
           console.error("Telegram API error response:", telegramText);
@@ -322,6 +348,7 @@ export async function POST(req: Request) {
         telegramError instanceof Error
           ? `Telegram gönderim hatası: ${telegramError.message}`
           : "Telegram gönderiminde bilinmeyen hata oluştu";
+
       console.error(telegramWarning);
     }
 
