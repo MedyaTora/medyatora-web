@@ -549,12 +549,18 @@ function OrderTable({
                     <span className="rounded-full bg-emerald-400 px-3 py-1 text-xs font-semibold text-black">
                       {item.status}
                     </span>
+
                     <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-white/60">
                       {item.platform || "-"} • {item.category || "-"}
                     </span>
                   </div>
+
                   <p className="font-semibold">{item.full_name || "İsimsiz sipariş"}</p>
-                  <p className="mt-1 text-xs text-white/45">{formatDate(item.created_at)}</p>
+
+                  <p className="mt-1 text-xs text-white/45">
+                    {formatDate(item.created_at)}
+                  </p>
+
                   <p className="mt-2 text-xs text-white/60">
                     {item.order_number || "-"} / {item.batch_code || "-"}
                   </p>
@@ -562,35 +568,65 @@ function OrderTable({
 
                 <div className="grid gap-2 text-sm text-white/70 md:grid-cols-2">
                   <MiniInfo label="Telefon" value={item.phone_number || "-"} />
-                  <MiniInfo label="İletişim" value={`${item.contact_type || "-"} / ${item.contact_value || "-"}`} />
+
+                  <MiniInfo
+                    label="İletişim"
+                    value={`${item.contact_type || "-"} / ${item.contact_value || "-"}`}
+                  />
+
                   <MiniInfo label="Panel Servis ID" value={item.service_id ?? "-"} />
+
                   <MiniInfo label="Müşteri Ürün Kodu" value={item.site_code ?? "-"} />
+
                   <MiniInfo label="Ürün" value={item.service_title || "-"} />
-                  <MiniInfo label="Hedef" value={item.target_username || item.target_link || "-"} />
+
+                  <MiniInfo
+                    label="Hedef"
+                    value={item.target_username || item.target_link || "-"}
+                  />
+
                   <MiniInfo label="Miktar" value={item.quantity ?? "-"} />
-                  <MiniInfo label="Satış" value={formatMoney(item.total_price, item.currency)} />
+
+                  <MiniInfo
+                    label="Satış"
+                    value={formatMoney(item.total_price, item.currency)}
+                  />
                 </div>
 
-                <OrderStatusCardActions
-  id={item.id}
-  initialStatus={item.status}
-  initialStartCount={item.start_count}
-  initialEndCount={item.end_count}
-  initialCompletionNote={item.completion_note}
-  orderNumber={item.order_number}
-  fullName={item.full_name}
-  contactType={item.contact_type}
-  contactValue={item.contact_value}
-  serviceTitle={item.service_title}
-  targetUsername={item.target_username}
-/>
+                <div className="space-y-3">
+                  <a
+                    href={`/admin/orders/${item.id}`}
+                    className="block rounded-2xl bg-white px-4 py-3 text-center text-sm font-bold text-black transition hover:bg-white/90"
+                  >
+                    Detay
+                  </a>
+
+                  <OrderStatusCardActions
+                    id={item.id}
+                    initialStatus={item.status}
+                    initialStartCount={item.start_count}
+                    initialEndCount={item.end_count}
+                    initialCompletionNote={item.completion_note}
+                    orderNumber={item.order_number}
+                    fullName={item.full_name}
+                    contactType={item.contact_type}
+                    contactValue={item.contact_value}
+                    serviceTitle={item.service_title}
+                    targetUsername={item.target_username}
+                  />
+                </div>
               </div>
             </div>
           ))
         )}
       </div>
 
-      <Pagination page={page} totalPages={totalPages} prevHref={buildPageHref(queryParams, "opage", page - 1)} nextHref={buildPageHref(queryParams, "opage", page + 1)} />
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        prevHref={buildPageHref(queryParams, "opage", page - 1)}
+        nextHref={buildPageHref(queryParams, "opage", page + 1)}
+      />
     </section>
   );
 }
