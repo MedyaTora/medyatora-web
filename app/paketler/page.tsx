@@ -408,6 +408,7 @@ export default function PaketlerPage() {
   const cartSectionRef = useRef<HTMLDivElement | null>(null);
 
   const [infoTab, setInfoTab] = useState<"service" | "before" | "notes">("service");
+  const [showAllPlatforms, setShowAllPlatforms] = useState(false);
 
   useEffect(() => {
     setSelectedLocale(detectInitialLocale());
@@ -420,6 +421,11 @@ export default function PaketlerPage() {
   }, [selectedLocale]);
 
   const t = getDictionary(selectedLocale);
+  const visiblePlatforms = useMemo(() => {
+    return showAllPlatforms ? platforms : platforms.slice(0, 10);
+  }, [platforms, showAllPlatforms]);
+  
+  const hiddenPlatformCount = Math.max(platforms.length - visiblePlatforms.length, 0);
 
   useEffect(() => {
     async function loadServices() {
@@ -491,15 +497,21 @@ export default function PaketlerPage() {
 
   const filteredServices = useMemo(() => {
     if (!selectedCategory) return [];
-
+  
     return services
       .filter(
         (item) =>
           item.platform === selectedPlatform && item.category === selectedCategory
       )
-      .sort((a, b) => {
+      .sort((a: OrderServiceItem, b: OrderServiceItem) => {
+        const aScore = a.sortScore ?? 999999999;
+        const bScore = b.sortScore ?? 999999999;
+  
+        if (aScore !== bScore) return aScore - bScore;
+  
         const aPrice = getUnitSalePrice(a, selectedCurrency);
         const bPrice = getUnitSalePrice(b, selectedCurrency);
+  
         return aPrice - bPrice;
       });
   }, [services, selectedPlatform, selectedCategory, selectedCurrency]);
@@ -818,7 +830,7 @@ export default function PaketlerPage() {
           </div>
 
           <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-            {platforms.map((platform) => {
+          {visiblePlatforms.map((platform) => {
               const active = selectedPlatform === platform.slug;
 
               return (
@@ -842,6 +854,20 @@ export default function PaketlerPage() {
               );
             })}
           </div>
+          
+          {platforms.length > 10 && (
+            <div className="mt-4 flex justify-center">
+              <button
+                type="button"
+                onClick={() => setShowAllPlatforms((prev) => !prev)}
+                className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white/75 transition hover:bg-white/10 hover:text-white"
+              >
+                {showAllPlatforms
+                  ? "Daha Az Platform Göster"
+                  : `Tüm Platformları Göster (${hiddenPlatformCount} daha)`}
+              </button>
+            </div>
+          )}
         </section>
 
         <section className="rounded-[28px] border border-white/10 bg-[#121826]/95 p-4 shadow-[0_10px_40px_rgba(0,0,0,0.25)] backdrop-blur sm:p-5">

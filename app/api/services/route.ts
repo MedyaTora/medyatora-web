@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { mapDbServiceToOrderItem, type DbServiceRow } from "@/lib/services";
+import {
+  mapDbServicesToRankedOrderItems,
+  type DbServiceRow,
+} from "@/lib/services";
 
 const ALLOWED_PLATFORMS = new Set([
   "instagram",
@@ -37,18 +40,7 @@ const ALLOWED_PLATFORMS = new Set([
   "google-review",
   "google-maps",
   "whatsapp",
-]);
-
-const ALLOWED_CATEGORIES = new Set([
-  "takipci",
-  "begeni",
-  "yorum",
-  "izlenme",
-  "kaydetme",
-  "abone",
-  "uye",
-  "reaksiyon",
-  "retweet",
+  "other",
 ]);
 
 export async function GET(req: NextRequest) {
@@ -72,13 +64,6 @@ export async function GET(req: NextRequest) {
     if (platform && !ALLOWED_PLATFORMS.has(platform)) {
       return NextResponse.json(
         { error: "Geçersiz platform parametresi." },
-        { status: 400 }
-      );
-    }
-
-    if (category && !ALLOWED_CATEGORIES.has(category)) {
-      return NextResponse.json(
-        { error: "Geçersiz kategori parametresi." },
         { status: 400 }
       );
     }
@@ -140,16 +125,14 @@ export async function GET(req: NextRequest) {
         typeof item.max === "number"
     );
 
-    const items = rows
-      .map(mapDbServiceToOrderItem)
-      .filter(
-        (item) =>
-          item.salePriceTl > 0 &&
-          item.salePriceUsd > 0 &&
-          item.salePriceRub > 0 &&
-          item.min > 0 &&
-          item.max > 0
-      );
+    const items = mapDbServicesToRankedOrderItems(rows).filter(
+      (item) =>
+        item.salePriceTl > 0 &&
+        item.salePriceUsd > 0 &&
+        item.salePriceRub > 0 &&
+        item.min > 0 &&
+        item.max > 0
+    );
 
     return NextResponse.json(
       {
