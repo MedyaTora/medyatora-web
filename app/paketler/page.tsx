@@ -8,6 +8,7 @@ import { getAllPlatforms } from "@/lib/platforms";
 type CurrencyCode = "TL" | "USD" | "RUB";
 type CheckoutMode = "single" | "cart" | null;
 type ContactType = "Telegram" | "WhatsApp" | "Instagram" | "E-posta" | "";
+type PaymentMethod = "turkey_bank" | "support" | "";
 type QualityFilter = "all" | "Core" | "Plus" | "Prime";
 type GuaranteeFilter = "all" | "guaranteed" | "no-guarantee";
 type RegionFilter = "all" | "TR" | "RU" | "Global";
@@ -98,6 +99,10 @@ const contactTypes: ContactType[] = ["Telegram", "WhatsApp", "Instagram", "E-pos
 
 const TELEGRAM_USERNAME = "medyatora";
 const WHATSAPP_NUMBER = "905530739292";
+const TURKEY_BANK_ACCOUNT_NAME =
+  "BİLÇAĞ İLETİŞİM TELEKOMİNASYON BİLGİSAYAR DAY. TÜK. MAİL. GIDA SAN. VE TİC.LTD.ŞTİ";
+
+const TURKEY_BANK_IBAN = "TR48 0001 0001 3349 7700 5150 01";
 
 function getCategoryName(slug: string) {
   return CATEGORY_LABELS[slug] || slug.replace(/_/g, " ");
@@ -401,6 +406,7 @@ export default function PaketlerPage() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [contactType, setContactType] = useState<ContactType>("");
   const [contactValue, setContactValue] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("");
 
   const [loading, setLoading] = useState(false);
   const [cartMessage, setCartMessage] = useState("");
@@ -662,11 +668,12 @@ export default function PaketlerPage() {
     quantityNumber <= (selectedService?.max ?? 0) &&
     !!targetUsername.trim();
 
-  const isCheckoutValid =
+    const isCheckoutValid =
     !!fullName.trim() &&
     !!phoneNumber.trim() &&
     !!contactType &&
-    !!contactValue.trim();
+    !!contactValue.trim() &&
+    !!paymentMethod;
 
   const scrollProducts = (direction: "up" | "down") => {
     if (!productsScrollRef.current) return;
@@ -693,6 +700,7 @@ export default function PaketlerPage() {
     setPhoneNumber("");
     setContactType("");
     setContactValue("");
+    setPaymentMethod("");
   };
 
   const buildCurrentItem = (): CartItem | null => {
@@ -795,6 +803,7 @@ export default function PaketlerPage() {
           contact_type: contactType,
           contact_value: contactValue,
           currency: selectedCurrency,
+          payment_method: paymentMethod,
           items: checkoutItems,
         }),
       });
@@ -1612,6 +1621,78 @@ export default function PaketlerPage() {
               <p>Lütfen yalnızca WhatsApp, Instagram, Telegram veya E-posta bilgisi giriniz.</p>
               <p className="mt-1">Önerilen iletişim yöntemi Telegram’dır.</p>
             </div>
+
+            <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+  <p className="text-sm font-semibold text-white">Ödeme Yöntemi</p>
+  <p className="mt-1 text-sm leading-6 text-white/60">
+    Siparişinizi onaylamadan önce ödeme yöntemi seçiniz.
+  </p>
+
+  <div className="mt-4 grid gap-3 md:grid-cols-2">
+    <button
+      type="button"
+      onClick={() => setPaymentMethod("turkey_bank")}
+      className={`rounded-2xl border p-4 text-left transition ${
+        paymentMethod === "turkey_bank"
+          ? "border-emerald-400 bg-emerald-400/10"
+          : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
+      }`}
+    >
+      <p className="text-sm font-bold text-white">Türkiye Banka Havalesi / EFT</p>
+      <p className="mt-1 text-xs leading-5 text-white/55">
+        Türkiye içi ödemeler için banka hesabı bilgileri gösterilir.
+      </p>
+    </button>
+
+    <button
+      type="button"
+      onClick={() => setPaymentMethod("support")}
+      className={`rounded-2xl border p-4 text-left transition ${
+        paymentMethod === "support"
+          ? "border-sky-400 bg-sky-400/10"
+          : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
+      }`}
+    >
+      <p className="text-sm font-bold text-white">Diğer Ödeme Yöntemleri</p>
+      <p className="mt-1 text-xs leading-5 text-white/55">
+        Aktif ödeme yöntemi görülmemektedir. Lütfen destek ile iletişime geçiniz.
+      </p>
+    </button>
+  </div>
+
+  {paymentMethod === "turkey_bank" && (
+    <div className="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm leading-6 text-emerald-50">
+      <p className="font-semibold text-white">Türkiye Banka Bilgileri</p>
+
+      <div className="mt-3 space-y-2">
+        <p>
+          <span className="font-semibold text-white">Alıcı Adı:</span>{" "}
+          {TURKEY_BANK_ACCOUNT_NAME}
+        </p>
+        <p>
+          <span className="font-semibold text-white">IBAN:</span>{" "}
+          {TURKEY_BANK_IBAN}
+        </p>
+        <p>
+          <span className="font-semibold text-white">Açıklama:</span>{" "}
+          Dijital Hizmet - Sipariş No
+        </p>
+        <p className="text-white/70">
+          Ödeme sonrası dekontu Telegram veya WhatsApp üzerinden sipariş numaranızla birlikte iletiniz.
+        </p>
+      </div>
+    </div>
+  )}
+
+  {paymentMethod === "support" && (
+    <div className="mt-4 rounded-2xl border border-sky-400/20 bg-sky-400/10 p-4 text-sm leading-6 text-sky-50">
+      <p className="font-semibold text-white">Diğer Ödeme Yöntemleri</p>
+      <p className="mt-2 text-white/70">
+        Aktif ödeme yöntemi görülmemektedir. Ödeme bilgisi almak için lütfen Telegram veya WhatsApp üzerinden destek ile iletişime geçiniz.
+      </p>
+    </div>
+  )}
+</div>
 
             <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
               <div className="flex items-center justify-between text-sm text-white/60">

@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 
 type CurrencyCode = "TL" | "USD" | "RUB";
 type ContactType = "Telegram" | "WhatsApp" | "Instagram" | "E-posta";
+type PaymentMethod = "turkey_bank" | "support";
 
 type OrderItemPayload = {
   service_id: number;
@@ -29,10 +30,12 @@ type OrderRequestPayload = {
   contact_type: ContactType;
   contact_value: string;
   currency: CurrencyCode;
+  payment_method: PaymentMethod;
   items: OrderItemPayload[];
 };
 
 const ALLOWED_CURRENCIES: CurrencyCode[] = ["TL", "USD", "RUB"];
+
 const ALLOWED_CONTACT_TYPES: ContactType[] = [
   "Telegram",
   "WhatsApp",
@@ -40,12 +43,20 @@ const ALLOWED_CONTACT_TYPES: ContactType[] = [
   "E-posta",
 ];
 
+const ALLOWED_PAYMENT_METHODS: PaymentMethod[] = ["turkey_bank", "support"];
+
+function getPaymentMethodLabel(method: PaymentMethod) {
+  if (method === "turkey_bank") return "Türkiye Banka Havalesi / EFT";
+  return "Destek ile İletişime Geçilecek";
+}
+
 function createBatchCode() {
   const random = Math.random().toString(36).slice(2, 8).toUpperCase();
   const now = new Date();
   const datePart = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(
     now.getDate()
   ).padStart(2, "0")}`;
+
   return `MT-BATCH-${datePart}-${random}`;
 }
 
@@ -55,6 +66,7 @@ function createOrderNumber() {
   const datePart = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(
     now.getDate()
   ).padStart(2, "0")}`;
+
   return `MT-ORD-${datePart}-${random}`;
 }
 
@@ -171,14 +183,19 @@ export async function POST(req: Request) {
     const body = rawBody as Partial<OrderRequestPayload>;
 
     const fullName = typeof body.full_name === "string" ? body.full_name.trim() : "";
+
     const phoneNumber =
       typeof body.phone_number === "string"
         ? normalizePhoneNumber(body.phone_number)
         : "";
+
     const contactType = body.contact_type;
+
     const contactValue =
       typeof body.contact_value === "string" ? body.contact_value.trim() : "";
+
     const currency = body.currency;
+    const paymentMethod = body.payment_method;
     const items = Array.isArray(body.items) ? body.items : [];
 
     if (!fullName || fullName.length < 2) {
@@ -216,9 +233,16 @@ export async function POST(req: Request) {
       );
     }
 
+    if (!paymentMethod || !ALLOWED_PAYMENT_METHODS.includes(paymentMethod)) {
+      return NextResponse.json(
+        { error: "Geçerli bir ödeme yöntemi seçiniz." },
+        { status: 400 }
+      );
+    }
+
     if (!items.length) {
       return NextResponse.json(
-        { error: "En az bir ürün seçmelisiniz." },
+        { error: "En az bir hizmet seçmelisiniz." },
         { status: 400 }
       );
     }
@@ -227,7 +251,7 @@ export async function POST(req: Request) {
 
     if (hasInvalidItem) {
       return NextResponse.json(
-        { error: "Sipariş ürünlerinden biri geçersiz." },
+        { error: "Sipariş hizmetlerinden biri geçersiz." },
         { status: 400 }
       );
     }
@@ -261,6 +285,7 @@ export async function POST(req: Request) {
       guarantee_label: item.guarantee_label.trim(),
       speed: item.speed.trim(),
       currency,
+      payment_method: paymentMethod,
       target_username: item.target_username?.trim() || null,
       target_link: item.target_link?.trim() || null,
       order_note: item.order_note?.trim() || null,
@@ -271,7 +296,7 @@ export async function POST(req: Request) {
       .from("order_requests")
       .insert(rows)
       .select(
-        "order_number, service_id, site_code, service_title, quantity, total_price, total_cost_price, currency"
+        "order_number, service_id, site_code, service_title, quantity, total_price, total_cost_price, currency, payment_method"
       );
 
     if (orderError) {
@@ -309,7 +334,10 @@ export async function POST(req: Request) {
       .join("\n");
 
     const totalSale = rows.reduce((sum, item) => sum + Number(item.total_price || 0), 0);
-    const totalCost = rows.reduce((sum, item) => sum + Number(item.total_cost_price || 0), 0);
+    const totalCost = rows.reduce(
+      (sum, item) => sum + Number(item.total_cost_price || 0),
+      0
+    );
     const totalProfit = totalSale - totalCost;
 
     const telegramMessage =
@@ -320,7 +348,8 @@ export async function POST(req: Request) {
       `📩 İletişim Türü: ${contactType}\n` +
       `📨 İletişim Bilgisi: ${contactValue}\n` +
       `💱 Para Birimi: ${currency}\n` +
-      `📦 Ürün Sayısı: ${rows.length}\n` +
+      `💳 Ödeme Yöntemi: ${getPaymentMethodLabel(paymentMethod)}\n` +
+      `📦 Hizmet Sayısı: ${rows.length}\n` +
       `💰 Toplam Alış: ${totalCost} ${currency}\n` +
       `🏷️ Toplam Satış: ${totalSale} ${currency}\n` +
       `📈 Tahmini Kâr: ${totalProfit} ${currency}\n\n` +

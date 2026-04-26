@@ -223,7 +223,7 @@ export async function POST(req: Request) {
       `🎬 İçerik Türü: ${contentType}\n` +
       `📆 Günlük Paylaşım: ${dailyPostCount}\n` +
       `🎟️ Kupon: ${couponCode || "-"}\n` +
-      `💵 Paket Fiyatı: ${packagePrice} USD\n` +
+      `💵 Analiz Fiyatı: ${packagePrice} USD\n` +
       `📞 İletişim Türü: ${contactType}\n` +
       `📩 İletişim: ${contactValue}\n\n` +
       `⚠️ Genel Sorun: ${mainProblem}\n` +
@@ -236,6 +236,7 @@ export async function POST(req: Request) {
 
       try {
         const telegramJson = JSON.parse(telegramText);
+
         if (!telegramJson.ok) {
           telegramWarning = "Telegram API analiz bildirimini kabul etmedi.";
           console.error("Telegram API error response:", telegramText);
@@ -249,6 +250,7 @@ export async function POST(req: Request) {
         telegramError instanceof Error
           ? `Telegram gönderim hatası: ${telegramError.message}`
           : "Telegram gönderiminde bilinmeyen hata oluştu";
+
       console.error(telegramWarning);
     }
 
