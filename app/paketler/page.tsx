@@ -1328,32 +1328,28 @@ export default function PaketlerPage() {
               </p>
 
               <p className="mt-1 text-sm leading-6 text-white/60">
-                Sipariş numaranız otomatik mesajın içine eklenecek. Seçtiğiniz para birimine göre en uygun ödeme iletişim kanalına yönlendirileceksiniz.
+  Sipariş numaranız otomatik mesajın içine eklenecek. Seçtiğiniz para birimine göre en uygun ödeme iletişim kanalına yönlendirileceksiniz.
               </p>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                {(selectedCurrency === "TL" || selectedCurrency === "USD") && (
-                  <a
-                    href={buildWhatsappLink(createdOrderNumbers)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-2xl bg-emerald-500 px-5 py-3 text-center text-sm font-bold text-black transition hover:bg-emerald-400"
-                  >
-                    WhatsApp’tan Ödeme Bilgisi Al
-                  </a>
-                )}
+  <a
+    href={buildTelegramLink(createdOrderNumbers)}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="rounded-2xl bg-sky-500 px-5 py-3 text-center text-sm font-bold text-black transition hover:bg-sky-400"
+  >
+    Önerilen: Telegram’dan Ödeme Bilgisi Al
+  </a>
 
-                {(selectedCurrency === "RUB" || selectedCurrency === "USD") && (
-                  <a
-                    href={buildTelegramLink(createdOrderNumbers)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-2xl bg-sky-500 px-5 py-3 text-center text-sm font-bold text-black transition hover:bg-sky-400"
-                  >
-                    Telegram’dan Ödeme Bilgisi Al
-                  </a>
-                )}
-              </div>
+  <a
+    href={buildWhatsappLink(createdOrderNumbers)}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-5 py-3 text-center text-sm font-bold text-emerald-300 transition hover:bg-emerald-400/15"
+  >
+    Alternatif: WhatsApp’tan Ödeme Bilgisi Al
+  </a>
+</div>
             </div>
 
             <div className="mt-5 flex justify-end">
