@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { OrderServiceItem } from "@/lib/services";
 import { getDictionary, type Locale } from "@/lib/i18n";
 import { getAllPlatforms } from "@/lib/platforms";
+import ServiceTermsModal from "../components/service-terms-modal";
 
 type CurrencyCode = "TL" | "USD" | "RUB";
 type CheckoutMode = "single" | "cart" | null;
@@ -833,6 +834,7 @@ export default function PaketlerPage() {
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#172033_0%,#0b0f19_55%,#070b12_100%)] px-3 py-4 text-white sm:px-4 sm:py-6">
+      <ServiceTermsModal />
       <div className="mx-auto max-w-7xl space-y-4 sm:space-y-5">
         <section className="overflow-hidden rounded-[28px] border border-white/10 bg-[#121826]/95 p-4 shadow-[0_10px_40px_rgba(0,0,0,0.25)] backdrop-blur sm:p-5">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
