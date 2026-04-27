@@ -14,6 +14,7 @@ type QualityFilter = "all" | "Core" | "Plus" | "Prime";
 type GuaranteeFilter = "all" | "guaranteed" | "no-guarantee";
 type RegionFilter = "all" | "TR" | "RU" | "Global";
 type PriceSort = "smart" | "price-asc" | "price-desc";
+type ServiceSearchMode = "all";
 
 type CartItem = {
   cartId: string;
@@ -422,10 +423,11 @@ export default function PaketlerPage() {
   const [showAllPlatforms, setShowAllPlatforms] = useState(false);
 
   const [showServiceFilters, setShowServiceFilters] = useState(false);
+  const [serviceSearch, setServiceSearch] = useState("");
   const [qualityFilter, setQualityFilter] = useState<QualityFilter>("all");
   const [guaranteeFilter, setGuaranteeFilter] = useState<GuaranteeFilter>("all");
   const [regionFilter, setRegionFilter] = useState<RegionFilter>("all");
-  const [priceSort, setPriceSort] = useState<PriceSort>("smart");
+  const [priceSort, setPriceSort] = useState<PriceSort>("price-asc");
 
   useEffect(() => {
     setSelectedLocale(detectInitialLocale());
@@ -440,10 +442,11 @@ export default function PaketlerPage() {
   const t = getDictionary(selectedLocale);
 
   const resetServiceFilters = () => {
+    setServiceSearch("");
     setQualityFilter("all");
     setGuaranteeFilter("all");
     setRegionFilter("all");
-    setPriceSort("smart");
+    setPriceSort("price-asc");
   };
 
   useEffect(() => {
@@ -550,58 +553,81 @@ export default function PaketlerPage() {
 
   const filteredServices = useMemo(() => {
     if (!selectedCategory) return [];
-
+  
+    const search = serviceSearch.trim().toLowerCase();
+  
     const filtered = services
       .filter(
         (item) =>
           item.platform === selectedPlatform && item.category === selectedCategory
       )
       .filter((item) => {
+        if (!search) return true;
+  
+        const text = [
+          item.id,
+          item.siteCode,
+          item.title,
+          item.subtitle,
+          item.guaranteeLabel,
+          item.speed,
+          item.level,
+          item.regionLabel,
+          item.originalName,
+        ]
+          .join(" ")
+          .toLowerCase();
+  
+        return text.includes(search);
+      })
+      .filter((item) => {
         if (qualityFilter === "all") return true;
         return item.level === qualityFilter;
       })
       .filter((item) => {
         if (guaranteeFilter === "all") return true;
-
+  
         const isGuaranteed =
           item.guarantee === true &&
           item.guaranteeLabel &&
           item.guaranteeLabel !== "Garantisiz";
-
+  
         if (guaranteeFilter === "guaranteed") return isGuaranteed;
         return !isGuaranteed;
       })
       .filter((item) => {
         if (regionFilter === "all") return true;
-
+  
         const region = item.regionLabel || "";
-
+  
         if (regionFilter === "TR") return region.includes("TR");
         if (regionFilter === "RU") return region.includes("RU");
         if (regionFilter === "Global") return region.includes("Global");
-
+  
         return true;
       });
-
+  
     return filtered.sort((a: OrderServiceItem, b: OrderServiceItem) => {
       const aPrice = getUnitSalePrice(a, selectedCurrency);
       const bPrice = getUnitSalePrice(b, selectedCurrency);
-
-      if (priceSort === "price-asc") return aPrice - bPrice;
+  
       if (priceSort === "price-desc") return bPrice - aPrice;
-
-      const aScore = a.sortScore ?? 999999999;
-      const bScore = b.sortScore ?? 999999999;
-
-      if (aScore !== bScore) return aScore - bScore;
-
-      return aPrice - bPrice;
+  
+      const aGuaranteed = a.guarantee ? 1 : 0;
+      const bGuaranteed = b.guarantee ? 1 : 0;
+  
+      if (aPrice !== bPrice) return aPrice - bPrice;
+      if (aGuaranteed !== bGuaranteed) return bGuaranteed - aGuaranteed;
+      if (a.max !== b.max) return b.max - a.max;
+  
+      return a.id - b.id;
     });
   }, [
     services,
     selectedPlatform,
     selectedCategory,
     selectedCurrency,
+    serviceSearch,
     qualityFilter,
     guaranteeFilter,
     regionFilter,
@@ -1066,6 +1092,20 @@ export default function PaketlerPage() {
                   {filteredServices.length} hizmet gösteriliyor
                 </p>
               </div>
+              <div className="mb-4">
+  <input
+    value={serviceSearch}
+    onChange={(e) => setServiceSearch(e.target.value)}
+    placeholder="Ürün kodu, panel ID veya hizmet adı ara... Örn: 9059"
+    className="w-full rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-sm text-white outline-none placeholder:text-white/30 focus:border-emerald-400"
+  />
+
+  {serviceSearch.trim() ? (
+    <p className="mt-2 text-xs text-white/45">
+      Arama: “{serviceSearch.trim()}” — {filteredServices.length} sonuç
+    </p>
+  ) : null}
+</div>
 
               {showServiceFilters && (
                 <div className="mb-4 rounded-3xl border border-white/10 bg-black/20 p-4">
@@ -1157,7 +1197,7 @@ export default function PaketlerPage() {
                         className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none"
                       >
                         <option value="smart" className="bg-[#111827]">
-                          Akıllı Sıralama
+                         Önerilen Sıralama
                         </option>
                         <option value="price-asc" className="bg-[#111827]">
                           Fiyat Artan
