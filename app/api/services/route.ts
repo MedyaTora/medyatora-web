@@ -43,6 +43,9 @@ const ALLOWED_PLATFORMS = new Set([
   "other",
 ]);
 
+const PAGE_SIZE = 1000;
+const MAX_PAGES = 20;
+
 export async function GET(req: NextRequest) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -68,56 +71,74 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    let query = supabase
-      .from("services")
-      .select(`
-        id,
-        panel_service_id,
-        site_code,
-        platform,
-        category,
-        original_name,
-        clean_title,
-        subtitle,
-        guarantee,
-        guarantee_label,
-        min,
-        max,
-        speed,
-        level,
-        description,
-        tl_cost_price,
-        usd_cost_price,
-        tl_sale_price,
-        usd_sale_price,
-        rub_sale_price
-      `)
-      .eq("is_active", true)
-      .gt("tl_sale_price", 0)
-      .gt("usd_sale_price", 0)
-      .gt("rub_sale_price", 0)
-      .gt("min", 0)
-      .gt("max", 0)
-      .order("panel_service_id", { ascending: true });
+    const allRows: DbServiceRow[] = [];
 
-    if (platform) {
-      query = query.eq("platform", platform);
+    for (let page = 0; page < MAX_PAGES; page += 1) {
+      const from = page * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+
+      let query = supabase
+        .from("services")
+        .select(
+          `
+            id,
+            panel_service_id,
+            site_code,
+            platform,
+            category,
+            original_name,
+            clean_title,
+            subtitle,
+            guarantee,
+            guarantee_label,
+            min,
+            max,
+            speed,
+            level,
+            description,
+            tl_cost_price,
+            usd_cost_price,
+            tl_sale_price,
+            usd_sale_price,
+            rub_sale_price
+          `
+        )
+        .eq("is_active", true)
+        .gt("tl_sale_price", 0)
+        .gt("usd_sale_price", 0)
+        .gt("rub_sale_price", 0)
+        .gt("min", 0)
+        .gt("max", 0)
+        .order("panel_service_id", { ascending: true })
+        .range(from, to);
+
+      if (platform) {
+        query = query.eq("platform", platform);
+      }
+
+      if (category) {
+        query = query.eq("category", category);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        return NextResponse.json(
+          { error: "Servisler alınamadı." },
+          { status: 400 }
+        );
+      }
+
+      const rows = (data || []) as DbServiceRow[];
+
+      allRows.push(...rows);
+
+      if (rows.length < PAGE_SIZE) {
+        break;
+      }
     }
 
-    if (category) {
-      query = query.eq("category", category);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      return NextResponse.json(
-        { error: "Servisler alınamadı." },
-        { status: 400 }
-      );
-    }
-
-    const rows = ((data ?? []) as DbServiceRow[]).filter(
+    const rows = allRows.filter(
       (item) =>
         item.platform &&
         item.category &&
@@ -137,6 +158,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(
       {
         success: true,
+        rawCount: rows.length,
         count: items.length,
         items,
       },
