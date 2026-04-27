@@ -186,7 +186,25 @@ function getCategoryName(slug: string) {
   return CATEGORY_LABELS[slug] || slug.replace(/_/g, " ");
 }
 
-function buildOrderMessage(orderNumbers: string[]) {
+function getOrderSupportMessage(orderNumbers: string[], locale: Locale) {
+  if (locale === "en") {
+    return `Hello, I placed an order on MedyaTora.
+
+My order number:
+${orderNumbers.join("\n")}
+
+I would like to get payment and processing instructions.`;
+  }
+
+  if (locale === "ru") {
+    return `Здравствуйте, я оформил заказ на MedyaTora.
+
+Номер моего заказа:
+${orderNumbers.join("\n")}
+
+Я хочу получить информацию об оплате и дальнейших шагах.`;
+  }
+
   return `Merhaba, MedyaTora üzerinden sipariş verdim.
 
 Sipariş numaram:
@@ -195,15 +213,15 @@ ${orderNumbers.join("\n")}
 Ödeme ve işlem adımlarını öğrenmek istiyorum.`;
 }
 
-function buildTelegramLink(orderNumbers: string[]) {
+function buildTelegramLink(orderNumbers: string[], locale: Locale) {
   return `https://t.me/${TELEGRAM_USERNAME}?text=${encodeURIComponent(
-    buildOrderMessage(orderNumbers)
+    getOrderSupportMessage(orderNumbers, locale)
   )}`;
 }
 
-function buildWhatsappLink(orderNumbers: string[]) {
+function buildWhatsappLink(orderNumbers: string[], locale: Locale) {
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
-    buildOrderMessage(orderNumbers)
+    getOrderSupportMessage(orderNumbers, locale)
   )}`;
 }
 
@@ -324,30 +342,149 @@ function getCategoryLabel(name: string, locale: Locale) {
   return map[name]?.[locale] || name;
 }
 
+function localizeCommonServiceText(value: string, locale: Locale) {
+  if (!value || locale === "tr") return value;
+
+  const enMap: Record<string, string> = {
+    "Takipçi": "Followers",
+    "Beğeni": "Likes",
+    "Yorum": "Comments",
+    "İzlenme": "Views",
+    "Kaydetme": "Saves",
+    "Paylaşım": "Shares",
+    "Abone": "Subscribers",
+    "Üye": "Members",
+    "Reaksiyon": "Reactions",
+    "Kalite": "Quality",
+    "Garantisiz": "No Guarantee",
+    "Garantili": "Guaranteed",
+    "Gün": "Day",
+    "Günlük": "Daily",
+    "Günde": "Daily",
+    "Hızlı": "Fast",
+    "Yavaş": "Slow",
+    "Türk": "Turkish",
+    "Rus": "Russian",
+    "Yabancı": "Global",
+    "Temel başlangıç seviyesidir.": "This is a basic entry-level service.",
+    "Düşük bütçeyle görünürlük kazanmak isteyen kullanıcılar için hazırlanmıştır.":
+      "It is prepared for users who want to gain visibility with a low budget.",
+    "Teslimat hızı, kalıcılık ve yoğunluk durumu seçilen servise göre değişebilir.":
+      "Delivery speed, retention, and traffic intensity may vary depending on the selected service.",
+    "Bu hizmet garantisizdir.": "This service does not include a refill guarantee.",
+    "Teslimat sonrası düşüş, yavaşlama veya dalgalanma yaşanabilir; yeniden gönderim taahhüdü bulunmaz.":
+      "Drops, slowdowns, or fluctuations may occur after delivery; no refill commitment is provided.",
+    "Takipçi hizmetlerinde profilin herkese açık olması gerekir.":
+      "For follower services, the profile must be public.",
+    "Sipariş devam ederken kullanıcı adı değiştirilmemelidir.":
+      "The username should not be changed while the order is in progress.",
+    "Garanti süresi": "Guarantee period",
+    "gündür": "days",
+    "Garantili hizmettir.": "This is a guaranteed service.",
+    "Düşüş olması durumunda destek sağlanır.":
+      "Support is provided in case of drops.",
+  };
+
+  const ruMap: Record<string, string> = {
+    "Takipçi": "Подписчики",
+    "Beğeni": "Лайки",
+    "Yorum": "Комментарии",
+    "İzlenme": "Просмотры",
+    "Kaydetme": "Сохранения",
+    "Paylaşım": "Репосты",
+    "Abone": "Подписчики",
+    "Üye": "Участники",
+    "Reaksiyon": "Реакции",
+    "Kalite": "Качество",
+    "Garantisiz": "Без гарантии",
+    "Garantili": "С гарантией",
+    "Gün": "дней",
+    "Günlük": "В день",
+    "Günde": "В день",
+    "Hızlı": "Быстро",
+    "Yavaş": "Медленно",
+    "Türk": "Турция",
+    "Rus": "Россия",
+    "Yabancı": "Глобальный",
+    "Temel başlangıç seviyesidir.": "Это базовая услуга начального уровня.",
+    "Düşük bütçeyle görünürlük kazanmak isteyen kullanıcılar için hazırlanmıştır.":
+      "Подходит для пользователей, которые хотят получить видимость с небольшим бюджетом.",
+    "Teslimat hızı, kalıcılık ve yoğunluk durumu seçilen servise göre değişebilir.":
+      "Скорость выполнения, удержание и нагрузка могут отличаться в зависимости от выбранной услуги.",
+    "Bu hizmet garantisizdir.":
+      "Эта услуга предоставляется без гарантии восстановления.",
+    "Teslimat sonrası düşüş, yavaşlama veya dalgalanma yaşanabilir; yeniden gönderim taahhüdü bulunmaz.":
+      "После выполнения возможны списания, замедления или колебания; повторная отправка не гарантируется.",
+    "Takipçi hizmetlerinde profilin herkese açık olması gerekir.":
+      "Для услуг подписчиков профиль должен быть открытым.",
+    "Sipariş devam ederken kullanıcı adı değiştirilmemelidir.":
+      "Не меняйте username во время выполнения заказа.",
+    "Garanti süresi": "Гарантийный срок",
+    "gündür": "дней",
+    "Garantili hizmettir.": "Это услуга с гарантией.",
+    "Düşüş olması durumunda destek sağlanır.":
+      "При списаниях предоставляется поддержка.",
+  };
+
+  const map = locale === "en" ? enMap : ruMap;
+
+  return Object.entries(map).reduce((text, [from, to]) => {
+    return text.replaceAll(from, to);
+  }, value);
+}
+
+function getLocalizedServiceTitle(title: string, locale: Locale) {
+  return localizeCommonServiceText(title, locale);
+}
+
+function getLocalizedServiceDescription(description: string, locale: Locale) {
+  return localizeCommonServiceText(description, locale);
+}
+
+function getLocalizedGuaranteeLabel(label: string, locale: Locale) {
+  return localizeCommonServiceText(label, locale);
+}
+
+function getLocalizedSpeed(speed: string, locale: Locale) {
+  return localizeCommonServiceText(speed, locale);
+}
+
+function getContactTypeLabel(type: ContactType, locale: Locale) {
+  if (!type) return "";
+
+  if (type === "E-posta") {
+    if (locale === "en") return "Email";
+    if (locale === "ru") return "E-mail";
+    return "E-posta";
+  }
+
+  return type;
+}
+
 function makeCartId() {
   return Math.random().toString(36).slice(2, 10);
 }
 
-function OrderBeforeNotice() {
+function OrderBeforeNotice({ t }: { t: ReturnType<typeof getDictionary> }) {
   const notices: { title: string; text: string; icon: IconType }[] = [
     {
-      title: "Fiyat Bilgisi",
-      text: "Tüm fiyatlara KDV + vergiler dahildir. Gördüğünüz tutar nihai ödeme tutarıdır.",
+      title: t.noticePriceTitle,
+      text: t.noticePriceText,
       icon: FaFileInvoice,
     },
     {
-      title: "Profil Durumu",
-      text: "İşlem yapılacak profil, gönderi, video veya kanal herkese açık olmalıdır.",
+      title: t.noticeProfileTitle,
+      text: t.noticeProfileText,
       icon: FaShieldHalved,
     },
     {
-      title: "Başlangıç Süresi",
-      text: "Başlangıç süresi servise göre değişebilir. Genellikle işlemler 0-24 saat içinde başlar.",
+      title: t.noticeStartTitle,
+      text: t.noticeStartText,
       icon: FaUserCheck,
     },
     {
-      title: "Destek",
-      text: "Ödeme sonrası dekontu WhatsApp veya Telegram üzerinden iletebilirsiniz.",
+      title: t.noticeSupportTitle,
+      text: t.noticeSupportText,
       icon: FaWhatsapp,
     },
   ];
@@ -356,15 +493,15 @@ function OrderBeforeNotice() {
     <section className="rounded-[32px] border border-amber-400/20 bg-gradient-to-br from-amber-400/10 to-white/[0.035] p-5 shadow-[0_18px_70px_rgba(0,0,0,0.28)] backdrop-blur sm:p-6">
       <div className="mb-5">
         <p className="text-xs font-bold uppercase tracking-[0.22em] text-amber-300">
-          MedyaTora Bilgilendirme Sistemi
+          {t.orderBeforeBadge}
         </p>
 
         <h2 className="mt-2 text-2xl font-bold text-white">
-          Sipariş Öncesi Önemli Bilgilendirme
+          {t.orderBeforeTitle}
         </h2>
 
         <p className="mt-2 max-w-3xl text-sm leading-6 text-white/65">
-          Sipariş oluşturmadan önce hedef hesabın, bağlantının ve miktarın doğru olduğundan emin olun.
+          {t.orderBeforeDesc}
         </p>
       </div>
 
@@ -747,7 +884,7 @@ export default function SmmToraPage() {
       cartId: makeCartId(),
       service_id: selectedService.id,
       site_code: selectedService.siteCode,
-      service_title: selectedService.title,
+      service_title: getLocalizedServiceTitle(selectedService.title, selectedLocale),
       platform: selectedPlatform,
       category: selectedCategory,
       quantity: quantityNumber,
@@ -755,8 +892,11 @@ export default function SmmToraPage() {
       total_price: totalPrice,
       unit_cost_price: selectedUnitCostPrice,
       total_cost_price: totalCostPrice,
-      guarantee_label: selectedService.guaranteeLabel,
-      speed: selectedService.speed,
+      guarantee_label: getLocalizedGuaranteeLabel(
+        selectedService.guaranteeLabel,
+        selectedLocale
+      ),
+      speed: getLocalizedSpeed(selectedService.speed, selectedLocale),
       target_username: targetUsername.trim(),
       target_link: targetLink.trim(),
       order_note: orderNote.trim(),
@@ -776,7 +916,7 @@ export default function SmmToraPage() {
 
     setCartItems((prev) => [...prev, item]);
     resetItemForm();
-    setCartMessage("Hizmet sepete eklendi.");
+    setCartMessage(t.successOrder);
     setError("");
     setCreatedOrderNumbers([]);
     setSuccessOpen(false);
@@ -799,7 +939,7 @@ export default function SmmToraPage() {
     setOrderNote(item.order_note);
 
     setCartItems((prev) => prev.filter((x) => x.cartId !== cartId));
-    setCartMessage("Sepet hizmeti düzenleme için forma taşındı.");
+    setCartMessage(t.edit);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -878,24 +1018,23 @@ export default function SmmToraPage() {
             <div className="min-w-0">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-xs font-semibold text-emerald-300">
                 <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                SMMTora tekli sosyal medya hizmetleri
+                {t.smmHeroBadge}
               </div>
 
               <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-                Tekli Sosyal Medya Hizmetleri
+                {t.smmHeroTitle}
               </h1>
 
               <p className="mt-3 max-w-3xl text-sm leading-6 text-white/65 sm:text-base">
-                Platform, kategori ve hizmet seçerek tekli sipariş oluşturabilirsiniz.
-                Takipçi, beğeni, izlenme, yorum ve diğer sosyal medya destekleri burada listelenir.
+                {t.smmHeroDesc}
               </p>
 
               <div className="mt-5 grid gap-3 text-sm text-white/70 sm:grid-cols-2 xl:grid-cols-4">
                 {[
-                  ["KDV + vergiler dahil", FaFileInvoice],
-                  ["Sipariş numarası ile takip", FaUserCheck],
-                  ["WhatsApp / Telegram destek", FaWhatsapp],
-                  ["Bilgiler işlem için kullanılır", FaShieldHalved],
+                  [t.smmTaxIncluded, FaFileInvoice],
+                  [t.smmOrderTracking, FaUserCheck],
+                  [t.smmSupport, FaWhatsapp],
+                  [t.smmDataUse, FaShieldHalved],
                 ].map(([title, Icon]) => {
                   const IconComponent = Icon as IconType;
 
@@ -917,7 +1056,7 @@ export default function SmmToraPage() {
             <div className="grid gap-4 md:grid-cols-2 xl:min-w-[430px]">
               <div className="rounded-3xl border border-white/10 bg-white/[0.035] p-4">
                 <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-white/45">
-                  Dil
+                  {t.language}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {localeOptions.map((locale) => {
@@ -973,16 +1112,16 @@ export default function SmmToraPage() {
           </div>
         </section>
 
-        <OrderBeforeNotice />
+        <OrderBeforeNotice t={t} />
 
         <section className="rounded-[34px] border border-white/10 bg-[#121826]/95 p-5 shadow-[0_18px_80px_rgba(0,0,0,0.32)] backdrop-blur sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/45">
-                Platform seçimi
+                {t.platformSelection}
               </p>
               <p className="mt-1 text-sm text-white/55">
-                Satışa açık platformlardan birini seçin.
+                {t.platformSelectionDesc}
               </p>
             </div>
 
@@ -991,17 +1130,17 @@ export default function SmmToraPage() {
               onClick={goToCart}
               className="rounded-2xl border border-sky-400/20 bg-sky-400/10 px-4 py-2 text-sm font-bold text-sky-300 transition hover:bg-sky-400/15"
             >
-              Sepete Git
+              {t.goToCart}
             </button>
           </div>
 
           {servicesLoading ? (
             <div className="mt-4 rounded-2xl border border-dashed border-white/15 bg-white/5 px-4 py-6 text-sm text-white/50">
-              Platformlar yükleniyor...
+              {t.platformLoading}
             </div>
           ) : availablePlatforms.length === 0 ? (
             <div className="mt-4 rounded-2xl border border-dashed border-white/15 bg-white/5 px-4 py-6 text-sm text-white/50">
-              Şu anda aktif satışa açık platform bulunmamaktadır.
+              {t.noActivePlatform}
             </div>
           ) : (
             <>
@@ -1051,13 +1190,13 @@ export default function SmmToraPage() {
                               {platform.title}
                             </div>
                             <div className="mt-1 text-xs text-white/45">
-                              Tekli hizmetler
+                              {t.singleServices}
                             </div>
                           </div>
 
                           {active && (
                             <span className="rounded-full bg-emerald-400 px-2.5 py-1 text-[10px] font-bold text-black">
-                              Seçili
+                              {t.selected}
                             </span>
                           )}
                         </div>
@@ -1075,8 +1214,8 @@ export default function SmmToraPage() {
                     className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold text-white/75 transition hover:bg-white/10 hover:text-white"
                   >
                     {showAllPlatforms
-                      ? "Daha Az Platform Göster"
-                      : `Tüm Platformları Göster (${hiddenPlatformCount} daha)`}
+                      ? t.showLessPlatforms
+                      : `${t.showMorePlatforms} (${hiddenPlatformCount} ${t.moreCount})`}
                   </button>
                 </div>
               )}
@@ -1086,7 +1225,7 @@ export default function SmmToraPage() {
 
         <section className="rounded-[34px] border border-white/10 bg-[#121826]/95 p-5 shadow-[0_18px_80px_rgba(0,0,0,0.32)] backdrop-blur sm:p-6">
           <p className="mb-4 text-xs font-bold uppercase tracking-[0.2em] text-white/45">
-            Kategori seçimi
+            {t.categorySelection}
           </p>
 
           {servicesLoading ? (
@@ -1095,7 +1234,7 @@ export default function SmmToraPage() {
             </div>
           ) : categories.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-white/15 bg-white/5 px-4 py-6 text-sm text-white/50">
-              Bu platformda aktif satışa açık hizmet bulunmamaktadır.
+              {t.noActiveServiceForPlatform}
             </div>
           ) : (
             <div className="flex flex-wrap gap-2">
@@ -1132,10 +1271,10 @@ export default function SmmToraPage() {
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/45">
-                    Hizmetler
+                    {t.serviceListTitle}
                   </p>
                   <p className="mt-1 text-sm text-white/50">
-                    Ürün kodu, panel ID veya hizmet adıyla arama yapabilirsiniz.
+                    {t.serviceListDesc}
                   </p>
                 </div>
 
@@ -1166,11 +1305,11 @@ export default function SmmToraPage() {
                   onClick={() => setShowServiceFilters((prev) => !prev)}
                   className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm font-bold text-white/80 transition hover:bg-white/[0.1] hover:text-white"
                 >
-                  <span>Filtrele</span>
+                  <span>{t.filter}</span>
                 </button>
 
                 <p className="text-xs text-white/45">
-                  {filteredServices.length} hizmet gösteriliyor
+                  {filteredServices.length} {t.servicesShown}
                 </p>
               </div>
 
@@ -1178,13 +1317,14 @@ export default function SmmToraPage() {
                 <input
                   value={serviceSearch}
                   onChange={(e) => setServiceSearch(e.target.value)}
-                  placeholder="Ürün kodu, panel ID veya hizmet adı ara... Örn: 9059"
+                  placeholder={t.searchPlaceholder}
                   className="w-full rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-sm text-white outline-none placeholder:text-white/30 focus:border-emerald-400"
                 />
 
                 {serviceSearch.trim() ? (
                   <p className="mt-2 text-xs text-white/45">
-                    Arama: “{serviceSearch.trim()}” — {filteredServices.length} sonuç
+                    “{serviceSearch.trim()}” — {filteredServices.length}{" "}
+                    {t.searchResultText}
                   </p>
                 ) : null}
               </div>
@@ -1194,7 +1334,7 @@ export default function SmmToraPage() {
                   <div className="grid gap-3 md:grid-cols-4">
                     <div>
                       <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-white/40">
-                        Kalite
+                        {t.quality}
                       </label>
                       <select
                         value={qualityFilter}
@@ -1204,23 +1344,23 @@ export default function SmmToraPage() {
                         className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none"
                       >
                         <option value="all" className="bg-[#111827]">
-                          Tümü
+                          {t.all}
                         </option>
                         <option value="Core" className="bg-[#111827]">
-                          Core Kalite
+                          {t.coreQuality}
                         </option>
                         <option value="Plus" className="bg-[#111827]">
-                          Plus Kalite
+                          {t.plusQuality}
                         </option>
                         <option value="Prime" className="bg-[#111827]">
-                          Prime Kalite
+                          {t.primeQuality}
                         </option>
                       </select>
                     </div>
 
                     <div>
                       <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-white/40">
-                        Garanti
+                        {t.guarantee}
                       </label>
                       <select
                         value={guaranteeFilter}
@@ -1230,20 +1370,20 @@ export default function SmmToraPage() {
                         className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none"
                       >
                         <option value="all" className="bg-[#111827]">
-                          Tümü
+                          {t.all}
                         </option>
                         <option value="guaranteed" className="bg-[#111827]">
-                          Garantili
+                          {t.guaranteed}
                         </option>
                         <option value="no-guarantee" className="bg-[#111827]">
-                          Garantisiz
+                          {t.noGuarantee}
                         </option>
                       </select>
                     </div>
 
                     <div>
                       <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-white/40">
-                        Bölge
+                        {t.region}
                       </label>
                       <select
                         value={regionFilter}
@@ -1253,7 +1393,7 @@ export default function SmmToraPage() {
                         className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none"
                       >
                         <option value="all" className="bg-[#111827]">
-                          Tümü
+                          {t.all}
                         </option>
                         <option value="TR" className="bg-[#111827]">
                           TR
@@ -1269,7 +1409,7 @@ export default function SmmToraPage() {
 
                     <div>
                       <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-white/40">
-                        Sıralama
+                        {t.sort}
                       </label>
                       <select
                         value={priceSort}
@@ -1279,13 +1419,13 @@ export default function SmmToraPage() {
                         className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none"
                       >
                         <option value="smart" className="bg-[#111827]">
-                          Önerilen Sıralama
+                          {t.recommendedSort}
                         </option>
                         <option value="price-asc" className="bg-[#111827]">
-                          Fiyat Artan
+                          {t.priceAsc}
                         </option>
                         <option value="price-desc" className="bg-[#111827]">
-                          Fiyat Azalan
+                          {t.priceDesc}
                         </option>
                       </select>
                     </div>
@@ -1297,7 +1437,7 @@ export default function SmmToraPage() {
                       onClick={resetServiceFilters}
                       className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-bold text-white/70 transition hover:bg-white/[0.08] hover:text-white"
                     >
-                      Filtreleri Temizle
+                      {t.clearFilters}
                     </button>
                   </div>
                 </div>
@@ -1339,12 +1479,12 @@ export default function SmmToraPage() {
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
                               <p className="line-clamp-2 text-sm font-bold text-white sm:text-base">
-                                {service.title}
+                                {getLocalizedServiceTitle(service.title, selectedLocale)}
                               </p>
 
                               {active && (
                                 <span className="rounded-full bg-emerald-400 px-2.5 py-1 text-[10px] font-bold text-black sm:text-[11px]">
-                                  Seçili
+                                  {t.selected}
                                 </span>
                               )}
 
@@ -1355,11 +1495,14 @@ export default function SmmToraPage() {
                                     : "bg-rose-500/15 text-rose-300"
                                 }`}
                               >
-                                {service.guaranteeLabel}
+                                {getLocalizedGuaranteeLabel(
+                                  service.guaranteeLabel,
+                                  selectedLocale
+                                )}
                               </span>
 
                               <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-bold text-white/70 sm:text-[11px]">
-                                {service.level}
+                                {localizeCommonServiceText(service.level, selectedLocale)}
                               </span>
                             </div>
 
@@ -1371,7 +1514,7 @@ export default function SmmToraPage() {
                                 {t.minMax}: {service.min} · Max: {service.max}
                               </p>
                               <p>
-                                {t.speed}: {service.speed}
+                                {t.speed}: {getLocalizedSpeed(service.speed, selectedLocale)}
                               </p>
                             </div>
                           </div>
@@ -1393,9 +1536,9 @@ export default function SmmToraPage() {
             <div className="rounded-[34px] border border-white/10 bg-[#121826]/95 p-5 shadow-[0_18px_80px_rgba(0,0,0,0.32)] backdrop-blur sm:p-6">
               <div className="mb-4 flex flex-wrap gap-2">
                 {[
-                  ["service", "Hizmet Bilgisi"],
-                  ["before", "Sipariş Öncesi"],
-                  ["notes", "Önemli Notlar"],
+                  ["service", t.serviceInfo],
+                  ["before", t.beforeOrder],
+                  ["notes", t.importantNotes],
                 ].map(([key, label]) => (
                   <button
                     key={key}
@@ -1414,37 +1557,25 @@ export default function SmmToraPage() {
 
               {infoTab === "service" && (
                 <div className="space-y-3 text-sm leading-7 text-white/70">
-                  <p>
-                    Satın alacağınız hizmet, seçtiğiniz platform ve kategoriye göre işleme alınır.
-                    Her hizmet için minimum ve maksimum sipariş limiti vardır.
-                  </p>
-                  <p>
-                    Garantili hizmetlerde belirtilen süre içinde destek sağlanır. Garantisiz
-                    hizmetlerde teslimat sonrası ek koruma bulunmaz.
-                  </p>
-                  <p>Sipariş yoğunluğa bağlı olarak genellikle 0-24 saat içerisinde başlar.</p>
+                  <p>{t.serviceInfoP1}</p>
+                  <p>{t.serviceInfoP2}</p>
+                  <p>{t.serviceInfoP3}</p>
                 </div>
               )}
 
               {infoTab === "before" && (
                 <div className="space-y-3 text-sm leading-7 text-white/70">
-                  <p>
-                    Kullanıcı adı, bağlantı ve miktar bilgilerini dikkatli giriniz. Yanlış bilgi
-                    girilmesi siparişin gecikmesine veya başlatılamamasına neden olabilir.
-                  </p>
-                  <p>
-                    Link isteyen hizmetlerde doğru profil, gönderi, video, kanal veya grup
-                    bağlantısı verilmesi gerekir.
-                  </p>
+                  <p>{t.beforeOrderP1}</p>
+                  <p>{t.beforeOrderP2}</p>
                 </div>
               )}
 
               {infoTab === "notes" && (
                 <div className="space-y-3 text-sm leading-7 text-white/70">
-                  <p>• Siparişten sonra kullanıcı adı veya bağlantıyı değiştirmemeniz önerilir.</p>
-                  <p>• Aynı hedefe aynı anda birden fazla benzer sipariş verilmesi önerilmez.</p>
-                  <p>• Profilin veya içeriğin erişilebilir olması gerekir.</p>
-                  <p>• Destek talebinde bulunurken sipariş numaranız ile yazınız.</p>
+                  <p>{t.note1}</p>
+                  <p>{t.note2}</p>
+                  <p>{t.note3}</p>
+                  <p>{t.note4}</p>
                 </div>
               )}
             </div>
@@ -1453,14 +1584,16 @@ export default function SmmToraPage() {
           <div className="space-y-5">
             <div className="rounded-[34px] border border-white/10 bg-[#121826]/95 p-5 shadow-[0_18px_80px_rgba(0,0,0,0.32)] backdrop-blur sm:p-6">
               <p className="mb-4 text-xs font-bold uppercase tracking-[0.2em] text-white/45">
-                Sipariş Bilgileri
+                {t.orderInfo}
               </p>
 
               {selectedService ? (
                 <div className="mb-4 space-y-3">
                   <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-bold text-white">{selectedService.title}</p>
+                      <p className="font-bold text-white">
+                        {getLocalizedServiceTitle(selectedService.title, selectedLocale)}
+                      </p>
 
                       <span
                         className={`rounded-full px-2.5 py-1 text-[10px] font-bold sm:text-[11px] ${
@@ -1469,11 +1602,14 @@ export default function SmmToraPage() {
                             : "bg-rose-500/15 text-rose-300"
                         }`}
                       >
-                        {selectedService.guaranteeLabel}
+                        {getLocalizedGuaranteeLabel(
+                          selectedService.guaranteeLabel,
+                          selectedLocale
+                        )}
                       </span>
 
                       <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-bold text-white/70 sm:text-[11px]">
-                        {selectedService.level}
+                        {localizeCommonServiceText(selectedService.level, selectedLocale)}
                       </span>
                     </div>
 
@@ -1482,14 +1618,17 @@ export default function SmmToraPage() {
                     </p>
 
                     <p className="mt-1 text-sm text-white/60">
-                      {t.speed}: {selectedService.speed}
+                      {t.speed}: {getLocalizedSpeed(selectedService.speed, selectedLocale)}
                     </p>
                   </div>
 
                   <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
                     <p className="text-sm font-bold text-white/85">{t.productDescription}</p>
                     <p className="mt-2 whitespace-pre-line text-sm leading-6 text-white/60">
-                      {selectedService.description}
+                      {getLocalizedServiceDescription(
+                        selectedService.description,
+                        selectedLocale
+                      )}
                     </p>
                   </div>
                 </div>
@@ -1523,8 +1662,9 @@ export default function SmmToraPage() {
 
                 {selectedService && (
                   <p className="text-xs leading-5 text-white/45">
-                    Bu hizmet için minimum {selectedService.min}, maksimum {selectedService.max} adet
-                    sipariş verilebilir.
+                    {t.minQuantityText
+                      .replace("{min}", String(selectedService.min))
+                      .replace("{max}", String(selectedService.max))}
                   </p>
                 )}
 
@@ -1646,15 +1786,14 @@ export default function SmmToraPage() {
               <div className="mt-4 space-y-3">
                 <div className="rounded-2xl border border-emerald-400/15 bg-emerald-400/5 p-4">
                   <div className="flex items-center justify-between text-sm text-white/60">
-                    <span>Sepet Toplamı</span>
+                    <span>{t.cartTotal}</span>
                     <span className="text-lg font-bold text-emerald-300">
                       {formatPrice(cartTotal, selectedCurrency)}
                     </span>
                   </div>
 
                   <p className="mt-2 text-xs leading-5 text-white/45">
-                    Tüm fiyatlara KDV + vergiler dahildir. Ödeme sonrası sipariş numaranız ile
-                    destek alabilirsiniz.
+                    {t.cartTotalDesc}
                   </p>
                 </div>
 
@@ -1680,9 +1819,9 @@ export default function SmmToraPage() {
           <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-[28px] border border-white/10 bg-[#121826] p-5 shadow-[0_20px_80px_rgba(0,0,0,0.45)]">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-2xl font-bold text-white">İletişim ve Onay</h2>
+                <h2 className="text-2xl font-bold text-white">{t.checkoutTitle}</h2>
                 <p className="mt-2 text-sm leading-6 text-white/60">
-                  Siparişinizi onaylamak için aşağıdaki alanları eksiksiz doldurunuz.
+                  {t.checkoutDesc}
                 </p>
               </div>
 
@@ -1691,7 +1830,7 @@ export default function SmmToraPage() {
                 onClick={() => setCheckoutMode(null)}
                 className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/70 hover:bg-white/10"
               >
-                Kapat
+                {t.close}
               </button>
             </div>
 
@@ -1706,7 +1845,7 @@ export default function SmmToraPage() {
               <input
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))}
-                placeholder="Telefon Numarası"
+                placeholder={t.phoneNumber}
                 inputMode="numeric"
                 className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none placeholder:text-white/30 focus:border-emerald-400"
               />
@@ -1717,11 +1856,11 @@ export default function SmmToraPage() {
                 className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none focus:border-emerald-400"
               >
                 <option value="" className="bg-[#121826]">
-                  İletişim Türü Seç
+                  {t.contactTypeSelect}
                 </option>
                 {contactTypes.map((item) => (
                   <option key={item} value={item} className="bg-[#121826]">
-                    {item}
+                    {getContactTypeLabel(item, selectedLocale)}
                   </option>
                 ))}
               </select>
@@ -1729,20 +1868,20 @@ export default function SmmToraPage() {
               <input
                 value={contactValue}
                 onChange={(e) => setContactValue(e.target.value)}
-                placeholder="İletişim Bilgisi"
+                placeholder={t.contactValue}
                 className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none placeholder:text-white/30 focus:border-emerald-400"
               />
             </div>
 
             <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm leading-6 text-amber-100">
-              <p>Lütfen yalnızca WhatsApp, Instagram, Telegram veya E-posta bilgisi giriniz.</p>
-              <p className="mt-1">Önerilen iletişim yöntemi Telegram’dır.</p>
+              <p>{t.contactWarning1}</p>
+              <p className="mt-1">{t.contactWarning2}</p>
             </div>
 
             <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-              <p className="text-sm font-bold text-white">Ödeme Yöntemi</p>
+              <p className="text-sm font-bold text-white">{t.paymentMethod}</p>
               <p className="mt-1 text-sm leading-6 text-white/60">
-                Siparişinizi onaylamadan önce ödeme yöntemi seçiniz.
+                {t.paymentMethodDesc}
               </p>
 
               <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -1755,9 +1894,9 @@ export default function SmmToraPage() {
                       : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
                   }`}
                 >
-                  <p className="text-sm font-bold text-white">Türkiye Banka Havalesi / EFT</p>
+                  <p className="text-sm font-bold text-white">{t.turkeyBankTransfer}</p>
                   <p className="mt-1 text-xs leading-5 text-white/55">
-                    Türkiye içi ödemeler için banka hesabı bilgileri gösterilir.
+                    {t.turkeyBankTransferDesc}
                   </p>
                 </button>
 
@@ -1770,44 +1909,42 @@ export default function SmmToraPage() {
                       : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
                   }`}
                 >
-                  <p className="text-sm font-bold text-white">Diğer Ödeme Yöntemleri</p>
+                  <p className="text-sm font-bold text-white">{t.otherPaymentMethods}</p>
                   <p className="mt-1 text-xs leading-5 text-white/55">
-                    Aktif ödeme yöntemi görülmemektedir. Lütfen destek ile iletişime geçiniz.
+                    {t.otherPaymentMethodsDesc}
                   </p>
                 </button>
               </div>
 
               {paymentMethod === "turkey_bank" && (
                 <div className="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm leading-6 text-emerald-50">
-                  <p className="font-bold text-white">Türkiye Banka Bilgileri</p>
+                  <p className="font-bold text-white">{t.turkeyBankInfo}</p>
 
                   <div className="mt-3 space-y-2">
                     <p>
-                      <span className="font-bold text-white">Alıcı Adı:</span>{" "}
+                      <span className="font-bold text-white">{t.receiverName}:</span>{" "}
                       {TURKEY_BANK_ACCOUNT_NAME}
                     </p>
                     <p>
-                      <span className="font-bold text-white">IBAN:</span>{" "}
+                      <span className="font-bold text-white">{t.iban}:</span>{" "}
                       {TURKEY_BANK_IBAN}
                     </p>
                     <p>
-                      <span className="font-bold text-white">Açıklama:</span>{" "}
-                      Dijital Hizmet - Sipariş No
+                      <span className="font-bold text-white">
+                        {t.paymentDescription}:
+                      </span>{" "}
+                      {t.digitalServiceOrderNo}
                     </p>
-                    <p className="text-white/70">
-                      Ödeme sonrası dekontu Telegram veya WhatsApp üzerinden sipariş numaranızla
-                      birlikte iletiniz.
-                    </p>
+                    <p className="text-white/70">{t.receiptInfo}</p>
                   </div>
                 </div>
               )}
 
               {paymentMethod === "support" && (
                 <div className="mt-4 rounded-2xl border border-sky-400/20 bg-sky-400/10 p-4 text-sm leading-6 text-sky-50">
-                  <p className="font-bold text-white">Diğer Ödeme Yöntemleri</p>
+                  <p className="font-bold text-white">{t.otherPaymentMethods}</p>
                   <p className="mt-2 text-white/70">
-                    Ödeme bilgisi almak için lütfen Telegram veya WhatsApp üzerinden destek ile
-                    iletişime geçiniz.
+                    {t.otherPaymentInfoText}
                   </p>
                 </div>
               )}
@@ -1815,7 +1952,7 @@ export default function SmmToraPage() {
 
             <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
               <div className="flex items-center justify-between text-sm text-white/60">
-                <span>Onaylanacak Hizmet Sayısı</span>
+                <span>{t.servicesToConfirm}</span>
                 <span>{checkoutItems.length}</span>
               </div>
               <div className="mt-2 flex items-center justify-between text-base font-bold text-white">
@@ -1842,7 +1979,7 @@ export default function SmmToraPage() {
                 disabled={!isCheckoutValid || loading}
                 className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-bold text-black transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {loading ? t.sending : "Alımı Onayla"}
+                {loading ? t.sending : t.confirmPurchase}
               </button>
             </div>
           </div>
@@ -1852,11 +1989,10 @@ export default function SmmToraPage() {
       {successOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
           <div className="w-full max-w-2xl rounded-[28px] border border-white/10 bg-[#121826] p-5 shadow-[0_20px_80px_rgba(0,0,0,0.45)]">
-            <h2 className="text-2xl font-bold text-white">Siparişiniz Onaylandı</h2>
+            <h2 className="text-2xl font-bold text-white">{t.orderConfirmedTitle}</h2>
 
             <p className="mt-2 text-sm leading-6 text-white/60">
-              Siparişiniz başarıyla oluşturuldu. Aşağıdaki sipariş numarası veya numaraları ile
-              bize ulaşabilirsiniz.
+              {t.orderConfirmedDesc}
             </p>
 
             <div className="mt-5 space-y-3">
@@ -1865,7 +2001,7 @@ export default function SmmToraPage() {
                   key={number}
                   className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4"
                 >
-                  <p className="text-sm text-emerald-200">Sipariş Numaranız</p>
+                  <p className="text-sm text-emerald-200">{t.yourOrderNumber}</p>
                   <p className="mt-1 text-lg font-bold text-white">{number}</p>
                 </div>
               ))}
@@ -1873,31 +2009,30 @@ export default function SmmToraPage() {
 
             <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
               <p className="text-sm font-bold text-white">
-                Ödeme ve işlem adımı için bize yazın
+                {t.paymentStepTitle}
               </p>
 
               <p className="mt-1 text-sm leading-6 text-white/60">
-                Sipariş numaranız otomatik mesajın içine eklenecek. Ödeme ve işlem adımları için
-                Telegram veya WhatsApp üzerinden bize ulaşabilirsiniz.
+                {t.paymentStepDesc}
               </p>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <a
-                  href={buildTelegramLink(createdOrderNumbers)}
+                  href={buildTelegramLink(createdOrderNumbers, selectedLocale)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="rounded-2xl bg-sky-500 px-5 py-3 text-center text-sm font-bold text-black transition hover:bg-sky-400"
                 >
-                  Telegram’dan Ödeme Bilgisi Al
+                  {t.telegramPaymentInfo}
                 </a>
 
                 <a
-                  href={buildWhatsappLink(createdOrderNumbers)}
+                  href={buildWhatsappLink(createdOrderNumbers, selectedLocale)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="rounded-2xl bg-emerald-500 px-5 py-3 text-center text-sm font-bold text-black transition hover:bg-emerald-400"
                 >
-                  WhatsApp’tan Ödeme Bilgisi Al
+                  {t.whatsappPaymentInfo}
                 </a>
               </div>
             </div>
@@ -1908,7 +2043,7 @@ export default function SmmToraPage() {
                 onClick={() => setSuccessOpen(false)}
                 className="rounded-2xl bg-white px-5 py-3 text-sm font-bold text-black transition hover:bg-white/90"
               >
-                Tamam
+                {t.ok}
               </button>
             </div>
           </div>

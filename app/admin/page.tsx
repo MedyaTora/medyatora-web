@@ -57,6 +57,38 @@ type OrderRequestRow = {
   completion_note: string | null;
 };
 
+type VisitorSessionRow = {
+  id: number;
+  visitor_id: string;
+  ip_address: string | null;
+  current_path: string | null;
+  locale: string | null;
+  user_agent: string | null;
+  referrer: string | null;
+  screen_width: number | null;
+  screen_height: number | null;
+  timezone: string | null;
+  browser_language: string | null;
+  first_seen_at: string | null;
+  last_seen_at: string | null;
+};
+
+type VisitorEventRow = {
+  id: number;
+  visitor_id: string;
+  ip_address: string | null;
+  event_type: string | null;
+  path: string | null;
+  locale: string | null;
+  user_agent: string | null;
+  referrer: string | null;
+  screen_width: number | null;
+  screen_height: number | null;
+  timezone: string | null;
+  browser_language: string | null;
+  created_at: string | null;
+};
+
 type SearchParams = {
   q?: string;
   analysisStatus?: string;
@@ -64,6 +96,7 @@ type SearchParams = {
   platform?: string;
   apage?: string;
   opage?: string;
+  vpage?: string;
 };
 
 const PAGE_SIZE = 20;
@@ -137,6 +170,107 @@ function buildPageHref(params: URLSearchParams, key: string, page: number) {
   return `/admin?${next.toString()}`;
 }
 
+function isActiveVisitor(lastSeenAt: string | null | undefined) {
+  if (!lastSeenAt) return false;
+
+  const lastSeenTime = new Date(lastSeenAt).getTime();
+  const now = Date.now();
+
+  return now - lastSeenTime <= 2 * 60 * 1000;
+}
+
+function isToday(value: string | null | undefined) {
+  if (!value) return false;
+
+  const date = new Date(value);
+  const now = new Date();
+
+  return (
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate()
+  );
+}
+
+function isThisMonth(value: string | null | undefined) {
+  if (!value) return false;
+
+  const date = new Date(value);
+  const now = new Date();
+
+  return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+}
+
+function getBrowser(userAgent: string | null | undefined) {
+  const ua = String(userAgent || "").toLowerCase();
+
+  if (!ua) return "-";
+  if (ua.includes("edg")) return "Edge";
+  if (ua.includes("opr") || ua.includes("opera")) return "Opera";
+  if (ua.includes("chrome")) return "Chrome";
+  if (ua.includes("safari")) return "Safari";
+  if (ua.includes("firefox")) return "Firefox";
+
+  return "Bilinmeyen";
+}
+
+function getOS(userAgent: string | null | undefined) {
+  const ua = String(userAgent || "").toLowerCase();
+
+  if (!ua) return "-";
+  if (ua.includes("windows")) return "Windows";
+  if (ua.includes("iphone")) return "iPhone";
+  if (ua.includes("ipad")) return "iPad";
+  if (ua.includes("android")) return "Android";
+  if (ua.includes("mac os") || ua.includes("macintosh")) return "macOS";
+  if (ua.includes("linux")) return "Linux";
+
+  return "Bilinmeyen";
+}
+
+function getDeviceType(userAgent: string | null | undefined) {
+  const ua = String(userAgent || "").toLowerCase();
+
+  if (!ua) return "-";
+  if (ua.includes("mobile") || ua.includes("iphone") || ua.includes("android")) {
+    return "Mobil";
+  }
+
+  if (ua.includes("ipad") || ua.includes("tablet")) return "Tablet";
+
+  return "Masaüstü";
+}
+
+function getReferrerLabel(referrer: string | null | undefined) {
+  const value = String(referrer || "").toLowerCase();
+
+  if (!value) return "Direkt giriş";
+  if (value.includes("instagram")) return "Instagram";
+  if (value.includes("google")) return "Google";
+  if (value.includes("tiktok")) return "TikTok";
+  if (value.includes("youtube")) return "YouTube";
+  if (value.includes("facebook")) return "Facebook";
+  if (value.includes("x.com") || value.includes("twitter")) return "X / Twitter";
+  if (value.includes("t.me") || value.includes("telegram")) return "Telegram";
+
+  return referrer || "-";
+}
+
+function getEventTypeLabel(type: string | null | undefined) {
+  const map: Record<string, string> = {
+    page_view: "Sayfa Girişi",
+    heartbeat: "Aktiflik",
+    platform_select: "Platform Seçti",
+    category_select: "Kategori Seçti",
+    service_select: "Hizmet Seçti",
+    add_to_cart: "Sepete Ekledi",
+    checkout_open: "Ödeme Ekranı Açtı",
+    order_created: "Sipariş Oluşturdu",
+  };
+
+  return map[type || ""] || type || "-";
+}
+
 function ErrorScreen({ message }: { message: string }) {
   return (
     <main className="min-h-screen bg-[#050505] p-8 text-white">
@@ -167,6 +301,7 @@ export default async function AdminPage({
   const platform = params.platform || "all";
   const analysisPage = Math.max(Number(params.apage || 1), 1);
   const orderPage = Math.max(Number(params.opage || 1), 1);
+  const visitorPage = Math.max(Number(params.vpage || 1), 1);
 
   const queryParams = new URLSearchParams();
 
@@ -233,16 +368,59 @@ export default async function AdminPage({
     `)
     .order("created_at", { ascending: false });
 
+  const { data: visitorSessionData, error: visitorSessionError } = await supabase
+    .from("visitor_sessions")
+    .select(`
+      id,
+      visitor_id,
+      ip_address,
+      current_path,
+      locale,
+      user_agent,
+      referrer,
+      screen_width,
+      screen_height,
+      timezone,
+      browser_language,
+      first_seen_at,
+      last_seen_at
+    `)
+    .order("last_seen_at", { ascending: false });
+
+  const { data: visitorEventData, error: visitorEventError } = await supabase
+    .from("visitor_events")
+    .select(`
+      id,
+      visitor_id,
+      ip_address,
+      event_type,
+      path,
+      locale,
+      user_agent,
+      referrer,
+      screen_width,
+      screen_height,
+      timezone,
+      browser_language,
+      created_at
+    `)
+    .order("created_at", { ascending: false })
+    .limit(100);
+
   const { count: customerCount, error: customerCountError } = await supabase
     .from("customers")
     .select("*", { count: "exact", head: true });
 
   if (analysisError) return <ErrorScreen message={analysisError.message} />;
   if (orderError) return <ErrorScreen message={orderError.message} />;
+  if (visitorSessionError) return <ErrorScreen message={visitorSessionError.message} />;
+  if (visitorEventError) return <ErrorScreen message={visitorEventError.message} />;
   if (customerCountError) return <ErrorScreen message={customerCountError.message} />;
 
   const allItems = (analysisData || []) as AnalysisRequestRow[];
   const allOrders = (orderData || []) as OrderRequestRow[];
+  const allVisitorSessions = (visitorSessionData || []) as VisitorSessionRow[];
+  const allVisitorEvents = (visitorEventData || []) as VisitorEventRow[];
 
   const filteredAnalysis = allItems.filter((item) => {
     const customer = normalizeCustomer(item.customers);
@@ -282,11 +460,28 @@ export default async function AdminPage({
     return statusOk && platformOk && searchOk;
   });
 
+  const filteredVisitors = allVisitorSessions.filter((item) => {
+    const searchOk =
+      !q ||
+      includesText(item.visitor_id, q) ||
+      includesText(item.ip_address, q) ||
+      includesText(item.current_path, q) ||
+      includesText(item.locale, q) ||
+      includesText(item.user_agent, q) ||
+      includesText(item.referrer, q) ||
+      includesText(item.timezone, q) ||
+      includesText(item.browser_language, q);
+
+    return searchOk;
+  });
+
   const analysisTotalPages = Math.max(Math.ceil(filteredAnalysis.length / PAGE_SIZE), 1);
   const orderTotalPages = Math.max(Math.ceil(filteredOrders.length / PAGE_SIZE), 1);
+  const visitorTotalPages = Math.max(Math.ceil(filteredVisitors.length / PAGE_SIZE), 1);
 
   const analysisPageItems = getPageItems(filteredAnalysis, analysisPage);
   const orderPageItems = getPageItems(filteredOrders, orderPage);
+  const visitorPageItems = getPageItems(filteredVisitors, visitorPage);
 
   const pendingAnalysis = allItems.filter((item) => item.status === "pending").length;
 
@@ -298,6 +493,26 @@ export default async function AdminPage({
 
   const pendingOrders = allOrders.filter((item) => item.status === "pending").length;
   const completedOrders = allOrders.filter((item) => item.status === "completed").length;
+
+  const activeVisitors = allVisitorSessions.filter((item) =>
+    isActiveVisitor(item.last_seen_at)
+  ).length;
+
+  const todayVisitors = new Set(
+    allVisitorEvents
+      .filter((item) => item.event_type === "page_view" && isToday(item.created_at))
+      .map((item) => item.visitor_id)
+  ).size;
+
+  const monthVisitors = new Set(
+    allVisitorEvents
+      .filter((item) => item.event_type === "page_view" && isThisMonth(item.created_at))
+      .map((item) => item.visitor_id)
+  ).size;
+
+  const todayVisits = allVisitorEvents.filter(
+    (item) => item.event_type === "page_view" && isToday(item.created_at)
+  ).length;
 
   const platforms = Array.from(
     new Set(allOrders.map((item) => item.platform).filter(Boolean) as string[])
@@ -323,7 +538,7 @@ export default async function AdminPage({
               </h1>
 
               <p className="mt-2 max-w-2xl text-sm leading-6 text-white/55">
-                Başvuruları ve siparişleri arama, filtreleme ve sayfalama ile takip et.
+                Başvuruları, siparişleri ve SMMTora ziyaretlerini tek panelden takip et.
               </p>
             </div>
 
@@ -361,6 +576,14 @@ export default async function AdminPage({
           <StatCard title="Toplam Müşteri" value={customerCount || 0} accent="white" />
         </section>
 
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          <StatCard title="Şu An Aktif" value={activeVisitors} accent="emerald" />
+          <StatCard title="Bugün Tekil Ziyaretçi" value={todayVisitors} accent="sky" />
+          <StatCard title="Bugün Sayfa Girişi" value={todayVisits} accent="amber" />
+          <StatCard title="Bu Ay Tekil Ziyaretçi" value={monthVisitors} accent="violet" />
+          <StatCard title="Toplam Ziyaretçi" value={allVisitorSessions.length} accent="white" />
+        </section>
+
         <form className="rounded-[28px] border border-white/10 bg-white/[0.03] p-5 md:p-6">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
             <div className="xl:col-span-2">
@@ -371,7 +594,7 @@ export default async function AdminPage({
               <input
                 name="q"
                 defaultValue={q}
-                placeholder="İsim, telefon, sipariş no, kullanıcı adı..."
+                placeholder="İsim, telefon, sipariş no, kullanıcı adı, IP, ziyaretçi kodu..."
                 className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white outline-none placeholder:text-white/30"
               />
             </div>
@@ -427,6 +650,15 @@ export default async function AdminPage({
             </a>
           </div>
         </form>
+
+        <VisitorTrackingPanel
+          sessions={visitorPageItems}
+          events={allVisitorEvents}
+          total={filteredVisitors.length}
+          page={visitorPage}
+          totalPages={visitorTotalPages}
+          queryParams={queryParams}
+        />
 
         <AnalysisTable
           items={analysisPageItems}
@@ -508,6 +740,206 @@ function FilterSelect({
         ))}
       </select>
     </div>
+  );
+}
+
+function VisitorTrackingPanel({
+  sessions,
+  events,
+  total,
+  page,
+  totalPages,
+  queryParams,
+}: {
+  sessions: VisitorSessionRow[];
+  events: VisitorEventRow[];
+  total: number;
+  page: number;
+  totalPages: number;
+  queryParams: URLSearchParams;
+}) {
+  return (
+    <section className="rounded-[28px] border border-white/10 bg-white/[0.03] p-5 md:p-6">
+      <SectionHeader
+        title="Ziyaretçi Takibi"
+        total={total}
+        page={page}
+        totalPages={totalPages}
+      />
+
+      <div className="mt-5 grid gap-5 xl:grid-cols-[1.4fr_0.9fr]">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[1320px] border-separate border-spacing-y-2 text-left text-sm">
+            <thead className="text-xs uppercase tracking-wide text-white/40">
+              <tr>
+                <th className="px-3 py-2">Durum</th>
+                <th className="px-3 py-2">IP</th>
+                <th className="px-3 py-2">Sayfa</th>
+                <th className="px-3 py-2">Dil</th>
+                <th className="px-3 py-2">Cihaz</th>
+                <th className="px-3 py-2">Tarayıcı</th>
+                <th className="px-3 py-2">Sistem</th>
+                <th className="px-3 py-2">Ekran</th>
+                <th className="px-3 py-2">Saat Dilimi</th>
+                <th className="px-3 py-2">Kaynak</th>
+                <th className="px-3 py-2">Son Görülme</th>
+                <th className="px-3 py-2">Detay</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {sessions.map((item) => {
+                const active = isActiveVisitor(item.last_seen_at);
+
+                return (
+                  <tr key={item.id} className="bg-black/20">
+                    <td className="rounded-l-2xl px-3 py-3">
+                      <span
+                        className={`rounded-full border px-3 py-1 text-xs font-bold ${
+                          active
+                            ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-300"
+                            : "border-white/10 bg-white/[0.04] text-white/45"
+                        }`}
+                      >
+                        {active ? "Aktif" : "Pasif"}
+                      </span>
+                    </td>
+
+                    <td className="px-3 py-3 font-semibold text-white">
+                      {item.ip_address || "-"}
+                    </td>
+
+                    <td className="px-3 py-3 text-white/70">
+                      {item.current_path || "-"}
+                    </td>
+
+                    <td className="px-3 py-3 text-white/70">
+                      {(item.locale || "-").toUpperCase()}
+                    </td>
+
+                    <td className="px-3 py-3 text-white/70">
+                      {getDeviceType(item.user_agent)}
+                    </td>
+
+                    <td className="px-3 py-3 text-white/70">
+                      {getBrowser(item.user_agent)}
+                    </td>
+
+                    <td className="px-3 py-3 text-white/70">
+                      {getOS(item.user_agent)}
+                    </td>
+
+                    <td className="px-3 py-3 text-white/70">
+                      {item.screen_width && item.screen_height
+                        ? `${item.screen_width}x${item.screen_height}`
+                        : "-"}
+                    </td>
+
+                    <td className="px-3 py-3 text-white/70">
+                      {item.timezone || "-"}
+                    </td>
+
+                    <td className="px-3 py-3 text-white/70">
+                      {getReferrerLabel(item.referrer)}
+                    </td>
+
+                    <td className="px-3 py-3 text-white/60">
+                      {formatDate(item.last_seen_at)}
+                    </td>
+
+                    <td className="rounded-r-2xl px-3 py-3">
+                      <a
+                        href={`/admin/visitors/${encodeURIComponent(item.visitor_id)}`}
+                        className="rounded-xl bg-white px-3 py-2 text-xs font-bold text-black transition hover:bg-white/90"
+                      >
+                        Detay
+                      </a>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+
+          {sessions.length === 0 ? (
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-5 text-white/45">
+              Henüz ziyaretçi kaydı yok. /smmtora sayfasına girince kayıt düşer.
+            </div>
+          ) : null}
+        </div>
+
+        <div className="rounded-3xl border border-white/10 bg-black/20 p-4">
+          <h3 className="text-lg font-bold">Son Sayfa Hareketleri</h3>
+
+          <div className="mt-4 max-h-[520px] space-y-3 overflow-y-auto pr-1">
+            {events.length === 0 ? (
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-white/45">
+                Henüz hareket kaydı yok.
+              </div>
+            ) : (
+              events.slice(0, 30).map((event) => (
+                <div
+                  key={event.id}
+                  className="rounded-2xl border border-white/10 bg-white/[0.03] p-4"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="rounded-full border border-sky-400/20 bg-sky-400/10 px-3 py-1 text-xs font-bold text-sky-300">
+                      {getEventTypeLabel(event.event_type)}
+                    </span>
+
+                    <span className="text-xs text-white/40">
+                      {formatDate(event.created_at)}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 space-y-1 text-xs leading-5 text-white/60">
+                    <p>
+                      <span className="text-white/35">IP:</span>{" "}
+                      {event.ip_address || "-"}
+                    </p>
+
+                    <p>
+                      <span className="text-white/35">Sayfa:</span>{" "}
+                      {event.path || "-"}
+                    </p>
+
+                    <p>
+                      <span className="text-white/35">Dil:</span>{" "}
+                      {(event.locale || "-").toUpperCase()}
+                    </p>
+
+                    <p>
+                      <span className="text-white/35">Kaynak:</span>{" "}
+                      {getReferrerLabel(event.referrer)}
+                    </p>
+
+                    <p>
+                      <span className="text-white/35">Cihaz:</span>{" "}
+                      {getDeviceType(event.user_agent)} / {getBrowser(event.user_agent)} /{" "}
+                      {getOS(event.user_agent)}
+                    </p>
+
+                    <p>
+                      <span className="text-white/35">Ekran:</span>{" "}
+                      {event.screen_width && event.screen_height
+                        ? `${event.screen_width}x${event.screen_height}`
+                        : "-"}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        prevHref={buildPageHref(queryParams, "vpage", page - 1)}
+        nextHref={buildPageHref(queryParams, "vpage", page + 1)}
+      />
+    </section>
   );
 }
 
