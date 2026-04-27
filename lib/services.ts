@@ -465,7 +465,12 @@ function buildOrderItem(row: DbServiceRow, qualityScore: number, priceScore: num
   const guaranteeDays = detectGuaranteeDays(row);
   const level = getQualityLevel(qualityScore);
   const regionLabel = detectRegionLabel(row);
-  const sortScore = getLevelSortScore(level) * 100000 + tlSale;
+  const guaranteeDaysForSort = detectGuaranteeDays(row) || 0;
+
+  const sortScore =
+    tlSale -
+    Math.min(guaranteeDaysForSort, 365) * 0.05 -
+    Math.min(safeNumber(row.max), 1000000) * 0.000001;
 
   return {
     id: row.panel_service_id,
@@ -540,8 +545,15 @@ export function mapDbServicesToRankedOrderItems(rows: DbServiceRow[]): OrderServ
   return items.sort((a, b) => {
     if (a.platform !== b.platform) return a.platform.localeCompare(b.platform, "tr");
     if (a.category !== b.category) return a.category.localeCompare(b.category, "tr");
-    if (a.sortScore !== b.sortScore) return a.sortScore - b.sortScore;
-    return a.salePriceTl - b.salePriceTl;
+  
+    const aGuaranteed = a.guaranteeDays ? 1 : 0;
+    const bGuaranteed = b.guaranteeDays ? 1 : 0;
+  
+    if (a.salePriceTl !== b.salePriceTl) return a.salePriceTl - b.salePriceTl;
+    if (aGuaranteed !== bGuaranteed) return bGuaranteed - aGuaranteed;
+    if (a.max !== b.max) return b.max - a.max;
+  
+    return a.id - b.id;
   });
 }
 
