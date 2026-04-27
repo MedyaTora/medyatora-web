@@ -54,6 +54,10 @@ export type DbServiceRow = {
   tl_sale_price: number;
   usd_sale_price: number;
   rub_sale_price: number;
+
+  manual_title?: string | null;
+  manual_description?: string | null;
+  manual_sale_price_tl?: number | null;
 };
 
 export type ServiceCardItem = OrderServiceItem;
@@ -452,9 +456,24 @@ function buildServiceDescription(
 function buildOrderItem(row: DbServiceRow, qualityScore: number, priceScore: number): OrderServiceItem {
   const usdCost = safeNumber(row.usd_cost_price);
   const tlCost = safeNumber(row.tl_cost_price);
-  const tlSale = safeNumber(row.tl_sale_price);
-  const usdSale = safeNumber(row.usd_sale_price);
-  const rubSale = safeNumber(row.rub_sale_price);
+
+  const autoTlSale = safeNumber(row.tl_sale_price);
+  const manualTlSale = safeNumber(row.manual_sale_price_tl);
+
+  const tlSale = manualTlSale > 0 ? manualTlSale : autoTlSale;
+
+  const autoUsdSale = safeNumber(row.usd_sale_price);
+  const autoRubSale = safeNumber(row.rub_sale_price);
+
+  const usdSale =
+    autoTlSale > 0 && autoUsdSale > 0
+      ? Number(((tlSale * autoUsdSale) / autoTlSale).toFixed(4))
+      : autoUsdSale;
+
+  const rubSale =
+    autoTlSale > 0 && autoRubSale > 0
+      ? Number(((tlSale * autoRubSale) / autoTlSale).toFixed(4))
+      : autoRubSale;
 
   const rubCost =
     usdCost > 0 && usdSale > 0 && rubSale > 0
@@ -467,6 +486,19 @@ function buildOrderItem(row: DbServiceRow, qualityScore: number, priceScore: num
   const regionLabel = detectRegionLabel(row);
   const guaranteeDaysForSort = detectGuaranteeDays(row) || 0;
 
+  const manualTitle = row.manual_title?.trim();
+  const manualDescription = row.manual_description?.trim();
+
+  const title =
+    manualTitle && manualTitle.length > 0
+      ? manualTitle
+      : buildServiceTitle(row, level, guaranteeLabel, regionLabel);
+
+  const description =
+    manualDescription && manualDescription.length > 0
+      ? manualDescription
+      : buildServiceDescription(row, level, guaranteeLabel, guaranteeDays);
+
   const sortScore =
     tlSale -
     Math.min(guaranteeDaysForSort, 365) * 0.05 -
@@ -477,7 +509,7 @@ function buildOrderItem(row: DbServiceRow, qualityScore: number, priceScore: num
     siteCode: safeNumber(row.site_code),
     platform: row.platform || "",
     category: row.category || "",
-    title: buildServiceTitle(row, level, guaranteeLabel, regionLabel),
+    title,
     subtitle: row.subtitle || "",
     guarantee: guaranteeLabel !== "Garantisiz",
     guaranteeLabel,
@@ -499,7 +531,7 @@ function buildOrderItem(row: DbServiceRow, qualityScore: number, priceScore: num
     qualityScore,
     sortScore,
     regionLabel,
-    description: buildServiceDescription(row, level, guaranteeLabel, guaranteeDays),
+    description,
     originalName: row.original_name || "",
   };
 }
@@ -676,7 +708,10 @@ async function fetchServicesFromDb(params: {
       usd_cost_price,
       tl_sale_price,
       usd_sale_price,
-      rub_sale_price
+      rub_sale_price,
+      manual_title,
+      manual_description,
+      manual_sale_price_tl
     `)
     .eq("is_active", true)
     .eq("platform", params.platform)
@@ -706,12 +741,20 @@ export async function getPlatformServices({
     .filter((row) => matchesRegion(row.original_name, region))
     .filter((row) => matchesCountry(row.original_name, country))
     .filter(
-      (row) =>
-        safeNumber(row.tl_sale_price) > 0 &&
-        safeNumber(row.usd_sale_price) > 0 &&
-        safeNumber(row.rub_sale_price) > 0 &&
-        safeNumber(row.min) > 0 &&
-        safeNumber(row.max) > 0
+      (row) => {
+        const finalTlSale =
+          safeNumber(row.manual_sale_price_tl) > 0
+            ? safeNumber(row.manual_sale_price_tl)
+            : safeNumber(row.tl_sale_price);
+    
+        return (
+          finalTlSale > 0 &&
+          safeNumber(row.usd_sale_price) > 0 &&
+          safeNumber(row.rub_sale_price) > 0 &&
+          safeNumber(row.min) > 0 &&
+          safeNumber(row.max) > 0
+        );
+      }
     );
 
   return mapDbServicesToRankedOrderItems(filteredRows);

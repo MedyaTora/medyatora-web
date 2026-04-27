@@ -79,31 +79,36 @@ export async function GET(req: NextRequest) {
 
       let query = supabase
         .from("services")
-        .select(
-          `
-            id,
-            panel_service_id,
-            site_code,
-            platform,
-            category,
-            original_name,
-            clean_title,
-            subtitle,
-            guarantee,
-            guarantee_label,
-            min,
-            max,
-            speed,
-            level,
-            description,
-            tl_cost_price,
-            usd_cost_price,
-            tl_sale_price,
-            usd_sale_price,
-            rub_sale_price
-          `
-        )
+        .select(`
+          id,
+          panel_service_id,
+          site_code,
+          platform,
+          category,
+          original_name,
+          clean_title,
+          subtitle,
+          guarantee,
+          guarantee_label,
+          min,
+          max,
+          speed,
+          level,
+          description,
+          tl_cost_price,
+          usd_cost_price,
+          tl_sale_price,
+          usd_sale_price,
+          rub_sale_price,
+          manual_title,
+          manual_description,
+          manual_sale_price_tl
+        `)
         .eq("is_active", true)
+        .eq("public_visible", true)
+        .eq("review_status", "approved")
+        .eq("product_type", "single")
+        .eq("public_page", "paketler")
         .gt("tl_sale_price", 0)
         .gt("usd_sale_price", 0)
         .gt("rub_sale_price", 0)
@@ -123,6 +128,8 @@ export async function GET(req: NextRequest) {
       const { data, error } = await query;
 
       if (error) {
+        console.error("Servisler alınamadı:", error.message);
+
         return NextResponse.json(
           { error: "Servisler alınamadı." },
           { status: 400 }
@@ -130,7 +137,6 @@ export async function GET(req: NextRequest) {
       }
 
       const rows = (data || []) as DbServiceRow[];
-
       allRows.push(...rows);
 
       if (rows.length < PAGE_SIZE) {
@@ -138,22 +144,41 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const rows = allRows.filter(
-      (item) =>
-        item.platform &&
-        item.category &&
-        typeof item.min === "number" &&
-        typeof item.max === "number"
-    );
+    const rows = allRows.filter((item) => {
+      const platform = (item.platform || "").trim();
+      const category = (item.category || "").trim();
+      const cleanTitle = (item.clean_title || "").trim();
+      const manualTitle = (item.manual_title || "").trim();
+      const guaranteeLabel = (item.guarantee_label || "").trim();
+      const subtitle = (item.subtitle || "").trim();
 
-    const items = mapDbServicesToRankedOrderItems(rows).filter(
-      (item) =>
+      const hasValidPlatform = platform.length > 0 && platform !== "other";
+      const hasValidCategory = category.length > 0 && category !== "other";
+
+      const hasVisibleTitle = cleanTitle.length > 0 || manualTitle.length > 0;
+      const hasVisibleGuarantee = guaranteeLabel.length > 0;
+      const hasVisibleCode = subtitle.length > 0 || Number(item.site_code) > 0;
+
+      return (
+        hasValidPlatform &&
+        hasValidCategory &&
+        hasVisibleTitle &&
+        hasVisibleGuarantee &&
+        hasVisibleCode &&
+        Number(item.min) > 0 &&
+        Number(item.max) > 0
+      );
+    });
+
+    const items = mapDbServicesToRankedOrderItems(rows).filter((item) => {
+      return (
         item.salePriceTl > 0 &&
         item.salePriceUsd > 0 &&
         item.salePriceRub > 0 &&
         item.min > 0 &&
         item.max > 0
-    );
+      );
+    });
 
     return NextResponse.json(
       {
@@ -165,7 +190,7 @@ export async function GET(req: NextRequest) {
       {
         status: 200,
         headers: {
-          "Cache-Control": "public, max-age=60, stale-while-revalidate=300",
+          "Cache-Control": "no-store",
         },
       }
     );

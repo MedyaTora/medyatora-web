@@ -200,6 +200,13 @@ function buildDescription(service: RawService): string {
 }
 
 export async function POST() {
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json(
+      { error: "Bu seed route production ortamında kapalıdır." },
+      { status: 403 }
+    );
+  }
+
   try {
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,

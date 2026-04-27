@@ -1,389 +1,1919 @@
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+"use client";
 
-import { CONTACT, getWhatsappLink } from "@/lib/contact";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { IconType } from "react-icons";
+import type { OrderServiceItem } from "@/lib/services";
+import { getDictionary, type Locale } from "@/lib/i18n";
+import { getAllPlatforms } from "@/lib/platforms";
+import ServiceTermsModal from "../components/service-terms-modal";
 
-const readyPackages = [
-  {
-    name: "Mini Hesap Destek Paketi",
-    slug: "mini-hesap-destek",
-    badge: "Başlangıç",
-    price: "799 TL",
-    oldPrice: "Tekli alıma göre avantajlı",
-    description:
-      "Yeni başlayan veya profil görünümünü güçlendirmek isteyen hesaplar için temel sosyal destek paketi.",
-    items: [
-      "1.000 takipçi",
-      "5.000 beğeni",
-      "50 kaydetme",
-      "365 gün garanti",
-    ],
-    suitableFor: "Yeni hesaplar, butik sayfalar ve temel güven görünümü isteyen profiller.",
-  },
-  {
-    name: "Orta Hesap Destek Paketi",
-    slug: "orta-hesap-destek",
-    badge: "En Dengeli",
-    price: "1.499 TL",
-    oldPrice: "Daha güçlü vitrin",
-    description:
-      "Profilini daha dolu, daha aktif ve daha güven veren göstermek isteyen hesaplar için dengeli paket.",
-    items: [
-      "2.500 takipçi",
-      "10.000 beğeni",
-      "150 kaydetme",
-      "2.000 izlenme",
-      "365 gün garanti",
-    ],
-    suitableFor: "Satış sayfaları, içerik üreticileri ve reklam öncesi güven artırmak isteyen hesaplar.",
-  },
-  {
-    name: "Mega Hesap Destek Paketi",
-    slug: "mega-hesap-destek",
-    badge: "Güçlü Görünüm",
-    price: "2.799 TL",
-    oldPrice: "Öncelikli destek",
-    description:
-      "Daha güçlü sosyal kanıt, daha dolu içerik görünümü ve yüksek güven algısı isteyen hesaplar için.",
-    items: [
-      "5.000 takipçi",
-      "25.000 beğeni",
-      "500 kaydetme",
-      "10.000 izlenme",
-      "365 gün garanti",
-    ],
-    suitableFor: "Markalar, butik işletmeler, kampanya öncesi güçlü vitrin isteyen hesaplar.",
-  },
-];
+import * as SiIcons from "react-icons/si";
 
-const serviceTypes = [
-  {
-    title: "Takipçi Destekleri",
-    description:
-      "Profilin ilk bakışta daha güçlü ve güven veren görünmesini destekleyen takipçi hizmetleri.",
-  },
-  {
-    title: "Beğeni ve Etkileşim",
-    description:
-      "Gönderilerinin daha dolu görünmesi ve ziyaretçiye daha aktif bir hesap algısı vermesi için.",
-  },
-  {
-    title: "İzlenme ve Görüntülenme",
-    description:
-      "Reels, video, story ve içeriklerinde daha canlı bir vitrin etkisi oluşturmak için.",
-  },
-  {
-    title: "Kaydetme ve Profil Desteği",
-    description:
-      "İçeriklerin daha değerli görünmesini destekleyen kaydetme ve ek etkileşim hizmetleri.",
-  },
-];
+import {
+  FaBoxesStacked,
+  FaFileInvoice,
+  FaShieldHalved,
+  FaUserCheck,
+  FaWhatsapp,
+} from "react-icons/fa6";
 
-const rules = [
-  "Profil herkese açık olmalıdır. Gizli hesaplarda işlem başlamaz.",
-  "Yanlış link, yanlış kullanıcı adı veya kapalı profil işlem süresini geciktirebilir.",
-  "İşlem başladıktan sonra keyfi iptal yapılamaz.",
-  "Tamamlanan dijital hizmetlerde iade yapılmaz.",
-  "Yüklenmeyen veya tamamlanamayan miktarın karşılığı bakiye olarak iade edilebilir.",
-  "Verdiğiniz bilgiler yalnızca işlem ve destek süreci için kullanılır.",
-];
+type CurrencyCode = "TL" | "USD" | "RUB";
+type CheckoutMode = "single" | "cart" | null;
+type ContactType = "Telegram" | "WhatsApp" | "Instagram" | "E-posta" | "";
+type PaymentMethod = "turkey_bank" | "support" | "";
+type QualityFilter = "all" | "Core" | "Plus" | "Prime";
+type GuaranteeFilter = "all" | "guaranteed" | "no-guarantee";
+type RegionFilter = "all" | "TR" | "RU" | "Global";
+type PriceSort = "smart" | "price-asc" | "price-desc";
 
-export default function SmmToraPage() {
+type CartItem = {
+  cartId: string;
+  service_id: number;
+  site_code: number;
+  service_title: string;
+  platform: string;
+  category: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  unit_cost_price: number;
+  total_cost_price: number;
+  guarantee_label: string;
+  speed: string;
+  target_username: string;
+  target_link: string;
+  order_note: string;
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  takipci: "Takipçi",
+  begeni: "Beğeni",
+  yorum: "Yorum",
+  izlenme: "İzlenme",
+  kaydetme: "Kaydetme",
+  paylasim: "Paylaşım",
+  repost: "Repost",
+  retweet: "Retweet",
+  abone: "Abone",
+  uye: "Üye",
+  reaksiyon: "Reaksiyon",
+  story: "Story",
+  story_izlenme: "Story İzlenme",
+  reels: "Reels",
+  reels_izlenme: "Reels İzlenme",
+  reels_begeni: "Reels Beğeni",
+  reels_yorum: "Reels Yorum",
+  shorts: "Shorts",
+  shorts_izlenme: "Shorts İzlenme",
+  shorts_begeni: "Shorts Beğeni",
+  canli_yayin: "Canlı Yayın",
+  profil_ziyareti: "Profil Ziyareti",
+  sayfa_begenisi: "Sayfa Beğenisi",
+  grup_uyesi: "Grup Üyesi",
+  oylama: "Oylama",
+  dinlenme: "Dinlenme",
+  other: "Diğer",
+};
+
+const CATEGORY_SORT_ORDER: Record<string, number> = {
+  takipci: 1,
+  abone: 2,
+  uye: 3,
+  begeni: 4,
+  yorum: 5,
+  izlenme: 6,
+  reels_izlenme: 7,
+  reels_begeni: 8,
+  reels_yorum: 9,
+  shorts_izlenme: 10,
+  shorts_begeni: 11,
+  story_izlenme: 12,
+  kaydetme: 13,
+  paylasim: 14,
+  repost: 15,
+  retweet: 16,
+  reaksiyon: 17,
+  canli_yayin: 18,
+  profil_ziyareti: 19,
+  sayfa_begenisi: 20,
+  grup_uyesi: 21,
+  oylama: 22,
+  dinlenme: 23,
+  story: 24,
+  reels: 25,
+  shorts: 26,
+  other: 999,
+};
+
+const currencyOptions: CurrencyCode[] = ["TL", "USD", "RUB"];
+const localeOptions: Locale[] = ["tr", "en", "ru"];
+const contactTypes: ContactType[] = ["Telegram", "WhatsApp", "Instagram", "E-posta"];
+
+const TELEGRAM_USERNAME = "medyatora";
+const WHATSAPP_NUMBER = "905530739292";
+
+const TURKEY_BANK_ACCOUNT_NAME =
+  "BİLÇAĞ İLETİŞİM TELEKOMİNASYON BİLGİSAYAR DAY. TÜK. MAİL. GIDA SAN. VE TİC.LTD.ŞTİ";
+
+const TURKEY_BANK_IBAN = "TR48 0001 0001 3349 7700 5150 01";
+
+function PlatformIcon({
+  slug,
+  title,
+}: {
+  slug: string;
+  title?: string | null;
+}) {
+  const className = "h-7 w-7";
+
+  const iconMap: Record<string, string> = {
+    instagram: "SiInstagram",
+    tiktok: "SiTiktok",
+    youtube: "SiYoutube",
+    telegram: "SiTelegram",
+    spotify: "SiSpotify",
+    facebook: "SiFacebook",
+    x: "SiX",
+    twitch: "SiTwitch",
+    kick: "SiKick",
+    discord: "SiDiscord",
+    snapchat: "SiSnapchat",
+    pinterest: "SiPinterest",
+    linkedin: "SiLinkedin",
+    reddit: "SiReddit",
+    threads: "SiThreads",
+    "apple-music": "SiApplemusic",
+    soundcloud: "SiSoundcloud",
+    audiomack: "SiAudiomack",
+    deezer: "SiDeezer",
+    shazam: "SiShazam",
+    boomplay: "SiBoomplay",
+    steam: "SiSteam",
+    xbox: "SiXbox",
+    vk: "SiVk",
+    rutube: "SiRutube",
+    "ok-ru": "SiOdnoklassniki",
+    dzen: "SiDzen",
+    github: "SiGithub",
+    tumblr: "SiTumblr",
+    bluesky: "SiBluesky",
+    vimeo: "SiVimeo",
+    "google-review": "SiGoogle",
+    "google-maps": "SiGooglemaps",
+    whatsapp: "SiWhatsapp",
+  };
+
+  const iconName = iconMap[slug];
+  const Icon = iconName
+    ? (SiIcons as unknown as Record<string, IconType | undefined>)[iconName]
+    : undefined;
+
+  if (Icon) {
+    return <Icon className={className} />;
+  }
+
+  const safeTitle = String(title || slug || "MT").trim();
+  const initials = safeTitle.slice(0, 2).toUpperCase();
+
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#172033_0%,#080b12_50%,#030408_100%)] text-white">
-      <section className="relative overflow-hidden">
-        <div className="pointer-events-none absolute left-1/2 top-0 h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-emerald-400/10 blur-[100px]" />
-        <div className="pointer-events-none absolute right-0 top-40 h-[360px] w-[360px] rounded-full bg-sky-500/10 blur-[100px]" />
-        <div className="pointer-events-none absolute bottom-0 left-0 h-[340px] w-[340px] rounded-full bg-violet-500/10 blur-[100px]" />
-
-        <div className="relative mx-auto max-w-6xl px-6 py-16 md:py-24">
-          <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-            <a
-              href="/"
-              className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/75 transition hover:bg-white/[0.08] hover:text-white"
-            >
-              ← MedyaTora Ana Sayfa
-            </a>
-
-            <div className="flex flex-wrap gap-3">
-              <a
-                href="/paketler"
-                className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2.5 text-sm font-medium text-emerald-300 transition hover:bg-emerald-400/15"
-              >
-                Tekli Hizmetler
-              </a>
-
-              <a
-                href={getWhatsappLink()}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/75 transition hover:bg-white/[0.08] hover:text-white"
-              >
-                Destek Al
-              </a>
-            </div>
-          </div>
-
-          <div className="grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr]">
-            <div>
-              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-xs font-semibold text-emerald-300">
-                <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                MedyaTora sosyal destek alanı
-              </div>
-
-              <h1 className="mb-6 text-4xl font-bold leading-tight tracking-tight md:text-6xl">
-                SMMTora ile hesabına hazır sosyal destek paketleri seç.
-              </h1>
-
-              <p className="mb-8 max-w-2xl text-lg leading-8 text-white/70 md:text-xl">
-                Takipçi, beğeni, izlenme, kaydetme ve hazır hesap destek paketleri için
-                MedyaTora içindeki ayrı SMM alanı. Tekli hizmet alabilir veya hazır paketlerden
-                birini seçebilirsin.
-              </p>
-
-              <div className="flex flex-col gap-4 sm:flex-row">
-                <a
-                  href="#ready-packages"
-                  className="rounded-2xl bg-white px-6 py-3 text-center font-semibold text-black transition hover:bg-white/90"
-                >
-                  Hazır Paketleri Gör
-                </a>
-
-                <a
-                  href="/paketler"
-                  className="rounded-2xl border border-white/20 px-6 py-3 text-center font-semibold text-white transition hover:bg-white/10"
-                >
-                  Tekli Hizmet Seç
-                </a>
-              </div>
-            </div>
-
-            <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur md:p-8">
-              <p className="mb-4 text-sm uppercase tracking-[0.2em] text-white/50">
-                SMMTora farkı
-              </p>
-
-              <div className="space-y-4">
-                <InfoCard
-                  title="Hazır paket kolaylığı"
-                  description="Mini, Orta ve Mega gibi paketlerle tek tek servis seçmeden hızlı başlangıç yap."
-                />
-                <InfoCard
-                  title="365 gün garanti vurgusu"
-                  description="Hazır paketlerde güçlü güven algısı için uzun garanti süresi öne çıkarılır."
-                />
-                <InfoCard
-                  title="MedyaTora’dan ayrı konum"
-                  description="Ana marka danışmanlık ve medya desteği olarak kalır, SMM hizmetleri burada toplanır."
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="ready-packages" className="mx-auto max-w-6xl px-6 pb-16 scroll-mt-8">
-        <div className="mb-8">
-          <p className="mb-2 text-sm uppercase tracking-[0.2em] text-white/50">
-            Hazır paketler
-          </p>
-          <h2 className="text-3xl font-bold md:text-4xl">
-            Hesap destek paketleri
-          </h2>
-          <p className="mt-3 max-w-3xl leading-7 text-white/65">
-            Tek tek hizmet seçmek istemeyen kullanıcılar için hazırlanmış sosyal destek
-            paketleri. Fiyatlar KDV ve vergiler dahil olacak şekilde gösterilir.
-          </p>
-        </div>
-
-        <div className="grid gap-5 lg:grid-cols-3">
-          {readyPackages.map((pack) => (
-            <div
-              key={pack.slug}
-              className="relative overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.04] p-6 transition hover:-translate-y-1 hover:bg-white/[0.07]"
-            >
-              <div className="pointer-events-none absolute right-0 top-0 h-32 w-32 rounded-full bg-emerald-400/10 blur-[60px]" />
-
-              <div className="relative">
-                <div className="mb-4 inline-flex rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-300">
-                  {pack.badge}
-                </div>
-
-                <h3 className="mb-3 text-2xl font-bold">{pack.name}</h3>
-
-                <p className="mb-5 text-sm leading-6 text-white/65">
-                  {pack.description}
-                </p>
-
-                <div className="mb-5 rounded-2xl border border-white/10 bg-black/25 p-4">
-                  <p className="text-xs uppercase tracking-wide text-white/40">Fiyat</p>
-                  <p className="mt-1 text-3xl font-bold">{pack.price}</p>
-                  <p className="mt-1 text-xs text-white/45">{pack.oldPrice}</p>
-                </div>
-
-                <div className="mb-5 space-y-2">
-                  {pack.items.map((item) => (
-                    <div
-                      key={item}
-                      className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white/75"
-                    >
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                      {item}
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mb-6 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                  <p className="mb-1 text-xs uppercase tracking-wide text-white/35">
-                    Kimler için uygun?
-                  </p>
-                  <p className="text-sm leading-6 text-white/65">{pack.suitableFor}</p>
-                </div>
-
-                <a
-                  href="/paketler"
-                  className="block rounded-2xl bg-white px-6 py-3 text-center font-semibold text-black transition hover:bg-white/90"
-                >
-                  Siparişe Geç
-                </a>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-6 pb-16">
-        <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-8 md:p-10">
-          <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
-            <div>
-              <p className="mb-2 text-sm uppercase tracking-[0.2em] text-white/50">
-                Tekli hizmetler
-              </p>
-
-              <h2 className="mb-4 text-3xl font-bold md:text-4xl">
-                Kendi ihtiyacına göre servis seç
-              </h2>
-
-              <p className="leading-7 text-white/70">
-                Hazır paket yerine sadece ihtiyacın olan hizmeti almak istersen tekli
-                hizmet ekranından platform, kategori ve miktar seçerek sipariş oluşturabilirsin.
-              </p>
-
-              <a
-                href="/paketler"
-                className="mt-6 inline-flex rounded-2xl bg-white px-6 py-3 font-semibold text-black transition hover:bg-white/90"
-              >
-                Tekli Hizmetleri Aç
-              </a>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              {serviceTypes.map((item) => (
-                <InfoCard key={item.title} title={item.title} description={item.description} />
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-6 pb-16">
-        <div className="rounded-[28px] border border-amber-400/20 bg-amber-400/10 p-8 md:p-10">
-          <p className="mb-2 text-sm uppercase tracking-[0.2em] text-amber-200/80">
-            Sipariş öncesi bilgilendirme
-          </p>
-
-          <h2 className="mb-5 text-3xl font-bold">
-            İşlem başlamadan önce dikkat edilmesi gerekenler
-          </h2>
-
-          <div className="grid gap-3 md:grid-cols-2">
-            {rules.map((rule) => (
-              <div
-                key={rule}
-                className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm leading-6 text-white/75"
-              >
-                {rule}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-6 pb-24">
-        <div className="flex flex-col gap-6 rounded-[28px] border border-white/10 bg-gradient-to-br from-white/[0.1] to-white/[0.03] p-8 md:p-10 lg:flex-row lg:items-center lg:justify-between">
-          <div className="max-w-2xl">
-            <p className="mb-3 text-sm uppercase tracking-[0.2em] text-white/50">
-              Kararsız mı kaldın?
-            </p>
-
-            <h2 className="mb-3 text-3xl font-bold md:text-4xl">
-              Önce destek ekibiyle konuşabilirsin
-            </h2>
-
-            <p className="leading-7 text-white/70">
-              Hangi paketin hesabına daha uygun olduğunu bilmiyorsan Telegram veya WhatsApp
-              üzerinden bize ulaşabilirsin.
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-4 sm:flex-row">
-            <a
-              href={getWhatsappLink()}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-2xl bg-white px-6 py-3 text-center font-semibold text-black transition hover:bg-white/90"
-            >
-              WhatsApp
-            </a>
-
-            <a
-              href={CONTACT.telegram}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-2xl border border-white/20 px-6 py-3 text-center font-semibold text-white transition hover:bg-white/10"
-            >
-              Telegram
-            </a>
-          </div>
-        </div>
-      </section>
-
-      <footer className="border-t border-white/10 px-6 py-10">
-        <div className="mx-auto flex max-w-6xl flex-col gap-4 text-sm text-white/50 md:flex-row md:items-center md:justify-between">
-          <div>
-            <div className="font-semibold text-white">© SMMTora</div>
-            <div>MedyaTora sosyal destek hizmetleri alanı</div>
-          </div>
-
-          <div className="flex flex-wrap gap-4">
-            <a href="/" className="transition hover:text-white">
-              MedyaTora
-            </a>
-
-            <a href="/paketler" className="transition hover:text-white">
-              Tekli Hizmetler
-            </a>
-
-            <a
-              href={CONTACT.instagram}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="transition hover:text-white"
-            >
-              Instagram
-            </a>
-          </div>
-        </div>
-      </footer>
-    </main>
+    <span className="text-sm font-black uppercase tracking-tight text-white">
+      {initials || "MT"}
+    </span>
   );
 }
 
-function InfoCard({ title, description }: { title: string; description: string }) {
+function getCategoryName(slug: string) {
+  return CATEGORY_LABELS[slug] || slug.replace(/_/g, " ");
+}
+
+function buildOrderMessage(orderNumbers: string[]) {
+  return `Merhaba, MedyaTora üzerinden sipariş verdim.
+
+Sipariş numaram:
+${orderNumbers.join("\n")}
+
+Ödeme ve işlem adımlarını öğrenmek istiyorum.`;
+}
+
+function buildTelegramLink(orderNumbers: string[]) {
+  return `https://t.me/${TELEGRAM_USERNAME}?text=${encodeURIComponent(
+    buildOrderMessage(orderNumbers)
+  )}`;
+}
+
+function buildWhatsappLink(orderNumbers: string[]) {
+  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+    buildOrderMessage(orderNumbers)
+  )}`;
+}
+
+function detectInitialLocale(): Locale {
+  if (typeof window === "undefined") return "tr";
+
+  const saved = window.localStorage.getItem("medyatora_locale");
+  if (saved === "tr" || saved === "en" || saved === "ru") return saved;
+
+  const browserLang = (navigator.language || "").toLowerCase();
+  if (browserLang.startsWith("tr")) return "tr";
+  if (browserLang.startsWith("ru")) return "ru";
+  return "en";
+}
+
+function getUnitSalePrice(service: OrderServiceItem | null, currency: CurrencyCode) {
+  if (!service) return 0;
+  if (currency === "USD") return service.salePriceUsd;
+  if (currency === "RUB") return service.salePriceRub;
+  return service.salePriceTl;
+}
+
+function getUnitCostPrice(service: OrderServiceItem | null, currency: CurrencyCode) {
+  if (!service) return 0;
+  if (currency === "USD") return service.costPriceUsd;
+  if (currency === "RUB") return service.costPriceRub;
+  return service.costPriceTl;
+}
+
+function formatPrice(value: number, currency: CurrencyCode) {
+  if (!value) return `0 ${currency}`;
+  if (currency === "TL") return `${Math.round(value)} TL`;
+  return `${value.toFixed(2)} ${currency}`;
+}
+
+function normalizeSearchText(value: unknown) {
+  return String(value || "")
+    .toLocaleLowerCase("tr-TR")
+    .replace(/ı/g, "i")
+    .replace(/ğ/g, "g")
+    .replace(/ü/g, "u")
+    .replace(/ş/g, "s")
+    .replace(/ö/g, "o")
+    .replace(/ç/g, "c");
+}
+
+function getCategoryLabel(name: string, locale: Locale) {
+  const map: Record<string, Record<Locale, string>> = {
+    Takipçi: { tr: "Takipçi", en: "Followers", ru: "Подписчики" },
+    Beğeni: { tr: "Beğeni", en: "Likes", ru: "Лайки" },
+    Yorum: { tr: "Yorum", en: "Comments", ru: "Комментарии" },
+    İzlenme: { tr: "İzlenme", en: "Views", ru: "Просмотры" },
+    Kaydetme: { tr: "Kaydetme", en: "Saves", ru: "Сохранения" },
+    Paylaşım: { tr: "Paylaşım", en: "Shares", ru: "Репосты" },
+    Repost: { tr: "Repost", en: "Repost", ru: "Репост" },
+    Retweet: { tr: "Retweet", en: "Retweet", ru: "Ретвит" },
+    Abone: { tr: "Abone", en: "Subscribers", ru: "Подписчики" },
+    Üye: { tr: "Üye", en: "Members", ru: "Участники" },
+    Reaksiyon: { tr: "Reaksiyon", en: "Reactions", ru: "Реакции" },
+    Story: { tr: "Story", en: "Story", ru: "История" },
+    "Story İzlenme": {
+      tr: "Story İzlenme",
+      en: "Story Views",
+      ru: "Просмотры историй",
+    },
+    Reels: { tr: "Reels", en: "Reels", ru: "Reels" },
+    "Reels İzlenme": {
+      tr: "Reels İzlenme",
+      en: "Reels Views",
+      ru: "Просмотры Reels",
+    },
+    "Reels Beğeni": {
+      tr: "Reels Beğeni",
+      en: "Reels Likes",
+      ru: "Лайки Reels",
+    },
+    "Reels Yorum": {
+      tr: "Reels Yorum",
+      en: "Reels Comments",
+      ru: "Комментарии Reels",
+    },
+    Shorts: { tr: "Shorts", en: "Shorts", ru: "Shorts" },
+    "Shorts İzlenme": {
+      tr: "Shorts İzlenme",
+      en: "Shorts Views",
+      ru: "Просмотры Shorts",
+    },
+    "Shorts Beğeni": {
+      tr: "Shorts Beğeni",
+      en: "Shorts Likes",
+      ru: "Лайки Shorts",
+    },
+    "Canlı Yayın": {
+      tr: "Canlı Yayın",
+      en: "Live Stream",
+      ru: "Прямой эфир",
+    },
+    "Profil Ziyareti": {
+      tr: "Profil Ziyareti",
+      en: "Profile Visits",
+      ru: "Посещения профиля",
+    },
+    "Sayfa Beğenisi": {
+      tr: "Sayfa Beğenisi",
+      en: "Page Likes",
+      ru: "Лайки страницы",
+    },
+    "Grup Üyesi": {
+      tr: "Grup Üyesi",
+      en: "Group Members",
+      ru: "Участники группы",
+    },
+    Oylama: { tr: "Oylama", en: "Poll / Votes", ru: "Голосования" },
+    Dinlenme: { tr: "Dinlenme", en: "Plays / Streams", ru: "Прослушивания" },
+    Diğer: { tr: "Diğer", en: "Other", ru: "Другое" },
+  };
+
+  return map[name]?.[locale] || name;
+}
+
+function makeCartId() {
+  return Math.random().toString(36).slice(2, 10);
+}
+
+function OrderBeforeNotice() {
+  const notices: { title: string; text: string; icon: IconType }[] = [
+    {
+      title: "Fiyat Bilgisi",
+      text: "Tüm fiyatlara KDV + vergiler dahildir. Gördüğünüz tutar nihai ödeme tutarıdır.",
+      icon: FaFileInvoice,
+    },
+    {
+      title: "Profil Durumu",
+      text: "İşlem yapılacak profil, gönderi, video veya kanal herkese açık olmalıdır.",
+      icon: FaShieldHalved,
+    },
+    {
+      title: "Başlangıç Süresi",
+      text: "Başlangıç süresi servise göre değişebilir. Genellikle işlemler 0-24 saat içinde başlar.",
+      icon: FaUserCheck,
+    },
+    {
+      title: "Destek",
+      text: "Ödeme sonrası dekontu WhatsApp veya Telegram üzerinden iletebilirsiniz.",
+      icon: FaWhatsapp,
+    },
+  ];
+
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/25 p-5">
-      <h3 className="mb-2 font-semibold">{title}</h3>
-      <p className="text-sm leading-6 text-white/65">{description}</p>
-    </div>
+    <section className="rounded-[32px] border border-amber-400/20 bg-gradient-to-br from-amber-400/10 to-white/[0.035] p-5 shadow-[0_18px_70px_rgba(0,0,0,0.28)] backdrop-blur sm:p-6">
+      <div className="mb-5">
+        <p className="text-xs font-bold uppercase tracking-[0.22em] text-amber-300">
+          MedyaTora Bilgilendirme Sistemi
+        </p>
+
+        <h2 className="mt-2 text-2xl font-bold text-white">
+          Sipariş Öncesi Önemli Bilgilendirme
+        </h2>
+
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-white/65">
+          Sipariş oluşturmadan önce hedef hesabın, bağlantının ve miktarın doğru olduğundan emin olun.
+        </p>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        {notices.map((item) => (
+          <div
+            key={item.title}
+            className="rounded-2xl border border-white/10 bg-black/20 p-4"
+          >
+            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-amber-300">
+              <item.icon />
+            </div>
+
+            <p className="text-sm font-bold text-white">{item.title}</p>
+            <p className="mt-2 text-sm leading-6 text-white/60">{item.text}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+export default function SmmToraPage() {
+  const platforms = getAllPlatforms();
+
+  const [selectedPlatform, setSelectedPlatform] = useState(
+    platforms[0]?.slug || "instagram"
+  );
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedServiceId, setSelectedServiceId] = useState<number | null>(null);
+  const [selectedCurrency, setSelectedCurrency] = useState<CurrencyCode>("TL");
+  const [selectedLocale, setSelectedLocale] = useState<Locale>("tr");
+
+  const [services, setServices] = useState<OrderServiceItem[]>([]);
+  const [servicesLoading, setServicesLoading] = useState(false);
+
+  const [quantity, setQuantity] = useState("");
+  const [targetUsername, setTargetUsername] = useState("");
+  const [targetLink, setTargetLink] = useState("");
+  const [orderNote, setOrderNote] = useState("");
+
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+
+  const [checkoutMode, setCheckoutMode] = useState<CheckoutMode>(null);
+  const [checkoutItems, setCheckoutItems] = useState<CartItem[]>([]);
+
+  const [fullName, setFullName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [contactType, setContactType] = useState<ContactType>("");
+  const [contactValue, setContactValue] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("");
+
+  const [loading, setLoading] = useState(false);
+  const [cartMessage, setCartMessage] = useState("");
+  const [error, setError] = useState("");
+  const [createdOrderNumbers, setCreatedOrderNumbers] = useState<string[]>([]);
+  const [successOpen, setSuccessOpen] = useState(false);
+
+  const productsScrollRef = useRef<HTMLDivElement | null>(null);
+  const cartSectionRef = useRef<HTMLDivElement | null>(null);
+
+  const [infoTab, setInfoTab] = useState<"service" | "before" | "notes">("service");
+  const [showAllPlatforms, setShowAllPlatforms] = useState(false);
+
+  const [showServiceFilters, setShowServiceFilters] = useState(false);
+  const [serviceSearch, setServiceSearch] = useState("");
+  const [qualityFilter, setQualityFilter] = useState<QualityFilter>("all");
+  const [guaranteeFilter, setGuaranteeFilter] = useState<GuaranteeFilter>("all");
+  const [regionFilter, setRegionFilter] = useState<RegionFilter>("all");
+  const [priceSort, setPriceSort] = useState<PriceSort>("price-asc");
+
+  useEffect(() => {
+    setSelectedLocale(detectInitialLocale());
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("medyatora_locale", selectedLocale);
+    }
+  }, [selectedLocale]);
+
+  const t = getDictionary(selectedLocale);
+
+  const resetServiceFilters = () => {
+    setServiceSearch("");
+    setQualityFilter("all");
+    setGuaranteeFilter("all");
+    setRegionFilter("all");
+    setPriceSort("price-asc");
+  };
+
+  useEffect(() => {
+    async function loadServices() {
+      setServicesLoading(true);
+      setError("");
+
+      try {
+        const res = await fetch("/api/services", {
+          cache: "no-store",
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || "Servisler alınamadı.");
+        }
+
+        setServices(Array.isArray(data.items) ? data.items : []);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Servisler yüklenemedi.");
+      } finally {
+        setServicesLoading(false);
+      }
+    }
+
+    loadServices();
+  }, []);
+
+  const availablePlatformSlugs = useMemo(() => {
+    return new Set(services.map((service) => service.platform).filter(Boolean));
+  }, [services]);
+
+  const availablePlatforms = useMemo(() => {
+    if (servicesLoading) return platforms;
+    return platforms.filter((platform) => availablePlatformSlugs.has(platform.slug));
+  }, [platforms, servicesLoading, availablePlatformSlugs]);
+
+  const visiblePlatforms = useMemo(() => {
+    return showAllPlatforms ? availablePlatforms : availablePlatforms.slice(0, 10);
+  }, [availablePlatforms, showAllPlatforms]);
+
+  const hiddenPlatformCount = Math.max(
+    availablePlatforms.length - visiblePlatforms.length,
+    0
+  );
+
+  useEffect(() => {
+    if (servicesLoading) return;
+    if (!availablePlatforms.length) return;
+
+    const selectedStillAvailable = availablePlatforms.some(
+      (platform) => platform.slug === selectedPlatform
+    );
+
+    if (!selectedStillAvailable) {
+      setSelectedPlatform(availablePlatforms[0].slug);
+      setSelectedCategory("");
+      setSelectedServiceId(null);
+      resetServiceFilters();
+    }
+  }, [availablePlatforms, servicesLoading, selectedPlatform]);
+
+  const platformServices = useMemo(() => {
+    return services.filter((item) => item.platform === selectedPlatform);
+  }, [services, selectedPlatform]);
+
+  const categories = useMemo(() => {
+    const uniqueCategories = Array.from(
+      new Set(
+        platformServices
+          .map((service) => service.category)
+          .filter((category): category is string => Boolean(category))
+      )
+    );
+
+    return uniqueCategories
+      .map((slug) => ({
+        slug,
+        name: getCategoryName(slug),
+      }))
+      .sort((a, b) => {
+        const aOrder = CATEGORY_SORT_ORDER[a.slug] ?? 500;
+        const bOrder = CATEGORY_SORT_ORDER[b.slug] ?? 500;
+
+        if (aOrder !== bOrder) return aOrder - bOrder;
+        return a.name.localeCompare(b.name, "tr");
+      });
+  }, [platformServices]);
+
+  useEffect(() => {
+    if (!categories.length) {
+      setSelectedCategory("");
+      setSelectedServiceId(null);
+      return;
+    }
+
+    const hasCurrentCategory = categories.some(
+      (category) => category.slug === selectedCategory
+    );
+
+    const nextCategory = hasCurrentCategory ? selectedCategory : categories[0].slug;
+
+    setSelectedCategory(nextCategory);
+    setSelectedServiceId(null);
+  }, [categories, selectedCategory]);
+
+  const filteredServices = useMemo(() => {
+    if (!selectedCategory && !serviceSearch.trim()) return [];
+
+    const search = normalizeSearchText(serviceSearch.trim());
+
+    const filtered = services
+      .filter((item) => {
+        if (search) return true;
+        return item.platform === selectedPlatform && item.category === selectedCategory;
+      })
+      .filter((item) => {
+        if (!search) return true;
+
+        const text = normalizeSearchText(
+          [
+            item.id,
+            item.siteCode,
+            item.platform,
+            item.category,
+            item.title,
+            item.subtitle,
+            item.guaranteeLabel,
+            item.speed,
+            item.level,
+            item.regionLabel,
+            item.originalName,
+          ].join(" ")
+        );
+
+        return text.includes(search);
+      })
+      .filter((item) => {
+        if (search) return true;
+        if (qualityFilter === "all") return true;
+        return item.level === qualityFilter;
+      })
+      .filter((item) => {
+        if (search) return true;
+        if (guaranteeFilter === "all") return true;
+
+        const isGuaranteed =
+          item.guarantee === true &&
+          item.guaranteeLabel &&
+          item.guaranteeLabel !== "Garantisiz";
+
+        if (guaranteeFilter === "guaranteed") return isGuaranteed;
+        return !isGuaranteed;
+      })
+      .filter((item) => {
+        if (search) return true;
+        if (regionFilter === "all") return true;
+
+        const region = item.regionLabel || "";
+
+        if (regionFilter === "TR") return region.includes("TR");
+        if (regionFilter === "RU") return region.includes("RU");
+        if (regionFilter === "Global") return region.includes("Global");
+
+        return true;
+      });
+
+    return filtered.sort((a, b) => {
+      const aPrice = getUnitSalePrice(a, selectedCurrency);
+      const bPrice = getUnitSalePrice(b, selectedCurrency);
+
+      if (priceSort === "price-desc") return bPrice - aPrice;
+
+      const aGuaranteed = a.guarantee ? 1 : 0;
+      const bGuaranteed = b.guarantee ? 1 : 0;
+
+      if (aPrice !== bPrice) return aPrice - bPrice;
+      if (aGuaranteed !== bGuaranteed) return bGuaranteed - aGuaranteed;
+      if (a.max !== b.max) return b.max - a.max;
+
+      return a.id - b.id;
+    });
+  }, [
+    services,
+    selectedPlatform,
+    selectedCategory,
+    selectedCurrency,
+    serviceSearch,
+    qualityFilter,
+    guaranteeFilter,
+    regionFilter,
+    priceSort,
+  ]);
+
+  useEffect(() => {
+    if (!filteredServices.length) {
+      setSelectedServiceId(null);
+      return;
+    }
+
+    const hasCurrentService = filteredServices.some(
+      (service) => service.id === selectedServiceId
+    );
+
+    if (!hasCurrentService) {
+      setSelectedServiceId(filteredServices[0].id);
+    }
+  }, [filteredServices, selectedServiceId]);
+
+  const selectedService = useMemo(() => {
+    return filteredServices.find((item) => item.id === selectedServiceId) ?? null;
+  }, [filteredServices, selectedServiceId]);
+
+  const quantityNumber = quantity ? Number(quantity.replace(/\D/g, "")) : 0;
+
+  const selectedUnitPrice = useMemo(() => {
+    return getUnitSalePrice(selectedService, selectedCurrency);
+  }, [selectedService, selectedCurrency]);
+
+  const selectedUnitCostPrice = useMemo(() => {
+    return getUnitCostPrice(selectedService, selectedCurrency);
+  }, [selectedService, selectedCurrency]);
+
+  const totalPrice = useMemo(() => {
+    if (!selectedService) return 0;
+    if (!quantityNumber) return 0;
+    if (quantityNumber < selectedService.min || quantityNumber > selectedService.max) {
+      return 0;
+    }
+    return (quantityNumber / 1000) * selectedUnitPrice;
+  }, [quantityNumber, selectedService, selectedUnitPrice]);
+
+  const totalCostPrice = useMemo(() => {
+    if (!selectedService) return 0;
+    if (!quantityNumber) return 0;
+    if (quantityNumber < selectedService.min || quantityNumber > selectedService.max) {
+      return 0;
+    }
+    return (quantityNumber / 1000) * selectedUnitCostPrice;
+  }, [quantityNumber, selectedService, selectedUnitCostPrice]);
+
+  const cartTotal = useMemo(() => {
+    return cartItems.reduce((sum, item) => sum + item.total_price, 0);
+  }, [cartItems]);
+
+  const canUseCurrentForm =
+    !!selectedService &&
+    quantityNumber >= (selectedService?.min ?? 0) &&
+    quantityNumber <= (selectedService?.max ?? 0) &&
+    !!targetUsername.trim();
+
+  const isCheckoutValid =
+    !!fullName.trim() &&
+    !!phoneNumber.trim() &&
+    !!contactType &&
+    !!contactValue.trim() &&
+    !!paymentMethod;
+
+  const scrollProducts = (direction: "up" | "down") => {
+    if (!productsScrollRef.current) return;
+
+    productsScrollRef.current.scrollBy({
+      top: direction === "down" ? 320 : -320,
+      behavior: "smooth",
+    });
+  };
+
+  const goToCart = () => {
+    cartSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const resetItemForm = () => {
+    setQuantity("");
+    setTargetUsername("");
+    setTargetLink("");
+    setOrderNote("");
+  };
+
+  const resetCheckoutForm = () => {
+    setFullName("");
+    setPhoneNumber("");
+    setContactType("");
+    setContactValue("");
+    setPaymentMethod("");
+  };
+
+  const buildCurrentItem = (): CartItem | null => {
+    if (!selectedService || !canUseCurrentForm) return null;
+
+    return {
+      cartId: makeCartId(),
+      service_id: selectedService.id,
+      site_code: selectedService.siteCode,
+      service_title: selectedService.title,
+      platform: selectedPlatform,
+      category: selectedCategory,
+      quantity: quantityNumber,
+      unit_price: selectedUnitPrice,
+      total_price: totalPrice,
+      unit_cost_price: selectedUnitCostPrice,
+      total_cost_price: totalCostPrice,
+      guarantee_label: selectedService.guaranteeLabel,
+      speed: selectedService.speed,
+      target_username: targetUsername.trim(),
+      target_link: targetLink.trim(),
+      order_note: orderNote.trim(),
+    };
+  };
+
+  const clearStatusMessages = () => {
+    setError("");
+    setCartMessage("");
+    setCreatedOrderNumbers([]);
+    setSuccessOpen(false);
+  };
+
+  const handleAddToCart = () => {
+    const item = buildCurrentItem();
+    if (!item) return;
+
+    setCartItems((prev) => [...prev, item]);
+    resetItemForm();
+    setCartMessage("Hizmet sepete eklendi.");
+    setError("");
+    setCreatedOrderNumbers([]);
+    setSuccessOpen(false);
+  };
+
+  const handleRemoveCartItem = (cartId: string) => {
+    setCartItems((prev) => prev.filter((item) => item.cartId !== cartId));
+  };
+
+  const handleEditCartItem = (cartId: string) => {
+    const item = cartItems.find((x) => x.cartId === cartId);
+    if (!item) return;
+
+    setSelectedPlatform(item.platform);
+    setSelectedCategory(item.category);
+    setSelectedServiceId(item.service_id);
+    setQuantity(String(item.quantity));
+    setTargetUsername(item.target_username);
+    setTargetLink(item.target_link);
+    setOrderNote(item.order_note);
+
+    setCartItems((prev) => prev.filter((x) => x.cartId !== cartId));
+    setCartMessage("Sepet hizmeti düzenleme için forma taşındı.");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleOpenSingleCheckout = () => {
+    const item = buildCurrentItem();
+    if (!item) return;
+
+    setCheckoutItems([item]);
+    setCheckoutMode("single");
+    setError("");
+  };
+
+  const handleOpenCartCheckout = () => {
+    if (cartItems.length === 0) return;
+
+    setCheckoutItems(cartItems);
+    setCheckoutMode("cart");
+    setError("");
+  };
+
+  const submitItems = async () => {
+    if (!isCheckoutValid || checkoutItems.length === 0) return;
+
+    setLoading(true);
+    setError("");
+    setCartMessage("");
+    setCreatedOrderNumbers([]);
+
+    try {
+      const res = await fetch("/api/order-request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          full_name: fullName,
+          phone_number: phoneNumber,
+          contact_type: contactType,
+          contact_value: contactValue,
+          currency: selectedCurrency,
+          payment_method: paymentMethod,
+          items: checkoutItems,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Sipariş oluşturulamadı.");
+      }
+
+      setCreatedOrderNumbers(data.orderNumbers || []);
+      setSuccessOpen(true);
+      setCheckoutMode(null);
+
+      if (checkoutMode === "cart") {
+        setCartItems([]);
+      }
+
+      resetItemForm();
+      resetCheckoutForm();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Bir hata oluştu");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#172033_0%,#0b1020_48%,#050812_100%)] px-4 py-6 text-white sm:px-6">
+      <ServiceTermsModal />
+
+      <div className="mx-auto max-w-7xl space-y-5">
+        <section className="overflow-hidden rounded-[34px] border border-white/10 bg-[#121826]/95 p-5 shadow-[0_18px_80px_rgba(0,0,0,0.35)] backdrop-blur sm:p-6">
+          <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
+            <div className="min-w-0">
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-xs font-semibold text-emerald-300">
+                <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                SMMTora tekli sosyal medya hizmetleri
+              </div>
+
+              <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+                Tekli Sosyal Medya Hizmetleri
+              </h1>
+
+              <p className="mt-3 max-w-3xl text-sm leading-6 text-white/65 sm:text-base">
+                Platform, kategori ve hizmet seçerek tekli sipariş oluşturabilirsiniz.
+                Takipçi, beğeni, izlenme, yorum ve diğer sosyal medya destekleri burada listelenir.
+              </p>
+
+              <div className="mt-5 grid gap-3 text-sm text-white/70 sm:grid-cols-2 xl:grid-cols-4">
+                {[
+                  ["KDV + vergiler dahil", FaFileInvoice],
+                  ["Sipariş numarası ile takip", FaUserCheck],
+                  ["WhatsApp / Telegram destek", FaWhatsapp],
+                  ["Bilgiler işlem için kullanılır", FaShieldHalved],
+                ].map(([title, Icon]) => {
+                  const IconComponent = Icon as IconType;
+
+                  return (
+                    <div
+                      key={title as string}
+                      className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3"
+                    >
+                      <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-black/20 text-emerald-300">
+                        <IconComponent />
+                      </span>
+                      <span className="leading-5">{title as string}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 xl:min-w-[430px]">
+              <div className="rounded-3xl border border-white/10 bg-white/[0.035] p-4">
+                <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-white/45">
+                  Dil
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {localeOptions.map((locale) => {
+                    const active = selectedLocale === locale;
+
+                    return (
+                      <button
+                        key={locale}
+                        type="button"
+                        onClick={() => setSelectedLocale(locale)}
+                        className={`rounded-full px-4 py-2 text-xs font-bold transition sm:text-sm ${
+                          active
+                            ? "bg-emerald-400 text-black"
+                            : "bg-white/10 text-white/80 hover:bg-white/15"
+                        }`}
+                      >
+                        {locale.toUpperCase()}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-white/10 bg-white/[0.035] p-4">
+                <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-white/45">
+                  {t.currency}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {currencyOptions.map((currency) => {
+                    const active = selectedCurrency === currency;
+
+                    return (
+                      <button
+                        key={currency}
+                        type="button"
+                        onClick={() => {
+                          setSelectedCurrency(currency);
+                          clearStatusMessages();
+                        }}
+                        className={`rounded-full px-4 py-2 text-xs font-bold transition sm:text-sm ${
+                          active
+                            ? "bg-emerald-400 text-black"
+                            : "bg-white/10 text-white/80 hover:bg-white/15"
+                        }`}
+                      >
+                        {currency}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <OrderBeforeNotice />
+
+        <section className="rounded-[34px] border border-white/10 bg-[#121826]/95 p-5 shadow-[0_18px_80px_rgba(0,0,0,0.32)] backdrop-blur sm:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/45">
+                Platform seçimi
+              </p>
+              <p className="mt-1 text-sm text-white/55">
+                Satışa açık platformlardan birini seçin.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={goToCart}
+              className="rounded-2xl border border-sky-400/20 bg-sky-400/10 px-4 py-2 text-sm font-bold text-sky-300 transition hover:bg-sky-400/15"
+            >
+              Sepete Git
+            </button>
+          </div>
+
+          {servicesLoading ? (
+            <div className="mt-4 rounded-2xl border border-dashed border-white/15 bg-white/5 px-4 py-6 text-sm text-white/50">
+              Platformlar yükleniyor...
+            </div>
+          ) : availablePlatforms.length === 0 ? (
+            <div className="mt-4 rounded-2xl border border-dashed border-white/15 bg-white/5 px-4 py-6 text-sm text-white/50">
+              Şu anda aktif satışa açık platform bulunmamaktadır.
+            </div>
+          ) : (
+            <>
+              <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+                {visiblePlatforms.map((platform) => {
+                  const active = selectedPlatform === platform.slug;
+
+                  return (
+                    <button
+                      key={platform.slug}
+                      type="button"
+                      onClick={() => {
+                        setSelectedPlatform(platform.slug);
+                        setSelectedServiceId(null);
+                        resetServiceFilters();
+                        clearStatusMessages();
+                      }}
+                      className={`group relative overflow-hidden rounded-3xl border p-4 text-left transition hover:-translate-y-0.5 ${
+                        active
+                          ? "border-emerald-400 bg-emerald-400/10 shadow-[0_0_0_1px_rgba(52,211,153,0.14)]"
+                          : "border-white/10 bg-white/[0.045] hover:border-white/20 hover:bg-white/[0.075]"
+                      }`}
+                    >
+                      <div
+                        className={`pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full ${
+                          platform.brandGlow || "bg-white/10"
+                        } blur-3xl transition group-hover:scale-125`}
+                      />
+
+                      <div className="relative">
+                        <div
+                          className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border ${
+                            active
+                              ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-300"
+                              : "border-white/10 bg-black/25 text-white"
+                          }`}
+                        >
+                          <PlatformIcon
+                            slug={platform.slug}
+                            title={platform.shortTitle || platform.title}
+                          />
+                        </div>
+
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-bold text-white sm:text-base">
+                              {platform.title}
+                            </div>
+                            <div className="mt-1 text-xs text-white/45">
+                              Tekli hizmetler
+                            </div>
+                          </div>
+
+                          {active && (
+                            <span className="rounded-full bg-emerald-400 px-2.5 py-1 text-[10px] font-bold text-black">
+                              Seçili
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {availablePlatforms.length > 10 && (
+                <div className="mt-5 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={() => setShowAllPlatforms((prev) => !prev)}
+                    className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold text-white/75 transition hover:bg-white/10 hover:text-white"
+                  >
+                    {showAllPlatforms
+                      ? "Daha Az Platform Göster"
+                      : `Tüm Platformları Göster (${hiddenPlatformCount} daha)`}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </section>
+
+        <section className="rounded-[34px] border border-white/10 bg-[#121826]/95 p-5 shadow-[0_18px_80px_rgba(0,0,0,0.32)] backdrop-blur sm:p-6">
+          <p className="mb-4 text-xs font-bold uppercase tracking-[0.2em] text-white/45">
+            Kategori seçimi
+          </p>
+
+          {servicesLoading ? (
+            <div className="rounded-2xl border border-dashed border-white/15 bg-white/5 px-4 py-6 text-sm text-white/50">
+              {t.servicesLoading}
+            </div>
+          ) : categories.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-white/15 bg-white/5 px-4 py-6 text-sm text-white/50">
+              Bu platformda aktif satışa açık hizmet bulunmamaktadır.
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {categories.map((category) => {
+                const active = selectedCategory === category.slug;
+
+                return (
+                  <button
+                    key={category.slug}
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategory(category.slug);
+                      setSelectedServiceId(null);
+                      resetServiceFilters();
+                      clearStatusMessages();
+                    }}
+                    className={`rounded-full px-4 py-2 text-xs font-bold transition sm:text-sm ${
+                      active
+                        ? "bg-emerald-400 text-black"
+                        : "bg-white/10 text-white/80 hover:bg-white/15"
+                    }`}
+                  >
+                    {getCategoryLabel(category.name, selectedLocale)}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        <section className="grid gap-5 xl:grid-cols-[1.12fr_0.88fr]">
+          <div className="space-y-5">
+            <div className="rounded-[34px] border border-white/10 bg-[#121826]/95 p-5 shadow-[0_18px_80px_rgba(0,0,0,0.32)] backdrop-blur sm:p-6">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/45">
+                    Hizmetler
+                  </p>
+                  <p className="mt-1 text-sm text-white/50">
+                    Ürün kodu, panel ID veya hizmet adıyla arama yapabilirsiniz.
+                  </p>
+                </div>
+
+                {filteredServices.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => scrollProducts("up")}
+                      className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-white/80 transition hover:bg-white/10 sm:text-sm"
+                    >
+                      {t.up}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => scrollProducts("down")}
+                      className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-white/80 transition hover:bg-white/10 sm:text-sm"
+                    >
+                      {t.down}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowServiceFilters((prev) => !prev)}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm font-bold text-white/80 transition hover:bg-white/[0.1] hover:text-white"
+                >
+                  <span>Filtrele</span>
+                </button>
+
+                <p className="text-xs text-white/45">
+                  {filteredServices.length} hizmet gösteriliyor
+                </p>
+              </div>
+
+              <div className="mb-4">
+                <input
+                  value={serviceSearch}
+                  onChange={(e) => setServiceSearch(e.target.value)}
+                  placeholder="Ürün kodu, panel ID veya hizmet adı ara... Örn: 9059"
+                  className="w-full rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-sm text-white outline-none placeholder:text-white/30 focus:border-emerald-400"
+                />
+
+                {serviceSearch.trim() ? (
+                  <p className="mt-2 text-xs text-white/45">
+                    Arama: “{serviceSearch.trim()}” — {filteredServices.length} sonuç
+                  </p>
+                ) : null}
+              </div>
+
+              {showServiceFilters && (
+                <div className="mb-4 rounded-3xl border border-white/10 bg-black/20 p-4">
+                  <div className="grid gap-3 md:grid-cols-4">
+                    <div>
+                      <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-white/40">
+                        Kalite
+                      </label>
+                      <select
+                        value={qualityFilter}
+                        onChange={(event) =>
+                          setQualityFilter(event.target.value as QualityFilter)
+                        }
+                        className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none"
+                      >
+                        <option value="all" className="bg-[#111827]">
+                          Tümü
+                        </option>
+                        <option value="Core" className="bg-[#111827]">
+                          Core Kalite
+                        </option>
+                        <option value="Plus" className="bg-[#111827]">
+                          Plus Kalite
+                        </option>
+                        <option value="Prime" className="bg-[#111827]">
+                          Prime Kalite
+                        </option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-white/40">
+                        Garanti
+                      </label>
+                      <select
+                        value={guaranteeFilter}
+                        onChange={(event) =>
+                          setGuaranteeFilter(event.target.value as GuaranteeFilter)
+                        }
+                        className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none"
+                      >
+                        <option value="all" className="bg-[#111827]">
+                          Tümü
+                        </option>
+                        <option value="guaranteed" className="bg-[#111827]">
+                          Garantili
+                        </option>
+                        <option value="no-guarantee" className="bg-[#111827]">
+                          Garantisiz
+                        </option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-white/40">
+                        Bölge
+                      </label>
+                      <select
+                        value={regionFilter}
+                        onChange={(event) =>
+                          setRegionFilter(event.target.value as RegionFilter)
+                        }
+                        className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none"
+                      >
+                        <option value="all" className="bg-[#111827]">
+                          Tümü
+                        </option>
+                        <option value="TR" className="bg-[#111827]">
+                          TR
+                        </option>
+                        <option value="RU" className="bg-[#111827]">
+                          RU
+                        </option>
+                        <option value="Global" className="bg-[#111827]">
+                          Global
+                        </option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-white/40">
+                        Sıralama
+                      </label>
+                      <select
+                        value={priceSort}
+                        onChange={(event) =>
+                          setPriceSort(event.target.value as PriceSort)
+                        }
+                        className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none"
+                      >
+                        <option value="smart" className="bg-[#111827]">
+                          Önerilen Sıralama
+                        </option>
+                        <option value="price-asc" className="bg-[#111827]">
+                          Fiyat Artan
+                        </option>
+                        <option value="price-desc" className="bg-[#111827]">
+                          Fiyat Azalan
+                        </option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={resetServiceFilters}
+                      className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-bold text-white/70 transition hover:bg-white/[0.08] hover:text-white"
+                    >
+                      Filtreleri Temizle
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {servicesLoading ? (
+                <div className="rounded-2xl border border-dashed border-white/15 bg-white/5 px-4 py-6 text-sm text-white/50">
+                  {t.productsLoading}
+                </div>
+              ) : filteredServices.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-white/15 bg-white/5 px-4 py-6 text-sm text-white/50">
+                  {t.noProductsFound}
+                </div>
+              ) : (
+                <div
+                  ref={productsScrollRef}
+                  className="max-h-[520px] space-y-2 overflow-y-auto pr-1 sm:max-h-[620px]"
+                  style={{ scrollbarWidth: "thin" }}
+                >
+                  {filteredServices.map((service) => {
+                    const active = selectedService?.id === service.id;
+                    const unitPrice = getUnitSalePrice(service, selectedCurrency);
+
+                    return (
+                      <button
+                        key={service.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedServiceId(service.id);
+                          clearStatusMessages();
+                        }}
+                        className={`w-full rounded-2xl border px-4 py-4 text-left transition ${
+                          active
+                            ? "border-emerald-400 bg-emerald-500/15 shadow-[0_0_0_1px_rgba(52,211,153,0.12)]"
+                            : "border-white/10 bg-white/5 hover:bg-white/10"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="line-clamp-2 text-sm font-bold text-white sm:text-base">
+                                {service.title}
+                              </p>
+
+                              {active && (
+                                <span className="rounded-full bg-emerald-400 px-2.5 py-1 text-[10px] font-bold text-black sm:text-[11px]">
+                                  Seçili
+                                </span>
+                              )}
+
+                              <span
+                                className={`rounded-full px-2.5 py-1 text-[10px] font-bold sm:text-[11px] ${
+                                  service.guarantee
+                                    ? "bg-emerald-500/15 text-emerald-300"
+                                    : "bg-rose-500/15 text-rose-300"
+                                }`}
+                              >
+                                {service.guaranteeLabel}
+                              </span>
+
+                              <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-bold text-white/70 sm:text-[11px]">
+                                {service.level}
+                              </span>
+                            </div>
+
+                            <div className="mt-3 grid gap-1 text-xs text-white/55 sm:text-sm">
+                              <p>
+                                {t.serviceNo}: {service.siteCode}
+                              </p>
+                              <p>
+                                {t.minMax}: {service.min} · Max: {service.max}
+                              </p>
+                              <p>
+                                {t.speed}: {service.speed}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="shrink-0 rounded-2xl border border-emerald-400/15 bg-emerald-400/5 px-3 py-2 text-right">
+                            <p className="text-[11px] text-white/45 sm:text-xs">{t.per1000}</p>
+                            <p className="mt-1 text-base font-bold text-emerald-300 sm:text-lg">
+                              {formatPrice(unitPrice, selectedCurrency)}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-[34px] border border-white/10 bg-[#121826]/95 p-5 shadow-[0_18px_80px_rgba(0,0,0,0.32)] backdrop-blur sm:p-6">
+              <div className="mb-4 flex flex-wrap gap-2">
+                {[
+                  ["service", "Hizmet Bilgisi"],
+                  ["before", "Sipariş Öncesi"],
+                  ["notes", "Önemli Notlar"],
+                ].map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setInfoTab(key as "service" | "before" | "notes")}
+                    className={`rounded-xl px-4 py-2 text-sm font-bold transition ${
+                      infoTab === key
+                        ? "bg-emerald-500 text-black"
+                        : "bg-white/5 text-white/75"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {infoTab === "service" && (
+                <div className="space-y-3 text-sm leading-7 text-white/70">
+                  <p>
+                    Satın alacağınız hizmet, seçtiğiniz platform ve kategoriye göre işleme alınır.
+                    Her hizmet için minimum ve maksimum sipariş limiti vardır.
+                  </p>
+                  <p>
+                    Garantili hizmetlerde belirtilen süre içinde destek sağlanır. Garantisiz
+                    hizmetlerde teslimat sonrası ek koruma bulunmaz.
+                  </p>
+                  <p>Sipariş yoğunluğa bağlı olarak genellikle 0-24 saat içerisinde başlar.</p>
+                </div>
+              )}
+
+              {infoTab === "before" && (
+                <div className="space-y-3 text-sm leading-7 text-white/70">
+                  <p>
+                    Kullanıcı adı, bağlantı ve miktar bilgilerini dikkatli giriniz. Yanlış bilgi
+                    girilmesi siparişin gecikmesine veya başlatılamamasına neden olabilir.
+                  </p>
+                  <p>
+                    Link isteyen hizmetlerde doğru profil, gönderi, video, kanal veya grup
+                    bağlantısı verilmesi gerekir.
+                  </p>
+                </div>
+              )}
+
+              {infoTab === "notes" && (
+                <div className="space-y-3 text-sm leading-7 text-white/70">
+                  <p>• Siparişten sonra kullanıcı adı veya bağlantıyı değiştirmemeniz önerilir.</p>
+                  <p>• Aynı hedefe aynı anda birden fazla benzer sipariş verilmesi önerilmez.</p>
+                  <p>• Profilin veya içeriğin erişilebilir olması gerekir.</p>
+                  <p>• Destek talebinde bulunurken sipariş numaranız ile yazınız.</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-5">
+            <div className="rounded-[34px] border border-white/10 bg-[#121826]/95 p-5 shadow-[0_18px_80px_rgba(0,0,0,0.32)] backdrop-blur sm:p-6">
+              <p className="mb-4 text-xs font-bold uppercase tracking-[0.2em] text-white/45">
+                Sipariş Bilgileri
+              </p>
+
+              {selectedService ? (
+                <div className="mb-4 space-y-3">
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-bold text-white">{selectedService.title}</p>
+
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-[10px] font-bold sm:text-[11px] ${
+                          selectedService.guarantee
+                            ? "bg-emerald-500/15 text-emerald-300"
+                            : "bg-rose-500/15 text-rose-300"
+                        }`}
+                      >
+                        {selectedService.guaranteeLabel}
+                      </span>
+
+                      <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-bold text-white/70 sm:text-[11px]">
+                        {selectedService.level}
+                      </span>
+                    </div>
+
+                    <p className="mt-3 text-sm text-white/60">
+                      {t.minMax} {selectedService.min} · Max {selectedService.max}
+                    </p>
+
+                    <p className="mt-1 text-sm text-white/60">
+                      {t.speed}: {selectedService.speed}
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                    <p className="text-sm font-bold text-white/85">{t.productDescription}</p>
+                    <p className="mt-2 whitespace-pre-line text-sm leading-6 text-white/60">
+                      {selectedService.description}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="mb-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm text-white/50">
+                  {t.selectProductFirst}
+                </div>
+              )}
+
+              <div className="space-y-3">
+                <input
+                  value={targetUsername}
+                  onChange={(e) => setTargetUsername(e.target.value)}
+                  placeholder={t.targetUsername}
+                  className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none placeholder:text-white/30 focus:border-emerald-400"
+                />
+
+                <input
+                  value={targetLink}
+                  onChange={(e) => setTargetLink(e.target.value)}
+                  placeholder={t.targetLink}
+                  className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none placeholder:text-white/30 focus:border-emerald-400"
+                />
+
+                <input
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value.replace(/\D/g, ""))}
+                  placeholder={t.quantity}
+                  className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none placeholder:text-white/30 focus:border-emerald-400"
+                />
+
+                {selectedService && (
+                  <p className="text-xs leading-5 text-white/45">
+                    Bu hizmet için minimum {selectedService.min}, maksimum {selectedService.max} adet
+                    sipariş verilebilir.
+                  </p>
+                )}
+
+                <input
+                  value={orderNote}
+                  onChange={(e) => setOrderNote(e.target.value)}
+                  placeholder={t.orderNote}
+                  className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none placeholder:text-white/30 focus:border-emerald-400"
+                />
+
+                <div className="rounded-2xl border border-emerald-400/10 bg-emerald-400/5 p-4">
+                  <p className="text-sm text-white/50">{t.totalSalePrice}</p>
+                  <p className="mt-1 text-2xl font-bold text-white">
+                    {totalPrice > 0 ? formatPrice(totalPrice, selectedCurrency) : "-"}
+                  </p>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <button
+                    type="button"
+                    onClick={handleOpenSingleCheckout}
+                    disabled={!canUseCurrentForm}
+                    className="rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-bold text-black transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {t.buyNow}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleAddToCart}
+                    disabled={!canUseCurrentForm}
+                    className="rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-3 text-sm font-bold text-emerald-300 transition hover:bg-emerald-400/15 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {t.addToCart}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={goToCart}
+                    className="rounded-2xl border border-sky-400/20 bg-sky-400/10 px-4 py-3 text-sm font-bold text-sky-300 transition hover:bg-sky-400/15"
+                  >
+                    {t.goToCart}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div
+              ref={cartSectionRef}
+              className="rounded-[34px] border border-white/10 bg-[#121826]/95 p-5 shadow-[0_18px_80px_rgba(0,0,0,0.32)] backdrop-blur sm:p-6"
+            >
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/45">
+                  {t.cart}
+                </p>
+
+                {cartItems.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleOpenCartCheckout}
+                    className="rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-black transition hover:bg-emerald-400 sm:text-sm"
+                  >
+                    {t.bulkBuy}
+                  </button>
+                )}
+              </div>
+
+              {cartItems.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.04] p-4 text-sm text-white/45">
+                  {t.cartEmpty}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {cartItems.map((item) => (
+                    <div
+                      key={item.cartId}
+                      className="rounded-2xl border border-white/10 bg-white/[0.04] p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-white">{item.service_title}</p>
+                          <div className="mt-2 space-y-1 text-xs text-white/55 sm:text-sm">
+                            <p>{t.serviceNo}: {item.site_code}</p>
+                            <p>{t.targetUsername}: {item.target_username}</p>
+                            <p>{t.targetLink}: {item.target_link || "-"}</p>
+                            <p>{t.quantity}: {item.quantity}</p>
+                            <p>{t.orderNote}: {item.order_note || "-"}</p>
+                            <p>{t.per1000}: {formatPrice(item.unit_price, selectedCurrency)}</p>
+                            <p>
+                              {t.totalSalePrice}:{" "}
+                              {formatPrice(item.total_price, selectedCurrency)}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleEditCartItem(item.cartId)}
+                            className="rounded-xl border border-amber-400/20 bg-amber-400/10 px-3 py-2 text-xs font-bold text-amber-300 transition hover:bg-amber-400/15"
+                          >
+                            {t.edit}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveCartItem(item.cartId)}
+                            className="rounded-xl border border-rose-400/20 bg-rose-400/10 px-3 py-2 text-xs font-bold text-rose-300 transition hover:bg-rose-400/15"
+                          >
+                            {t.remove}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="mt-4 space-y-3">
+                <div className="rounded-2xl border border-emerald-400/15 bg-emerald-400/5 p-4">
+                  <div className="flex items-center justify-between text-sm text-white/60">
+                    <span>Sepet Toplamı</span>
+                    <span className="text-lg font-bold text-emerald-300">
+                      {formatPrice(cartTotal, selectedCurrency)}
+                    </span>
+                  </div>
+
+                  <p className="mt-2 text-xs leading-5 text-white/45">
+                    Tüm fiyatlara KDV + vergiler dahildir. Ödeme sonrası sipariş numaranız ile
+                    destek alabilirsiniz.
+                  </p>
+                </div>
+
+                {cartMessage && (
+                  <div className="rounded-2xl border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-300">
+                    {cartMessage}
+                  </div>
+                )}
+
+                {error && (
+                  <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+                    {error}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      {checkoutMode && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-[28px] border border-white/10 bg-[#121826] p-5 shadow-[0_20px_80px_rgba(0,0,0,0.45)]">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-2xl font-bold text-white">İletişim ve Onay</h2>
+                <p className="mt-2 text-sm leading-6 text-white/60">
+                  Siparişinizi onaylamak için aşağıdaki alanları eksiksiz doldurunuz.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setCheckoutMode(null)}
+                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/70 hover:bg-white/10"
+              >
+                Kapat
+              </button>
+            </div>
+
+            <div className="mt-5 grid gap-3 md:grid-cols-2">
+              <input
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder={t.fullName}
+                className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none placeholder:text-white/30 focus:border-emerald-400"
+              />
+
+              <input
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))}
+                placeholder="Telefon Numarası"
+                inputMode="numeric"
+                className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none placeholder:text-white/30 focus:border-emerald-400"
+              />
+
+              <select
+                value={contactType}
+                onChange={(e) => setContactType(e.target.value as ContactType)}
+                className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none focus:border-emerald-400"
+              >
+                <option value="" className="bg-[#121826]">
+                  İletişim Türü Seç
+                </option>
+                {contactTypes.map((item) => (
+                  <option key={item} value={item} className="bg-[#121826]">
+                    {item}
+                  </option>
+                ))}
+              </select>
+
+              <input
+                value={contactValue}
+                onChange={(e) => setContactValue(e.target.value)}
+                placeholder="İletişim Bilgisi"
+                className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none placeholder:text-white/30 focus:border-emerald-400"
+              />
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm leading-6 text-amber-100">
+              <p>Lütfen yalnızca WhatsApp, Instagram, Telegram veya E-posta bilgisi giriniz.</p>
+              <p className="mt-1">Önerilen iletişim yöntemi Telegram’dır.</p>
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+              <p className="text-sm font-bold text-white">Ödeme Yöntemi</p>
+              <p className="mt-1 text-sm leading-6 text-white/60">
+                Siparişinizi onaylamadan önce ödeme yöntemi seçiniz.
+              </p>
+
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod("turkey_bank")}
+                  className={`rounded-2xl border p-4 text-left transition ${
+                    paymentMethod === "turkey_bank"
+                      ? "border-emerald-400 bg-emerald-400/10"
+                      : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
+                  }`}
+                >
+                  <p className="text-sm font-bold text-white">Türkiye Banka Havalesi / EFT</p>
+                  <p className="mt-1 text-xs leading-5 text-white/55">
+                    Türkiye içi ödemeler için banka hesabı bilgileri gösterilir.
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod("support")}
+                  className={`rounded-2xl border p-4 text-left transition ${
+                    paymentMethod === "support"
+                      ? "border-sky-400 bg-sky-400/10"
+                      : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
+                  }`}
+                >
+                  <p className="text-sm font-bold text-white">Diğer Ödeme Yöntemleri</p>
+                  <p className="mt-1 text-xs leading-5 text-white/55">
+                    Aktif ödeme yöntemi görülmemektedir. Lütfen destek ile iletişime geçiniz.
+                  </p>
+                </button>
+              </div>
+
+              {paymentMethod === "turkey_bank" && (
+                <div className="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm leading-6 text-emerald-50">
+                  <p className="font-bold text-white">Türkiye Banka Bilgileri</p>
+
+                  <div className="mt-3 space-y-2">
+                    <p>
+                      <span className="font-bold text-white">Alıcı Adı:</span>{" "}
+                      {TURKEY_BANK_ACCOUNT_NAME}
+                    </p>
+                    <p>
+                      <span className="font-bold text-white">IBAN:</span>{" "}
+                      {TURKEY_BANK_IBAN}
+                    </p>
+                    <p>
+                      <span className="font-bold text-white">Açıklama:</span>{" "}
+                      Dijital Hizmet - Sipariş No
+                    </p>
+                    <p className="text-white/70">
+                      Ödeme sonrası dekontu Telegram veya WhatsApp üzerinden sipariş numaranızla
+                      birlikte iletiniz.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {paymentMethod === "support" && (
+                <div className="mt-4 rounded-2xl border border-sky-400/20 bg-sky-400/10 p-4 text-sm leading-6 text-sky-50">
+                  <p className="font-bold text-white">Diğer Ödeme Yöntemleri</p>
+                  <p className="mt-2 text-white/70">
+                    Ödeme bilgisi almak için lütfen Telegram veya WhatsApp üzerinden destek ile
+                    iletişime geçiniz.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+              <div className="flex items-center justify-between text-sm text-white/60">
+                <span>Onaylanacak Hizmet Sayısı</span>
+                <span>{checkoutItems.length}</span>
+              </div>
+              <div className="mt-2 flex items-center justify-between text-base font-bold text-white">
+                <span>{t.totalSalePrice}</span>
+                <span>
+                  {formatPrice(
+                    checkoutItems.reduce((sum, item) => sum + item.total_price, 0),
+                    selectedCurrency
+                  )}
+                </span>
+              </div>
+            </div>
+
+            {error && (
+              <div className="mt-4 rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+                {error}
+              </div>
+            )}
+
+            <div className="mt-5 flex justify-end">
+              <button
+                type="button"
+                onClick={submitItems}
+                disabled={!isCheckoutValid || loading}
+                className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-bold text-black transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {loading ? t.sending : "Alımı Onayla"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {successOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-2xl rounded-[28px] border border-white/10 bg-[#121826] p-5 shadow-[0_20px_80px_rgba(0,0,0,0.45)]">
+            <h2 className="text-2xl font-bold text-white">Siparişiniz Onaylandı</h2>
+
+            <p className="mt-2 text-sm leading-6 text-white/60">
+              Siparişiniz başarıyla oluşturuldu. Aşağıdaki sipariş numarası veya numaraları ile
+              bize ulaşabilirsiniz.
+            </p>
+
+            <div className="mt-5 space-y-3">
+              {createdOrderNumbers.map((number) => (
+                <div
+                  key={number}
+                  className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4"
+                >
+                  <p className="text-sm text-emerald-200">Sipariş Numaranız</p>
+                  <p className="mt-1 text-lg font-bold text-white">{number}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+              <p className="text-sm font-bold text-white">
+                Ödeme ve işlem adımı için bize yazın
+              </p>
+
+              <p className="mt-1 text-sm leading-6 text-white/60">
+                Sipariş numaranız otomatik mesajın içine eklenecek. Ödeme ve işlem adımları için
+                Telegram veya WhatsApp üzerinden bize ulaşabilirsiniz.
+              </p>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <a
+                  href={buildTelegramLink(createdOrderNumbers)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-2xl bg-sky-500 px-5 py-3 text-center text-sm font-bold text-black transition hover:bg-sky-400"
+                >
+                  Telegram’dan Ödeme Bilgisi Al
+                </a>
+
+                <a
+                  href={buildWhatsappLink(createdOrderNumbers)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-2xl bg-emerald-500 px-5 py-3 text-center text-sm font-bold text-black transition hover:bg-emerald-400"
+                >
+                  WhatsApp’tan Ödeme Bilgisi Al
+                </a>
+              </div>
+            </div>
+
+            <div className="mt-5 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setSuccessOpen(false)}
+                className="rounded-2xl bg-white px-5 py-3 text-sm font-bold text-black transition hover:bg-white/90"
+              >
+                Tamam
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </main>
   );
 }

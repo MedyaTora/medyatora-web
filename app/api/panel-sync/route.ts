@@ -46,6 +46,10 @@ type NormalizedServiceRow = {
   last_synced_at: string;
 };
 
+type ExistingServiceRow = {
+  panel_service_id: number;
+};
+
 function createAdminSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -692,6 +696,35 @@ function normalizePanelServices(
     .filter((item): item is NormalizedServiceRow => item !== null);
 }
 
+function buildSafeSyncUpdate(item: NormalizedServiceRow) {
+  return {
+    original_name: item.original_name,
+
+    platform: item.platform,
+    category: item.category,
+
+    min: item.min,
+    max: item.max,
+    speed: item.speed,
+    level: item.level,
+    guarantee: item.guarantee,
+    guarantee_label: item.guarantee_label,
+
+    usd_cost_price: item.usd_cost_price,
+    tl_cost_price: item.tl_cost_price,
+    tl_sale_price: item.tl_sale_price,
+    usd_sale_price: item.usd_sale_price,
+    rub_sale_price: item.rub_sale_price,
+
+    refill: item.refill,
+    cancel: item.cancel,
+    dripfeed: item.dripfeed,
+
+    is_active: true,
+    last_synced_at: item.last_synced_at,
+  };
+}
+
 async function deactivateMissingServices(syncedIds: number[]): Promise<number> {
   if (syncedIds.length === 0) return 0;
 
@@ -738,36 +771,85 @@ async function syncPanelServices() {
   const items = normalizePanelServices(panelServices, tryRate, rubRate);
   const syncedIds = items.map((item) => item.panel_service_id);
 
-  const { error: upsertError } = await supabase
+  const { data: existingRows, error: existingError } = await supabase
     .from("services")
-    .upsert(items, { onConflict: "panel_service_id" });
+    .select("panel_service_id")
+    .in("panel_service_id", syncedIds);
 
-  if (upsertError) {
+  if (existingError) {
     await insertSyncLog({
       status: "failed",
-      message: upsertError.message,
+      message: existingError.message,
       total_fetched: panelServices.length,
       total_inserted: 0,
       total_updated: 0,
     });
 
-    throw new Error(upsertError.message);
+    throw new Error(existingError.message);
+  }
+
+  const existingIds = new Set(
+    ((existingRows || []) as ExistingServiceRow[]).map((row) => row.panel_service_id)
+  );
+
+  const itemsToInsert = items.filter((item) => !existingIds.has(item.panel_service_id));
+  const itemsToUpdate = items.filter((item) => existingIds.has(item.panel_service_id));
+
+  if (itemsToInsert.length > 0) {
+    const { error: insertError } = await supabase.from("services").insert(itemsToInsert);
+
+    if (insertError) {
+      await insertSyncLog({
+        status: "failed",
+        message: insertError.message,
+        total_fetched: panelServices.length,
+        total_inserted: 0,
+        total_updated: 0,
+      });
+
+      throw new Error(insertError.message);
+    }
+  }
+
+  let updatedCount = 0;
+
+  for (const item of itemsToUpdate) {
+    const { error: updateError } = await supabase
+      .from("services")
+      .update(buildSafeSyncUpdate(item))
+      .eq("panel_service_id", item.panel_service_id);
+
+    if (updateError) {
+      await insertSyncLog({
+        status: "failed",
+        message: updateError.message,
+        total_fetched: panelServices.length,
+        total_inserted: itemsToInsert.length,
+        total_updated: updatedCount,
+      });
+
+      throw new Error(updateError.message);
+    }
+
+    updatedCount += 1;
   }
 
   const deactivatedCount = await deactivateMissingServices(syncedIds);
 
   await insertSyncLog({
     status: "success",
-    message: `Panel servisleri senkronize edildi. TRY: ${tryRate}, RUB: ${rubRate}. Pasife alınan servis: ${deactivatedCount}`,
+    message: `Panel servisleri güvenli şekilde senkronize edildi. TRY: ${tryRate}, RUB: ${rubRate}. Yeni eklenen: ${itemsToInsert.length}. Güncellenen: ${updatedCount}. Pasife alınan servis: ${deactivatedCount}`,
     total_fetched: panelServices.length,
-    total_inserted: items.length,
-    total_updated: deactivatedCount,
+    total_inserted: itemsToInsert.length,
+    total_updated: updatedCount + deactivatedCount,
   });
 
   return {
     success: true,
+    mode: "safe-sync",
     totalFetched: panelServices.length,
-    totalSynced: items.length,
+    totalInserted: itemsToInsert.length,
+    totalUpdated: updatedCount,
     totalDeactivated: deactivatedCount,
     tryRate,
     rubRate,
