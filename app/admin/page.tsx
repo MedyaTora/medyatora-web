@@ -47,6 +47,7 @@ type OrderRequestRow = {
   total_price: number | null;
   total_cost_price: number | null;
   currency: string | null;
+  payment_method: string | null;
   target_username: string | null;
   target_link: string | null;
   order_note: string | null;
@@ -75,8 +76,9 @@ function normalizeCustomer(customers: AnalysisRequestRow["customers"]): Customer
 
 function formatDate(value: string | null | undefined) {
   if (!value) return "-";
+
   try {
-    return new Date(value).toLocaleString();
+    return new Date(value).toLocaleString("tr-TR");
   } catch {
     return "-";
   }
@@ -85,6 +87,39 @@ function formatDate(value: string | null | undefined) {
 function formatMoney(value: number | null | undefined, currency?: string | null) {
   const safeValue = typeof value === "number" ? value : 0;
   return `${safeValue} ${currency || ""}`.trim();
+}
+
+function getOrderStatusLabel(status: string | null | undefined) {
+  const map: Record<string, string> = {
+    pending: "Bekliyor",
+    processing: "İşlemde",
+    completed: "Tamamlandı",
+    cancelled: "İptal Edildi",
+    refunded: "İade Edildi",
+  };
+
+  return map[status || ""] || status || "-";
+}
+
+function getOrderStatusBadgeClass(status: string | null | undefined) {
+  const map: Record<string, string> = {
+    pending: "border-amber-400/20 bg-amber-400/10 text-amber-300",
+    processing: "border-sky-400/20 bg-sky-400/10 text-sky-300",
+    completed: "border-emerald-400/20 bg-emerald-400/10 text-emerald-300",
+    cancelled: "border-rose-400/20 bg-rose-400/10 text-rose-300",
+    refunded: "border-violet-400/20 bg-violet-400/10 text-violet-300",
+  };
+
+  return map[status || ""] || "border-white/10 bg-white/[0.04] text-white/60";
+}
+
+function getPaymentMethodLabel(method: string | null | undefined) {
+  const map: Record<string, string> = {
+    turkey_bank: "Türkiye Banka Havalesi / EFT",
+    support: "Destek ile İletişime Geçilecek",
+  };
+
+  return map[method || ""] || method || "-";
 }
 
 function includesText(value: unknown, q: string) {
@@ -134,6 +169,7 @@ export default async function AdminPage({
   const orderPage = Math.max(Number(params.opage || 1), 1);
 
   const queryParams = new URLSearchParams();
+
   if (q) queryParams.set("q", q);
   if (analysisStatus !== "all") queryParams.set("analysisStatus", analysisStatus);
   if (orderStatus !== "all") queryParams.set("orderStatus", orderStatus);
@@ -186,6 +222,7 @@ export default async function AdminPage({
       total_price,
       total_cost_price,
       currency,
+      payment_method,
       target_username,
       target_link,
       order_note,
@@ -211,6 +248,7 @@ export default async function AdminPage({
     const customer = normalizeCustomer(item.customers);
 
     const statusOk = analysisStatus === "all" || item.status === analysisStatus;
+
     const searchOk =
       !q ||
       includesText(customer?.full_name, q) ||
@@ -225,6 +263,7 @@ export default async function AdminPage({
   const filteredOrders = allOrders.filter((item) => {
     const statusOk = orderStatus === "all" || item.status === orderStatus;
     const platformOk = platform === "all" || item.platform === platform;
+
     const searchOk =
       !q ||
       includesText(item.full_name, q) ||
@@ -237,7 +276,8 @@ export default async function AdminPage({
       includesText(item.service_title, q) ||
       includesText(item.platform, q) ||
       includesText(item.service_id, q) ||
-      includesText(item.site_code, q);
+      includesText(item.site_code, q) ||
+      includesText(getPaymentMethodLabel(item.payment_method), q);
 
     return statusOk && platformOk && searchOk;
   });
@@ -249,10 +289,13 @@ export default async function AdminPage({
   const orderPageItems = getPageItems(filteredOrders, orderPage);
 
   const pendingAnalysis = allItems.filter((item) => item.status === "pending").length;
+
   const processingAnalysis = allItems.filter(
     (item) => item.status === "in_review" || item.status === "contacted"
   ).length;
+
   const completedAnalysis = allItems.filter((item) => item.status === "completed").length;
+
   const pendingOrders = allOrders.filter((item) => item.status === "pending").length;
   const completedOrders = allOrders.filter((item) => item.status === "completed").length;
 
@@ -270,23 +313,40 @@ export default async function AdminPage({
                 <span className="h-2 w-2 rounded-full bg-emerald-400" />
                 MedyaTora Yönetim
               </div>
+
               <p className="text-xs uppercase tracking-[0.25em] text-white/40">
                 Dashboard
               </p>
+
               <h1 className="mt-2 text-3xl font-bold tracking-tight md:text-4xl">
                 Admin Panel
               </h1>
+
               <p className="mt-2 max-w-2xl text-sm leading-6 text-white/55">
                 Başvuruları ve siparişleri arama, filtreleme ve sayfalama ile takip et.
               </p>
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <a href="/admin" className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/[0.08]">
+              <a
+                href="/admin"
+                className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/[0.08]"
+              >
                 Başvurular
               </a>
-              <a href="/admin/customers" className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/[0.08]">
+
+              <a
+                href="/admin/customers"
+                className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/[0.08]"
+              >
                 Müşteriler
+              </a>
+
+              <a
+                href="/admin/profit"
+                className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2.5 text-sm font-medium text-emerald-300 transition hover:bg-emerald-400/15"
+              >
+                Kâr Paneli
               </a>
             </div>
           </div>
@@ -307,6 +367,7 @@ export default async function AdminPage({
               <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-white/40">
                 Arama
               </label>
+
               <input
                 name="q"
                 defaultValue={q}
@@ -328,19 +389,19 @@ export default async function AdminPage({
               ]}
             />
 
-<FilterSelect
-  label="Sipariş Durumu"
-  name="orderStatus"
-  defaultValue={orderStatus}
-  options={[
-    ["all", "Tümü"],
-    ["pending", "Bekliyor"],
-    ["processing", "İşlemde"],
-    ["completed", "Tamamlandı"],
-    ["cancelled", "İptal Edildi"],
-    ["refunded", "İade Edildi"],
-  ]}
-/>
+            <FilterSelect
+              label="Sipariş Durumu"
+              name="orderStatus"
+              defaultValue={orderStatus}
+              options={[
+                ["all", "Tümü"],
+                ["pending", "Bekliyor"],
+                ["processing", "İşlemde"],
+                ["completed", "Tamamlandı"],
+                ["cancelled", "İptal Edildi"],
+                ["refunded", "İade Edildi"],
+              ]}
+            />
 
             <FilterSelect
               label="Platform"
@@ -357,7 +418,11 @@ export default async function AdminPage({
             <button className="rounded-2xl bg-white px-5 py-3 text-sm font-bold text-black">
               Filtrele
             </button>
-            <a href="/admin" className="rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-semibold text-white/80">
+
+            <a
+              href="/admin"
+              className="rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-semibold text-white/80"
+            >
               Temizle
             </a>
           </div>
@@ -403,9 +468,12 @@ function StatCard({
 
   return (
     <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-5">
-      <div className={`mb-4 inline-flex rounded-full bg-gradient-to-r px-3 py-1 text-xs font-semibold ${accentMap[accent]}`}>
+      <div
+        className={`mb-4 inline-flex rounded-full bg-gradient-to-r px-3 py-1 text-xs font-semibold ${accentMap[accent]}`}
+      >
         {title}
       </div>
+
       <p className="text-3xl font-bold tracking-tight">{value}</p>
     </div>
   );
@@ -427,6 +495,7 @@ function FilterSelect({
       <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-white/40">
         {label}
       </label>
+
       <select
         name={name}
         defaultValue={defaultValue}
@@ -467,11 +536,12 @@ function AnalysisTable({
               <th className="px-3 py-2">Müşteri</th>
               <th className="px-3 py-2">Kullanıcı</th>
               <th className="px-3 py-2">İletişim</th>
-              <th className="px-3 py-2">Paket</th>
+              <th className="px-3 py-2">Analiz</th>
               <th className="px-3 py-2">Durum</th>
               <th className="px-3 py-2">İşlem</th>
             </tr>
           </thead>
+
           <tbody>
             {items.map((item) => {
               const customer = normalizeCustomer(item.customers);
@@ -481,23 +551,32 @@ function AnalysisTable({
                   <td className="rounded-l-2xl px-3 py-3 text-white/60">
                     {formatDate(item.created_at)}
                   </td>
+
                   <td className="px-3 py-3 font-semibold">
                     {customer?.full_name || "İsimsiz"}
                   </td>
+
                   <td className="px-3 py-3 text-white/70">
                     {customer?.username || "-"}
                   </td>
+
                   <td className="px-3 py-3 text-white/70">
                     {customer?.contact_type || "-"} / {customer?.contact_value || "-"}
                   </td>
+
                   <td className="px-3 py-3 text-white/70">
                     {item.package_type} • {item.package_price ?? "-"} {item.currency ?? ""}
                   </td>
+
                   <td className="px-3 py-3">
                     <StatusSelect id={String(item.id)} initialStatus={item.status} />
                   </td>
+
                   <td className="rounded-r-2xl px-3 py-3">
-                    <a href={`/admin/${item.id}`} className="rounded-xl bg-white px-3 py-2 text-xs font-bold text-black">
+                    <a
+                      href={`/admin/${item.id}`}
+                      className="rounded-xl bg-white px-3 py-2 text-xs font-bold text-black"
+                    >
                       Detay
                     </a>
                   </td>
@@ -514,7 +593,12 @@ function AnalysisTable({
         ) : null}
       </div>
 
-      <Pagination page={page} totalPages={totalPages} prevHref={buildPageHref(queryParams, "apage", page - 1)} nextHref={buildPageHref(queryParams, "apage", page + 1)} />
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        prevHref={buildPageHref(queryParams, "apage", page - 1)}
+        nextHref={buildPageHref(queryParams, "apage", page + 1)}
+      />
     </section>
   );
 }
@@ -547,8 +631,12 @@ function OrderTable({
               <div className="grid gap-3 xl:grid-cols-[1fr_1.2fr_auto] xl:items-start">
                 <div>
                   <div className="mb-2 flex flex-wrap gap-2">
-                    <span className="rounded-full bg-emerald-400 px-3 py-1 text-xs font-semibold text-black">
-                      {item.status}
+                    <span
+                      className={`rounded-full border px-3 py-1 text-xs font-semibold ${getOrderStatusBadgeClass(
+                        item.status
+                      )}`}
+                    >
+                      {getOrderStatusLabel(item.status)}
                     </span>
 
                     <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-white/60">
@@ -591,6 +679,11 @@ function OrderTable({
                   <MiniInfo
                     label="Satış"
                     value={formatMoney(item.total_price, item.currency)}
+                  />
+
+                  <MiniInfo
+                    label="Ödeme Yöntemi"
+                    value={getPaymentMethodLabel(item.payment_method)}
                   />
                 </div>
 
@@ -646,6 +739,7 @@ function SectionHeader({
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
       <h2 className="text-2xl font-bold tracking-tight">{title}</h2>
+
       <span className="text-sm text-white/45">
         {total} kayıt • Sayfa {page}/{totalPages}
       </span>
@@ -667,13 +761,19 @@ function Pagination({
   return (
     <div className="mt-5 flex items-center justify-end gap-3">
       {page > 1 ? (
-        <a href={prevHref} className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white/80">
+        <a
+          href={prevHref}
+          className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white/80"
+        >
           ← Önceki
         </a>
       ) : null}
 
       {page < totalPages ? (
-        <a href={nextHref} className="rounded-xl bg-white px-4 py-2 text-sm font-bold text-black">
+        <a
+          href={nextHref}
+          className="rounded-xl bg-white px-4 py-2 text-sm font-bold text-black"
+        >
           Sonraki →
         </a>
       ) : null}
