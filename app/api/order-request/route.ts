@@ -1,6 +1,6 @@
 import https from "https";
 import { NextResponse } from "next/server";
-import { getMysqlPool } from "@/lib/mysql";
+import { getMysqlPool, hasMysqlConfig } from "@/lib/mysql";
 
 type CurrencyCode = "TL" | "USD" | "RUB";
 type ContactType = "Telegram" | "WhatsApp" | "Instagram" | "E-posta";
@@ -71,6 +71,10 @@ function createOrderNumber() {
 }
 
 function isPositiveNumber(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
+function isZeroOrPositiveNumber(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) && value >= 0;
 }
 
@@ -78,8 +82,16 @@ function isNonEmptyString(value: unknown) {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+function normalizeString(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
 function normalizePhoneNumber(value: string) {
   return value.replace(/[^\d+]/g, "").trim();
+}
+
+function roundMoney(value: number) {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
 function validateItem(item: unknown): item is OrderItemPayload {
@@ -94,10 +106,10 @@ function validateItem(item: unknown): item is OrderItemPayload {
     isNonEmptyString(x.platform) &&
     isNonEmptyString(x.category) &&
     isPositiveNumber(x.quantity) &&
-    isPositiveNumber(x.unit_price) &&
-    isPositiveNumber(x.total_price) &&
-    isPositiveNumber(x.unit_cost_price) &&
-    isPositiveNumber(x.total_cost_price) &&
+    isZeroOrPositiveNumber(x.unit_price) &&
+    isZeroOrPositiveNumber(x.total_price) &&
+    isZeroOrPositiveNumber(x.unit_cost_price) &&
+    isZeroOrPositiveNumber(x.total_cost_price) &&
     isNonEmptyString(x.guarantee_label) &&
     isNonEmptyString(x.speed)
   );
@@ -112,7 +124,10 @@ async function sendTelegramMessage(text: string) {
   const chatId = process.env.TELEGRAM_CHAT_ID;
 
   if (!token || !chatId) {
-    throw new Error("Telegram token veya chat id eksik.");
+    return {
+      ok: false,
+      warning: "Telegram token veya chat id eksik.",
+    };
   }
 
   const body = JSON.stringify({
@@ -120,43 +135,74 @@ async function sendTelegramMessage(text: string) {
     text,
   });
 
-  return await new Promise<string>((resolve, reject) => {
-    const req = https.request(
-      {
-        hostname: "api.telegram.org",
-        path: `/bot${token}/sendMessage`,
-        method: "POST",
-        family: 4,
-        headers: {
-          "Content-Type": "application/json",
-          "Content-Length": Buffer.byteLength(body),
+  try {
+    const responseText = await new Promise<string>((resolve, reject) => {
+      const req = https.request(
+        {
+          hostname: "api.telegram.org",
+          path: `/bot${token}/sendMessage`,
+          method: "POST",
+          family: 4,
+          headers: {
+            "Content-Type": "application/json",
+            "Content-Length": Buffer.byteLength(body),
+          },
         },
-      },
-      (res) => {
-        let data = "";
+        (res) => {
+          let data = "";
 
-        res.on("data", (chunk) => {
-          data += chunk;
-        });
+          res.on("data", (chunk) => {
+            data += chunk;
+          });
 
-        res.on("end", () => {
-          if (!res.statusCode || res.statusCode < 200 || res.statusCode >= 300) {
-            reject(new Error(`Telegram HTTP ${res.statusCode}: ${data}`));
-            return;
-          }
+          res.on("end", () => {
+            if (!res.statusCode || res.statusCode < 200 || res.statusCode >= 300) {
+              reject(new Error(`Telegram HTTP ${res.statusCode}: ${data}`));
+              return;
+            }
 
-          resolve(data);
-        });
-      }
-    );
+            resolve(data);
+          });
+        }
+      );
 
-    req.on("error", (err) => {
-      reject(err);
+      req.on("error", (err) => {
+        reject(err);
+      });
+
+      req.write(body);
+      req.end();
     });
 
-    req.write(body);
-    req.end();
-  });
+    try {
+      const json = JSON.parse(responseText);
+
+      if (!json.ok) {
+        return {
+          ok: false,
+          warning: "Telegram API sipariş bildirimini kabul etmedi.",
+        };
+      }
+    } catch {
+      return {
+        ok: false,
+        warning: "Telegram cevabı beklenen formatta alınamadı.",
+      };
+    }
+
+    return {
+      ok: true,
+      warning: null,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      warning:
+        error instanceof Error
+          ? `Telegram gönderim hatası: ${error.message}`
+          : "Telegram gönderiminde bilinmeyen hata oluştu.",
+    };
+  }
 }
 
 export async function POST(req: Request) {
@@ -165,14 +211,14 @@ export async function POST(req: Request) {
 
     if (!rawBody || typeof rawBody !== "object") {
       return NextResponse.json(
-        { error: "Geçersiz istek gövdesi." },
+        { success: false, error: "Geçersiz istek gövdesi." },
         { status: 400 }
       );
     }
 
     const body = rawBody as Partial<OrderRequestPayload>;
 
-    const fullName = typeof body.full_name === "string" ? body.full_name.trim() : "";
+    const fullName = normalizeString(body.full_name);
 
     const phoneNumber =
       typeof body.phone_number === "string"
@@ -181,8 +227,7 @@ export async function POST(req: Request) {
 
     const contactType = body.contact_type;
 
-    const contactValue =
-      typeof body.contact_value === "string" ? body.contact_value.trim() : "";
+    const contactValue = normalizeString(body.contact_value);
 
     const currency = body.currency;
     const paymentMethod = body.payment_method;
@@ -190,49 +235,49 @@ export async function POST(req: Request) {
 
     if (!fullName || fullName.length < 2) {
       return NextResponse.json(
-        { error: "Geçerli bir ad soyad giriniz." },
+        { success: false, error: "Geçerli bir ad soyad giriniz." },
         { status: 400 }
       );
     }
 
     if (!phoneNumber || phoneNumber.length < 7) {
       return NextResponse.json(
-        { error: "Geçerli bir telefon numarası giriniz." },
+        { success: false, error: "Geçerli bir telefon numarası giriniz." },
         { status: 400 }
       );
     }
 
     if (!contactType || !ALLOWED_CONTACT_TYPES.includes(contactType)) {
       return NextResponse.json(
-        { error: "Geçerli bir iletişim türü seçiniz." },
+        { success: false, error: "Geçerli bir iletişim türü seçiniz." },
         { status: 400 }
       );
     }
 
     if (!contactValue) {
       return NextResponse.json(
-        { error: "İletişim bilgisi boş bırakılamaz." },
+        { success: false, error: "İletişim bilgisi boş bırakılamaz." },
         { status: 400 }
       );
     }
 
     if (!currency || !ALLOWED_CURRENCIES.includes(currency)) {
       return NextResponse.json(
-        { error: "Geçerli bir para birimi seçiniz." },
+        { success: false, error: "Geçerli bir para birimi seçiniz." },
         { status: 400 }
       );
     }
 
     if (!paymentMethod || !ALLOWED_PAYMENT_METHODS.includes(paymentMethod)) {
       return NextResponse.json(
-        { error: "Geçerli bir ödeme yöntemi seçiniz." },
+        { success: false, error: "Geçerli bir ödeme yöntemi seçiniz." },
         { status: 400 }
       );
     }
 
     if (!items.length) {
       return NextResponse.json(
-        { error: "En az bir hizmet seçmelisiniz." },
+        { success: false, error: "En az bir hizmet seçmelisiniz." },
         { status: 400 }
       );
     }
@@ -241,40 +286,61 @@ export async function POST(req: Request) {
 
     if (hasInvalidItem) {
       return NextResponse.json(
-        { error: "Sipariş hizmetlerinden biri geçersiz." },
+        { success: false, error: "Sipariş hizmetlerinden biri geçersiz." },
         { status: 400 }
+      );
+    }
+
+    if (!hasMysqlConfig()) {
+      console.warn("[MedyaTora] Sipariş alınamadı: MySQL env eksik.");
+
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Geliştirme ortamında MySQL bağlantısı yok. Canlı ortamda sipariş sistemi çalışır.",
+        },
+        { status: 503 }
       );
     }
 
     const safeItems = items as OrderItemPayload[];
     const batchCode = createBatchCode();
 
-    const rows = safeItems.map((item) => ({
-      batch_code: batchCode,
-      order_number: createOrderNumber(),
-      full_name: fullName,
-      phone_number: phoneNumber,
-      contact_type: contactType,
-      contact_value: contactValue,
-      platform: item.platform.trim(),
-      category: item.category.trim(),
-      service_id: Number(item.service_id),
-      site_code: Number(item.site_code),
-      service_title: item.service_title.trim(),
-      quantity: Number(item.quantity),
-      unit_price: Number(item.unit_price),
-      total_price: Number(item.total_price),
-      unit_cost_price: Number(item.unit_cost_price),
-      total_cost_price: Number(item.total_cost_price),
-      guarantee_label: item.guarantee_label.trim(),
-      speed: item.speed.trim(),
-      currency,
-      payment_method: paymentMethod,
-      target_username: item.target_username?.trim() || null,
-      target_link: item.target_link?.trim() || null,
-      order_note: item.order_note?.trim() || null,
-      status: "pending",
-    }));
+    const rows = safeItems.map((item) => {
+      const quantity = Number(item.quantity);
+      const unitPrice = roundMoney(Number(item.unit_price));
+      const totalPrice = roundMoney(Number(item.total_price));
+      const unitCostPrice = roundMoney(Number(item.unit_cost_price));
+      const totalCostPrice = roundMoney(Number(item.total_cost_price));
+
+      return {
+        batch_code: batchCode,
+        order_number: createOrderNumber(),
+        full_name: fullName,
+        phone_number: phoneNumber,
+        contact_type: contactType,
+        contact_value: contactValue,
+        platform: item.platform.trim(),
+        category: item.category.trim(),
+        service_id: Number(item.service_id),
+        site_code: Number(item.site_code),
+        service_title: item.service_title.trim(),
+        quantity,
+        unit_price: unitPrice,
+        total_price: totalPrice,
+        unit_cost_price: unitCostPrice,
+        total_cost_price: totalCostPrice,
+        guarantee_label: item.guarantee_label.trim(),
+        speed: item.speed.trim(),
+        currency,
+        payment_method: paymentMethod,
+        target_username: item.target_username?.trim() || null,
+        target_link: item.target_link?.trim() || null,
+        order_note: item.order_note?.trim() || null,
+        status: paymentMethod === "turkey_bank" ? "pending_payment" : "pending",
+      };
+    });
 
     const pool = getMysqlPool();
     const connection = await pool.getConnection();
@@ -348,8 +414,12 @@ export async function POST(req: Request) {
       console.error("MySQL order insert error:", dbError);
 
       return NextResponse.json(
-        { error: "Sipariş kaydedilemedi." },
-        { status: 400 }
+        {
+          success: false,
+          error:
+            "Sipariş kaydedilemedi. Lütfen bilgileri kontrol edip tekrar deneyin.",
+        },
+        { status: 500 }
       );
     } finally {
       connection.release();
@@ -382,12 +452,15 @@ export async function POST(req: Request) {
       )
       .join("\n");
 
-    const totalSale = rows.reduce((sum, item) => sum + Number(item.total_price || 0), 0);
-    const totalCost = rows.reduce(
-      (sum, item) => sum + Number(item.total_cost_price || 0),
-      0
+    const totalSale = roundMoney(
+      rows.reduce((sum, item) => sum + Number(item.total_price || 0), 0)
     );
-    const totalProfit = totalSale - totalCost;
+
+    const totalCost = roundMoney(
+      rows.reduce((sum, item) => sum + Number(item.total_cost_price || 0), 0)
+    );
+
+    const totalProfit = roundMoney(totalSale - totalCost);
 
     const telegramMessage =
       `🛒 Yeni sipariş alındı\n\n` +
@@ -398,6 +471,7 @@ export async function POST(req: Request) {
       `📨 İletişim Bilgisi: ${contactValue}\n` +
       `💱 Para Birimi: ${currency}\n` +
       `💳 Ödeme Yöntemi: ${getPaymentMethodLabel(paymentMethod)}\n` +
+      `📌 Sipariş Durumu: ${rows[0]?.status || "pending"}\n` +
       `📦 Hizmet Sayısı: ${rows.length}\n` +
       `💰 Toplam Alış: ${totalCost} ${currency}\n` +
       `🏷️ Toplam Satış: ${totalSale} ${currency}\n` +
@@ -405,44 +479,35 @@ export async function POST(req: Request) {
       `🔢 Sipariş Numaraları:\n${orderNumberLines}\n\n` +
       `📌 Sipariş Detayları:\n\n${lines}`;
 
-    let telegramWarning: string | null = null;
+    const telegramResult = await sendTelegramMessage(telegramMessage);
 
-    try {
-      const telegramText = await sendTelegramMessage(telegramMessage);
-
-      try {
-        const telegramJson = JSON.parse(telegramText);
-
-        if (!telegramJson.ok) {
-          telegramWarning = "Telegram API sipariş bildirimini kabul etmedi.";
-          console.error("Telegram API error response:", telegramText);
-        }
-      } catch {
-        telegramWarning = "Telegram cevabı beklenen formatta alınamadı.";
-        console.error("Telegram parse error:", telegramText);
-      }
-    } catch (telegramError) {
-      telegramWarning =
-        telegramError instanceof Error
-          ? `Telegram gönderim hatası: ${telegramError.message}`
-          : "Telegram gönderiminde bilinmeyen hata oluştu";
-
-      console.error(telegramWarning);
+    if (!telegramResult.ok && telegramResult.warning) {
+      console.error(telegramResult.warning);
     }
 
     return NextResponse.json(
       {
         success: true,
+        message:
+          paymentMethod === "turkey_bank"
+            ? "Siparişiniz alındı. Ödeme kontrolünden sonra işleme alınacaktır."
+            : "Siparişiniz alındı. Ekibimiz sizinle iletişime geçecektir.",
         batchCode,
         orderNumbers: rows.map((row) => row.order_number),
-        telegramWarning,
+        telegramWarning: telegramResult.warning,
       },
       { status: 200 }
     );
   } catch (error) {
+    console.error("Order request server error:", error);
+
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : "Sunucu hatası oluştu.",
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Sunucu hatası oluştu. Lütfen tekrar deneyin.",
       },
       { status: 500 }
     );
