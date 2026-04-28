@@ -2,10 +2,12 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 import { getMysqlPool } from "@/lib/mysql";
+import OrderStatusCardActions from "@/app/components/order-status-card-actions";
 
 type OrderDetailRow = {
   id: number;
   created_at: string;
+  updated_at: string | null;
   batch_code: string | null;
   order_number: string | null;
   full_name: string | null;
@@ -25,6 +27,7 @@ type OrderDetailRow = {
   guarantee_label: string | null;
   speed: string | null;
   currency: string | null;
+  payment_method: string | null;
   target_username: string | null;
   target_link: string | null;
   order_note: string | null;
@@ -38,7 +41,7 @@ function formatDate(value: string | null | undefined) {
   if (!value) return "-";
 
   try {
-    return new Date(value).toLocaleString();
+    return new Date(value).toLocaleString("tr-TR");
   } catch {
     return "-";
   }
@@ -53,6 +56,43 @@ function calculateProfit(order: OrderDetailRow) {
   const sale = typeof order.total_price === "number" ? order.total_price : 0;
   const cost = typeof order.total_cost_price === "number" ? order.total_cost_price : 0;
   return sale - cost;
+}
+
+function getOrderStatusLabel(status: string | null | undefined) {
+  const map: Record<string, string> = {
+    pending_payment: "Ödeme Bekliyor",
+    pending: "Bekliyor",
+    processing: "İşlemde",
+    completed: "Tamamlandı",
+    cancelled: "İptal Edildi",
+    refunded: "İade Edildi",
+    failed: "Başarısız",
+  };
+
+  return map[status || ""] || status || "-";
+}
+
+function getOrderStatusBadgeClass(status: string | null | undefined) {
+  const map: Record<string, string> = {
+    pending_payment: "border-orange-400/20 bg-orange-400/10 text-orange-300",
+    pending: "border-amber-400/20 bg-amber-400/10 text-amber-300",
+    processing: "border-sky-400/20 bg-sky-400/10 text-sky-300",
+    completed: "border-emerald-400/20 bg-emerald-400/10 text-emerald-300",
+    cancelled: "border-rose-400/20 bg-rose-400/10 text-rose-300",
+    refunded: "border-violet-400/20 bg-violet-400/10 text-violet-300",
+    failed: "border-red-400/20 bg-red-400/10 text-red-300",
+  };
+
+  return map[status || ""] || "border-white/10 bg-white/[0.04] text-white/60";
+}
+
+function getPaymentMethodLabel(method: string | null | undefined) {
+  const map: Record<string, string> = {
+    turkey_bank: "Türkiye Banka Havalesi / EFT",
+    support: "Destek ile İletişime Geçilecek",
+  };
+
+  return map[method || ""] || method || "-";
 }
 
 function ErrorScreen({ message }: { message: string }) {
@@ -137,6 +177,7 @@ export default async function OrderDetailPage({
       SELECT
         id,
         created_at,
+        updated_at,
         batch_code,
         order_number,
         full_name,
@@ -156,6 +197,7 @@ export default async function OrderDetailPage({
         guarantee_label,
         speed,
         currency,
+        payment_method,
         target_username,
         target_link,
         order_note,
@@ -179,6 +221,7 @@ export default async function OrderDetailPage({
     order = {
       id: Number(row.id),
       created_at: toDateValue(row.created_at),
+      updated_at: row.updated_at ? toDateValue(row.updated_at) : null,
       batch_code: row.batch_code,
       order_number: row.order_number,
       full_name: row.full_name,
@@ -198,6 +241,7 @@ export default async function OrderDetailPage({
       guarantee_label: row.guarantee_label,
       speed: row.speed,
       currency: row.currency,
+      payment_method: row.payment_method,
       target_username: row.target_username,
       target_link: row.target_link,
       order_note: row.order_note,
@@ -215,23 +259,40 @@ export default async function OrderDetailPage({
   }
 
   const profit = calculateProfit(order);
+  const profitRate =
+    typeof order.total_price === "number" && order.total_price > 0
+      ? Math.round((profit / order.total_price) * 100)
+      : 0;
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#171717_0%,#090909_55%,#050505_100%)] p-4 text-white md:p-8">
-      <div className="mx-auto max-w-6xl space-y-6">
-        <a
-          href="/admin"
-          className="inline-flex items-center rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/[0.08]"
-        >
-          ← Admin’e Dön
-        </a>
+      <div className="mx-auto max-w-7xl space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <a
+            href="/admin"
+            className="inline-flex items-center rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/[0.08]"
+          >
+            ← Admin’e Dön
+          </a>
+
+          <a
+            href={`/admin?orderStatus=${encodeURIComponent(order.status || "all")}`}
+            className="inline-flex items-center rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/[0.08]"
+          >
+            Aynı Durumdaki Siparişler
+          </a>
+        </div>
 
         <section className="rounded-[28px] border border-white/10 bg-white/[0.03] p-5 shadow-[0_10px_40px_rgba(0,0,0,0.25)] backdrop-blur md:p-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div>
               <div className="mb-3 flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-emerald-400 px-3 py-1 text-xs font-semibold text-black">
-                  {order.status || "-"}
+                <span
+                  className={`rounded-full border px-3 py-1 text-xs font-semibold ${getOrderStatusBadgeClass(
+                    order.status
+                  )}`}
+                >
+                  {getOrderStatusLabel(order.status)}
                 </span>
 
                 <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-white/60">
@@ -241,10 +302,14 @@ export default async function OrderDetailPage({
                 <span className="rounded-full border border-sky-400/20 bg-sky-400/10 px-3 py-1 text-xs text-sky-300">
                   {order.currency || "-"}
                 </span>
+
+                <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-300">
+                  {getPaymentMethodLabel(order.payment_method)}
+                </span>
               </div>
 
               <p className="text-xs uppercase tracking-[0.25em] text-white/40">
-                Order Detail
+                Sipariş Detayı
               </p>
 
               <h1 className="mt-2 text-2xl font-bold tracking-tight md:text-4xl">
@@ -256,6 +321,10 @@ export default async function OrderDetailPage({
               </p>
 
               <p className="mt-1 text-sm text-white/50">
+                Son Güncelleme: {formatDate(order.updated_at)}
+              </p>
+
+              <p className="mt-1 text-sm text-white/50">
                 Batch: {order.batch_code || "-"}
               </p>
             </div>
@@ -264,82 +333,146 @@ export default async function OrderDetailPage({
               DB ID: {order.id}
             </div>
           </div>
+        </section>
 
-          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <InfoCard
-              title="Panel Servis ID"
-              value={order.service_id ?? "-"}
-              highlight
-            />
-            <InfoCard
-              title="Müşteri Ürün Kodu"
-              value={order.site_code ?? "-"}
-              highlight
-            />
-            <InfoCard title="Platform" value={order.platform || "-"} />
-            <InfoCard title="Kategori" value={order.category || "-"} />
+        <section className="grid gap-6 xl:grid-cols-[1fr_420px]">
+          <div className="space-y-6">
+            <section className="rounded-[28px] border border-white/10 bg-white/[0.03] p-5 md:p-6">
+              <h2 className="text-xl font-bold">Sipariş Bilgileri</h2>
+
+              <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <InfoCard title="Panel Servis ID" value={order.service_id ?? "-"} highlight />
+                <InfoCard title="Müşteri Ürün Kodu" value={order.site_code ?? "-"} highlight />
+                <InfoCard title="Platform" value={order.platform || "-"} />
+                <InfoCard title="Kategori" value={order.category || "-"} />
+              </div>
+
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+                <TextCard title="Hizmet Adı" value={order.service_title} />
+                <TextCard title="Hedef Link" value={order.target_link} />
+              </div>
+
+              <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <InfoCard title="Miktar" value={order.quantity ?? "-"} />
+                <InfoCard title="Garanti" value={order.guarantee_label || "-"} />
+                <InfoCard title="Hız" value={order.speed || "-"} />
+                <InfoCard title="Durum" value={getOrderStatusLabel(order.status)} />
+              </div>
+            </section>
+
+            <section className="rounded-[28px] border border-white/10 bg-white/[0.03] p-5 md:p-6">
+              <h2 className="text-xl font-bold">Müşteri Bilgileri</h2>
+
+              <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <InfoCard title="Müşteri" value={order.full_name || "-"} />
+                <InfoCard title="Telefon" value={order.phone_number || "-"} />
+                <InfoCard
+                  title="İletişim"
+                  value={`${order.contact_type || "-"} / ${order.contact_value || "-"}`}
+                />
+                <InfoCard title="Hedef Kullanıcı" value={order.target_username || "-"} />
+              </div>
+            </section>
+
+            <section className="rounded-[28px] border border-white/10 bg-white/[0.03] p-5 md:p-6">
+              <h2 className="text-xl font-bold">Fiyat ve Kâr</h2>
+
+              <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+                <InfoCard
+                  title="Birim Alış"
+                  value={`${order.unit_cost_price ?? 0} ${order.currency || ""} / 1000`}
+                />
+                <InfoCard
+                  title="Birim Satış"
+                  value={`${order.unit_price ?? 0} ${order.currency || ""} / 1000`}
+                />
+                <InfoCard
+                  title="Toplam Alış"
+                  value={formatMoney(order.total_cost_price, order.currency)}
+                />
+                <InfoCard
+                  title="Toplam Satış"
+                  value={formatMoney(order.total_price, order.currency)}
+                />
+                <InfoCard
+                  title="Tahmini Kâr"
+                  value={`${formatMoney(profit, order.currency)} (${profitRate}%)`}
+                  highlight
+                />
+              </div>
+            </section>
+
+            <section className="rounded-[28px] border border-white/10 bg-white/[0.03] p-5 md:p-6">
+              <h2 className="text-xl font-bold">İşlem Sonucu</h2>
+
+              <div className="mt-5 grid gap-4 md:grid-cols-3">
+                <InfoCard title="Başlangıç Sayısı" value={order.start_count ?? "-"} />
+                <InfoCard title="Bitiş Sayısı" value={order.end_count ?? "-"} />
+                <InfoCard
+                  title="Fark"
+                  value={
+                    typeof order.start_count === "number" &&
+                    typeof order.end_count === "number"
+                      ? order.end_count - order.start_count
+                      : "-"
+                  }
+                  highlight={
+                    typeof order.start_count === "number" &&
+                    typeof order.end_count === "number" &&
+                    order.end_count - order.start_count > 0
+                  }
+                />
+              </div>
+
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+                <TextCard title="Sipariş Notu" value={order.order_note} />
+                <TextCard title="Admin / İşlem Notu" value={order.completion_note} />
+              </div>
+            </section>
           </div>
 
-          <div className="mt-6 grid gap-4 md:grid-cols-2">
-            <TextCard title="Hizmet Adı" value={order.service_title} />
-            <TextCard title="Hedef Link" value={order.target_link} />
-          </div>
+          <aside className="space-y-6">
+            <OrderStatusCardActions
+              id={order.id}
+              initialStatus={order.status || "pending"}
+              initialStartCount={order.start_count}
+              initialEndCount={order.end_count}
+              initialCompletionNote={order.completion_note}
+              orderNumber={order.order_number}
+              fullName={order.full_name}
+              contactType={order.contact_type}
+              contactValue={order.contact_value}
+              serviceTitle={order.service_title}
+              targetUsername={order.target_username}
+            />
 
-          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <InfoCard title="Müşteri" value={order.full_name || "-"} />
-            <InfoCard title="Telefon" value={order.phone_number || "-"} />
-            <InfoCard
-              title="İletişim"
-              value={`${order.contact_type || "-"} / ${order.contact_value || "-"}`}
-            />
-            <InfoCard title="Hedef Kullanıcı" value={order.target_username || "-"} />
-          </div>
+            <section className="rounded-[28px] border border-white/10 bg-white/[0.03] p-5 md:p-6">
+              <h2 className="text-xl font-bold">Hızlı Kontrol</h2>
 
-          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <InfoCard title="Miktar" value={order.quantity ?? "-"} />
-            <InfoCard title="Garanti" value={order.guarantee_label || "-"} />
-            <InfoCard title="Hız" value={order.speed || "-"} />
-            <InfoCard title="Durum" value={order.status || "-"} />
-          </div>
-
-          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <InfoCard
-              title="Birim Satış"
-              value={`${order.unit_price ?? 0} ${order.currency || ""} / 1000`}
-            />
-            <InfoCard
-              title="Toplam Satış"
-              value={formatMoney(order.total_price, order.currency)}
-            />
-            <InfoCard
-              title="Toplam Alış"
-              value={formatMoney(order.total_cost_price, order.currency)}
-            />
-            <InfoCard
-              title="Tahmini Kâr"
-              value={formatMoney(profit, order.currency)}
-              highlight
-            />
-          </div>
-
-          <div className="mt-6 grid gap-4 md:grid-cols-3">
-            <InfoCard title="Başlangıç Sayısı" value={order.start_count ?? "-"} />
-            <InfoCard title="Bitiş Sayısı" value={order.end_count ?? "-"} />
-            <InfoCard
-              title="Fark"
-              value={
-                typeof order.start_count === "number" &&
-                typeof order.end_count === "number"
-                  ? order.end_count - order.start_count
-                  : "-"
-              }
-            />
-          </div>
-
-          <div className="mt-6 grid gap-4 md:grid-cols-2">
-            <TextCard title="Sipariş Notu" value={order.order_note} />
-            <TextCard title="Tamamlanma Notu" value={order.completion_note} />
-          </div>
+              <div className="mt-4 space-y-3 text-sm leading-6 text-white/65">
+                <p>
+                  <span className="font-semibold text-white">Sipariş No:</span>{" "}
+                  {order.order_number || "-"}
+                </p>
+                <p>
+                  <span className="font-semibold text-white">Panel ID:</span>{" "}
+                  {order.service_id || "-"}
+                </p>
+                <p>
+                  <span className="font-semibold text-white">Ürün Kodu:</span>{" "}
+                  {order.site_code || "-"}
+                </p>
+                <p>
+                  <span className="font-semibold text-white">Hedef:</span>{" "}
+                  {order.target_username || order.target_link || "-"}
+                </p>
+                <p>
+                  <span className="font-semibold text-white">Ödeme:</span>{" "}
+                  {getPaymentMethodLabel(order.payment_method)}
+                </p>
+              </div>
+            </section>
+          </aside>
         </section>
       </div>
     </main>
