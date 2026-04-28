@@ -124,11 +124,13 @@ function formatMoney(value: number | null | undefined, currency?: string | null)
 
 function getOrderStatusLabel(status: string | null | undefined) {
   const map: Record<string, string> = {
+    pending_payment: "Ödeme Bekliyor",
     pending: "Bekliyor",
     processing: "İşlemde",
     completed: "Tamamlandı",
     cancelled: "İptal Edildi",
     refunded: "İade Edildi",
+    failed: "Başarısız",
   };
 
   return map[status || ""] || status || "-";
@@ -136,11 +138,13 @@ function getOrderStatusLabel(status: string | null | undefined) {
 
 function getOrderStatusBadgeClass(status: string | null | undefined) {
   const map: Record<string, string> = {
+    pending_payment: "border-orange-400/20 bg-orange-400/10 text-orange-300",
     pending: "border-amber-400/20 bg-amber-400/10 text-amber-300",
     processing: "border-sky-400/20 bg-sky-400/10 text-sky-300",
     completed: "border-emerald-400/20 bg-emerald-400/10 text-emerald-300",
     cancelled: "border-rose-400/20 bg-rose-400/10 text-rose-300",
     refunded: "border-violet-400/20 bg-violet-400/10 text-violet-300",
+    failed: "border-red-400/20 bg-red-400/10 text-red-300",
   };
 
   return map[status || ""] || "border-white/10 bg-white/[0.04] text-white/60";
@@ -391,9 +395,9 @@ export default async function AdminPage({
         target_link,
         order_note,
         status,
-        NULL AS start_count,
-        NULL AS end_count,
-        NULL AS completion_note
+        start_count,
+        end_count,
+        completion_note
       FROM order_requests
       ORDER BY created_at DESC
       `
@@ -422,9 +426,9 @@ export default async function AdminPage({
       target_link: row.target_link,
       order_note: row.order_note,
       status: row.status,
-      start_count: null,
-      end_count: null,
-      completion_note: null,
+      start_count: row.start_count === null ? null : Number(row.start_count),
+      end_count: row.end_count === null ? null : Number(row.end_count),
+      completion_note: row.completion_note,
     }));
 
     const [customerCountRows] = await pool.query(
@@ -433,7 +437,6 @@ export default async function AdminPage({
 
     customerCount = Number((customerCountRows as any[])[0]?.total || 0);
 
-    // Ziyaretçi tabloları henüz MySQL'e taşınmadığı için admin panelde şimdilik boş gösteriyoruz.
     allVisitorSessions = [];
     allVisitorEvents = [];
   } catch (error) {
@@ -513,7 +516,10 @@ export default async function AdminPage({
 
   const completedAnalysis = allItems.filter((item) => item.status === "completed").length;
 
-  const pendingOrders = allOrders.filter((item) => item.status === "pending").length;
+  const pendingOrders = allOrders.filter(
+    (item) => item.status === "pending" || item.status === "pending_payment"
+  ).length;
+
   const completedOrders = allOrders.filter((item) => item.status === "completed").length;
 
   const activeVisitors = allVisitorSessions.filter((item) =>
@@ -640,11 +646,13 @@ export default async function AdminPage({
               defaultValue={orderStatus}
               options={[
                 ["all", "Tümü"],
+                ["pending_payment", "Ödeme Bekliyor"],
                 ["pending", "Bekliyor"],
                 ["processing", "İşlemde"],
                 ["completed", "Tamamlandı"],
                 ["cancelled", "İptal Edildi"],
                 ["refunded", "İade Edildi"],
+                ["failed", "Başarısız"],
               ]}
             />
 
