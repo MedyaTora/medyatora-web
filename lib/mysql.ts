@@ -5,6 +5,17 @@ declare global {
   var medyatoraMysqlPool: mysql.Pool | undefined;
 }
 
+const REQUIRED_MYSQL_ENVS = [
+  "MYSQL_HOST",
+  "MYSQL_DATABASE",
+  "MYSQL_USER",
+  "MYSQL_PASSWORD",
+] as const;
+
+export function hasMysqlConfig() {
+  return REQUIRED_MYSQL_ENVS.every((name) => Boolean(process.env[name]));
+}
+
 function getRequiredEnv(name: string) {
   const value = process.env[name];
 
@@ -16,6 +27,12 @@ function getRequiredEnv(name: string) {
 }
 
 export function getMysqlPool() {
+  if (!hasMysqlConfig()) {
+    throw new Error(
+      "MySQL bağlantı ayarları eksik. MYSQL_HOST, MYSQL_DATABASE, MYSQL_USER ve MYSQL_PASSWORD kontrol edilmeli."
+    );
+  }
+
   if (!global.medyatoraMysqlPool) {
     global.medyatoraMysqlPool = mysql.createPool({
       host: getRequiredEnv("MYSQL_HOST"),
@@ -41,4 +58,27 @@ export async function executeQuery<T = mysql.RowDataPacket[]>(
   const pool = getMysqlPool();
   const [rows] = await pool.execute(sql, params);
   return rows as T;
+}
+
+export async function executeQuerySafe<T = mysql.RowDataPacket[]>(
+  sql: string,
+  params: any[] = [],
+  fallback: T
+) {
+  if (!hasMysqlConfig()) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(
+        "[MedyaTora] MySQL env eksik olduğu için safe fallback döndürüldü."
+      );
+    }
+
+    return fallback;
+  }
+
+  try {
+    return await executeQuery<T>(sql, params);
+  } catch (error) {
+    console.error("[MedyaTora] MySQL query hatası:", error);
+    return fallback;
+  }
 }

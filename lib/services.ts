@@ -1,4 +1,4 @@
-import { getMysqlPool } from "@/lib/mysql";
+import { getMysqlPool, hasMysqlConfig } from "@/lib/mysql";
 
 export type QualityLevel = "Core" | "Plus" | "Prime";
 
@@ -266,7 +266,6 @@ function getGuaranteeLabel(row: DbServiceRow) {
   return "Garantisiz";
 }
 
-
 function getGuaranteeScore(row: DbServiceRow) {
   const days = detectGuaranteeDays(row);
 
@@ -331,12 +330,6 @@ function getQualityLevel(score: number): QualityLevel {
   if (score >= 60) return "Prime";
   if (score >= 25) return "Plus";
   return "Core";
-}
-
-function getLevelSortScore(level: QualityLevel) {
-  if (level === "Core") return 10;
-  if (level === "Plus") return 20;
-  return 30;
 }
 
 function buildServiceTitle(
@@ -570,14 +563,14 @@ export function mapDbServicesToRankedOrderItems(rows: DbServiceRow[]): OrderServ
   return items.sort((a, b) => {
     if (a.platform !== b.platform) return a.platform.localeCompare(b.platform, "tr");
     if (a.category !== b.category) return a.category.localeCompare(b.category, "tr");
-  
+
     const aGuaranteed = a.guaranteeDays ? 1 : 0;
     const bGuaranteed = b.guaranteeDays ? 1 : 0;
-  
+
     if (a.salePriceTl !== b.salePriceTl) return a.salePriceTl - b.salePriceTl;
     if (aGuaranteed !== bGuaranteed) return bGuaranteed - aGuaranteed;
     if (a.max !== b.max) return b.max - a.max;
-  
+
     return a.id - b.id;
   });
 }
@@ -677,6 +670,16 @@ async function fetchServicesFromDb(params: {
   platform: string;
   category: string;
 }): Promise<DbServiceRow[]> {
+  if (!hasMysqlConfig()) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(
+        `[MedyaTora] Local MySQL env eksik. ${params.platform}/${params.category} için boş servis listesi döndü.`
+      );
+    }
+
+    return [];
+  }
+
   try {
     const pool = getPool();
 
@@ -743,7 +746,9 @@ async function fetchServicesFromDb(params: {
       manual_title: row.manual_title || null,
       manual_description: row.manual_description || null,
       manual_sale_price_tl:
-        row.manual_sale_price_tl === null ? null : Number(row.manual_sale_price_tl || 0),
+        row.manual_sale_price_tl === null
+          ? null
+          : Number(row.manual_sale_price_tl || 0),
     })) as DbServiceRow[];
   } catch (error) {
     console.error("Servisler MySQL'den çekilemedi:", error);
@@ -765,22 +770,20 @@ export async function getPlatformServices({
   const filteredRows = rows
     .filter((row) => matchesRegion(row.original_name, region))
     .filter((row) => matchesCountry(row.original_name, country))
-    .filter(
-      (row) => {
-        const finalTlSale =
-          safeNumber(row.manual_sale_price_tl) > 0
-            ? safeNumber(row.manual_sale_price_tl)
-            : safeNumber(row.tl_sale_price);
-    
-        return (
-          finalTlSale > 0 &&
-          safeNumber(row.usd_sale_price) > 0 &&
-          safeNumber(row.rub_sale_price) > 0 &&
-          safeNumber(row.min) > 0 &&
-          safeNumber(row.max) > 0
-        );
-      }
-    );
+    .filter((row) => {
+      const finalTlSale =
+        safeNumber(row.manual_sale_price_tl) > 0
+          ? safeNumber(row.manual_sale_price_tl)
+          : safeNumber(row.tl_sale_price);
+
+      return (
+        finalTlSale > 0 &&
+        safeNumber(row.usd_sale_price) > 0 &&
+        safeNumber(row.rub_sale_price) > 0 &&
+        safeNumber(row.min) > 0 &&
+        safeNumber(row.max) > 0
+      );
+    });
 
   return mapDbServicesToRankedOrderItems(filteredRows);
 }

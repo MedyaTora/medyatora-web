@@ -1,6 +1,6 @@
 import https from "https";
 import { NextResponse } from "next/server";
-import { getMysqlPool } from "@/lib/mysql";
+import { getMysqlPool, hasMysqlConfig } from "@/lib/mysql";
 
 type ContactType = "Telegram" | "WhatsApp" | "Instagram" | "E-posta";
 
@@ -26,6 +26,7 @@ function normalizeContactType(value: unknown): ContactType | "" {
   if (normalized === "telegram") return "Telegram";
   if (normalized === "whatsapp" || normalized === "wa") return "WhatsApp";
   if (normalized === "instagram" || normalized === "ig") return "Instagram";
+
   if (
     normalized === "e-posta" ||
     normalized === "eposta" ||
@@ -49,12 +50,19 @@ function normalizeCoupon(value: unknown) {
   return typeof value === "string" ? value.trim().toUpperCase() : "";
 }
 
+function isFreeAnalysisCoupon(couponCode: string) {
+  return couponCode === "ANALIZ100";
+}
+
 async function sendTelegramMessage(text: string) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
 
   if (!token || !chatId) {
-    throw new Error("Telegram token veya chat id eksik.");
+    return {
+      ok: false,
+      warning: "Telegram token veya chat id eksik.",
+    };
   }
 
   const body = JSON.stringify({
@@ -62,43 +70,74 @@ async function sendTelegramMessage(text: string) {
     text,
   });
 
-  return await new Promise<string>((resolve, reject) => {
-    const req = https.request(
-      {
-        hostname: "api.telegram.org",
-        path: `/bot${token}/sendMessage`,
-        method: "POST",
-        family: 4,
-        headers: {
-          "Content-Type": "application/json",
-          "Content-Length": Buffer.byteLength(body),
+  try {
+    const responseText = await new Promise<string>((resolve, reject) => {
+      const req = https.request(
+        {
+          hostname: "api.telegram.org",
+          path: `/bot${token}/sendMessage`,
+          method: "POST",
+          family: 4,
+          headers: {
+            "Content-Type": "application/json",
+            "Content-Length": Buffer.byteLength(body),
+          },
         },
-      },
-      (res) => {
-        let data = "";
+        (res) => {
+          let data = "";
 
-        res.on("data", (chunk) => {
-          data += chunk;
-        });
+          res.on("data", (chunk) => {
+            data += chunk;
+          });
 
-        res.on("end", () => {
-          if (!res.statusCode || res.statusCode < 200 || res.statusCode >= 300) {
-            reject(new Error(`Telegram HTTP ${res.statusCode}: ${data}`));
-            return;
-          }
+          res.on("end", () => {
+            if (!res.statusCode || res.statusCode < 200 || res.statusCode >= 300) {
+              reject(new Error(`Telegram HTTP ${res.statusCode}: ${data}`));
+              return;
+            }
 
-          resolve(data);
-        });
-      }
-    );
+            resolve(data);
+          });
+        }
+      );
 
-    req.on("error", (err) => {
-      reject(err);
+      req.on("error", (err) => {
+        reject(err);
+      });
+
+      req.write(body);
+      req.end();
     });
 
-    req.write(body);
-    req.end();
-  });
+    try {
+      const json = JSON.parse(responseText);
+
+      if (!json.ok) {
+        return {
+          ok: false,
+          warning: "Telegram API bildirimi kabul etmedi.",
+        };
+      }
+    } catch {
+      return {
+        ok: false,
+        warning: "Telegram cevabı beklenen formatta alınamadı.",
+      };
+    }
+
+    return {
+      ok: true,
+      warning: null,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      warning:
+        error instanceof Error
+          ? `Telegram gönderim hatası: ${error.message}`
+          : "Telegram gönderiminde bilinmeyen hata oluştu.",
+    };
+  }
 }
 
 export async function POST(req: Request) {
@@ -119,64 +158,80 @@ export async function POST(req: Request) {
 
     if (!isNonEmptyString(fullName)) {
       return NextResponse.json(
-        { error: "Ad soyad boş bırakılamaz." },
+        { success: false, error: "Ad soyad boş bırakılamaz." },
         { status: 400 }
       );
     }
 
     if (!isNonEmptyString(username) && !isNonEmptyString(accountLink)) {
       return NextResponse.json(
-        { error: "Kullanıcı adı veya hesap linki gerekli." },
+        { success: false, error: "Kullanıcı adı veya hesap linki gerekli." },
         { status: 400 }
       );
     }
 
     if (!isNonEmptyString(accountType)) {
       return NextResponse.json(
-        { error: "Hesap türü boş bırakılamaz." },
+        { success: false, error: "Hesap türü boş bırakılamaz." },
         { status: 400 }
       );
     }
 
     if (!isNonEmptyString(contentType)) {
       return NextResponse.json(
-        { error: "İçerik türü boş bırakılamaz." },
+        { success: false, error: "İçerik türü boş bırakılamaz." },
         { status: 400 }
       );
     }
 
     if (!isNonEmptyString(mainProblem)) {
       return NextResponse.json(
-        { error: "Genel sorun alanı boş bırakılamaz." },
+        { success: false, error: "Genel sorun alanı boş bırakılamaz." },
         { status: 400 }
       );
     }
 
     if (!isNonEmptyString(mainMissing)) {
       return NextResponse.json(
-        { error: "En büyük eksik alanı boş bırakılamaz." },
+        { success: false, error: "En büyük eksik alanı boş bırakılamaz." },
         { status: 400 }
       );
     }
 
     if (!contactType || !ALLOWED_CONTACT_TYPES.includes(contactType)) {
       return NextResponse.json(
-        { error: "Geçerli bir iletişim türü seçiniz." },
+        { success: false, error: "Geçerli bir iletişim türü seçiniz." },
         { status: 400 }
       );
     }
 
     if (!isNonEmptyString(contactValue)) {
       return NextResponse.json(
-        { error: "İletişim bilgisi boş bırakılamaz." },
+        { success: false, error: "İletişim bilgisi boş bırakılamaz." },
         { status: 400 }
       );
     }
 
-    const packagePrice = couponCode === "ANALIZ100" ? 0 : 5;
+    const packagePrice = isFreeAnalysisCoupon(couponCode) ? 0 : 5;
+
+    if (!hasMysqlConfig()) {
+      console.warn("[MedyaTora] Analiz başvurusu alınamadı: MySQL env eksik.");
+
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Geliştirme ortamında MySQL bağlantısı yok. Canlı ortamda başvuru sistemi çalışır.",
+        },
+        { status: 503 }
+      );
+    }
 
     const pool = getMysqlPool();
     const connection = await pool.getConnection();
+
+    let customerId: number | null = null;
+    let analysisRequestId: number | null = null;
 
     try {
       await connection.beginTransaction();
@@ -210,13 +265,13 @@ export async function POST(req: Request) {
         ]
       );
 
-      const insertId = (customerResult as { insertId?: number }).insertId;
+      customerId = (customerResult as { insertId?: number }).insertId || null;
 
-      if (!insertId) {
+      if (!customerId) {
         throw new Error("Müşteri ID alınamadı.");
       }
 
-      await connection.execute(
+      const [analysisResult] = await connection.execute(
         `
         INSERT INTO analysis_requests (
           customer_id,
@@ -228,7 +283,7 @@ export async function POST(req: Request) {
         ) VALUES (?, ?, ?, ?, ?, ?)
         `,
         [
-          insertId,
+          customerId,
           couponCode || null,
           "analysis",
           packagePrice,
@@ -237,6 +292,9 @@ export async function POST(req: Request) {
         ]
       );
 
+      analysisRequestId =
+        (analysisResult as { insertId?: number }).insertId || null;
+
       await connection.commit();
     } catch (dbError) {
       await connection.rollback();
@@ -244,8 +302,12 @@ export async function POST(req: Request) {
       console.error("MySQL analysis insert error:", dbError);
 
       return NextResponse.json(
-        { error: "Analiz başvurusu kaydedilemedi." },
-        { status: 400 }
+        {
+          success: false,
+          error:
+            "Analiz başvurusu kaydedilemedi. Lütfen bilgileri kontrol edip tekrar deneyin.",
+        },
+        { status: 500 }
       );
     } finally {
       connection.release();
@@ -253,6 +315,8 @@ export async function POST(req: Request) {
 
     const telegramMessage =
       `📥 Yeni analiz başvurusu alındı\n\n` +
+      `🆔 Başvuru ID: ${analysisRequestId || "-"}\n` +
+      `👤 Müşteri ID: ${customerId || "-"}\n` +
       `👤 Ad Soyad: ${fullName}\n` +
       `📷 Kullanıcı Adı: ${username || "-"}\n` +
       `🔗 Hesap Linki: ${accountLink || "-"}\n` +
@@ -266,42 +330,33 @@ export async function POST(req: Request) {
       `⚠️ Genel Sorun: ${mainProblem}\n` +
       `❗ En Büyük Eksik: ${mainMissing}`;
 
-    let telegramWarning: string | null = null;
+    const telegramResult = await sendTelegramMessage(telegramMessage);
 
-    try {
-      const telegramText = await sendTelegramMessage(telegramMessage);
-
-      try {
-        const telegramJson = JSON.parse(telegramText);
-
-        if (!telegramJson.ok) {
-          telegramWarning = "Telegram API analiz bildirimini kabul etmedi.";
-          console.error("Telegram API error response:", telegramText);
-        }
-      } catch {
-        telegramWarning = "Telegram cevabı beklenen formatta alınamadı.";
-        console.error("Telegram parse error:", telegramText);
-      }
-    } catch (telegramError) {
-      telegramWarning =
-        telegramError instanceof Error
-          ? `Telegram gönderim hatası: ${telegramError.message}`
-          : "Telegram gönderiminde bilinmeyen hata oluştu";
-
-      console.error(telegramWarning);
+    if (!telegramResult.ok && telegramResult.warning) {
+      console.error(telegramResult.warning);
     }
 
     return NextResponse.json(
       {
         success: true,
-        telegramWarning,
+        message:
+          "Analiz başvurunuz alındı. Ekibimiz bilgilerinizi inceleyip sizinle iletişime geçecek.",
+        customerId,
+        analysisRequestId,
+        telegramWarning: telegramResult.warning,
       },
       { status: 200 }
     );
   } catch (error) {
+    console.error("Analysis request server error:", error);
+
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : "Sunucu hatası oluştu.",
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Sunucu hatası oluştu. Lütfen tekrar deneyin.",
       },
       { status: 500 }
     );
