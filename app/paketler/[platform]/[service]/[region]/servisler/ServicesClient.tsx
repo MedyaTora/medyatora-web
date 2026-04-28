@@ -13,14 +13,31 @@ type Props = {
   };
 };
 
+type ContactType = "Telegram" | "WhatsApp" | "Instagram" | "E-posta";
+type PaymentMethod = "turkey_bank" | "support";
+type CurrencyCode = "TL";
+
 type CardProps = {
   item: ServiceCardItem;
 };
 
+function formatPrice(value: number) {
+  if (!Number.isFinite(value)) return "-";
+  return value.toLocaleString("tr-TR", {
+    maximumFractionDigits: 2,
+  });
+}
+
 function ServiceCard({ item }: CardProps) {
   const [quantity, setQuantity] = useState("");
-  const [customerName, setCustomerName] = useState("");
-  const [username, setUsername] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [contactType, setContactType] = useState<ContactType>("Telegram");
+  const [contactValue, setContactValue] = useState("");
+  const [targetUsername, setTargetUsername] = useState("");
+  const [targetLink, setTargetLink] = useState("");
+  const [orderNote, setOrderNote] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("turkey_bank");
   const [loading, setLoading] = useState(false);
 
   function handleQuantityChange(value: string) {
@@ -35,26 +52,30 @@ function ServiceCard({ item }: CardProps) {
       return 0;
     }
 
-    return Math.floor((quantityNumber / 1000) * item.salePrice);
-  }, [quantityNumber, item.min, item.max, item.salePrice]);
+    return Math.round((quantityNumber / 1000) * item.salePriceTl * 100) / 100;
+  }, [quantityNumber, item.min, item.max, item.salePriceTl]);
 
   const totalCost = useMemo(() => {
     if (!quantityNumber || quantityNumber < item.min || quantityNumber > item.max) {
       return 0;
     }
 
-    return Math.floor((quantityNumber / 1000) * item.costPriceTl);
+    return Math.round((quantityNumber / 1000) * item.costPriceTl * 100) / 100;
   }, [quantityNumber, item.min, item.max, item.costPriceTl]);
 
   const isBelowMin = quantity !== "" && quantityNumber < item.min;
   const isAboveMax = quantity !== "" && quantityNumber > item.max;
 
+  const hasTarget = targetUsername.trim() !== "" || targetLink.trim() !== "";
+
   const isValid =
     quantity !== "" &&
     quantityNumber >= item.min &&
     quantityNumber <= item.max &&
-    customerName.trim() !== "" &&
-    username.trim() !== "";
+    fullName.trim().length >= 2 &&
+    phoneNumber.trim().length >= 7 &&
+    contactValue.trim() !== "" &&
+    hasTarget;
 
   async function handleOrder() {
     if (!isValid || loading) return;
@@ -63,17 +84,34 @@ function ServiceCard({ item }: CardProps) {
       setLoading(true);
 
       const payload = {
-        customerName,
-        username,
-        siteCode: item.siteCode,
-        providerServiceId: item.id,
-        productTitle: item.title,
-        quantity: quantityNumber,
-        costPrice: totalCost,
-        salePrice: totalPrice,
+        full_name: fullName.trim(),
+        phone_number: phoneNumber.trim(),
+        contact_type: contactType,
+        contact_value: contactValue.trim(),
+        currency: "TL" as CurrencyCode,
+        payment_method: paymentMethod,
+        items: [
+          {
+            service_id: item.id,
+            site_code: item.siteCode,
+            service_title: item.title,
+            platform: item.platform,
+            category: item.category,
+            quantity: quantityNumber,
+            unit_price: item.salePriceTl,
+            total_price: totalPrice,
+            unit_cost_price: item.costPriceTl,
+            total_cost_price: totalCost,
+            guarantee_label: item.guaranteeLabel,
+            speed: item.speed,
+            target_username: targetUsername.trim(),
+            target_link: targetLink.trim(),
+            order_note: orderNote.trim(),
+          },
+        ],
       };
 
-      const response = await fetch("/api/order-notify", {
+      const response = await fetch("/api/order-request", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -83,15 +121,25 @@ function ServiceCard({ item }: CardProps) {
 
       const result = await response.json();
 
-      if (!response.ok) {
+      if (!response.ok || !result?.success) {
         alert(result?.error || "Sipariş gönderilemedi.");
         return;
       }
 
-      alert("Sipariş başarıyla gönderildi.");
+      alert(
+        result?.message ||
+          `Sipariş başarıyla alındı. Sipariş kodu: ${result?.batchCode || "-"}`
+      );
+
       setQuantity("");
-      setCustomerName("");
-      setUsername("");
+      setFullName("");
+      setPhoneNumber("");
+      setContactType("Telegram");
+      setContactValue("");
+      setTargetUsername("");
+      setTargetLink("");
+      setOrderNote("");
+      setPaymentMethod("turkey_bank");
     } catch (error) {
       alert("Sipariş gönderilirken hata oluştu.");
     } finally {
@@ -100,26 +148,51 @@ function ServiceCard({ item }: CardProps) {
   }
 
   return (
-    <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+    <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
       <div className="mb-4">
+        <div className="mb-3 flex flex-wrap gap-2">
+          <span className="inline-flex rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white">
+            {item.level}
+          </span>
+
+          <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+            {item.guaranteeLabel}
+          </span>
+
+          <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+            {item.regionLabel}
+          </span>
+        </div>
+
         <h2 className="line-clamp-2 text-lg font-bold text-gray-900">
           {item.title}
         </h2>
 
         <p className="mt-1 text-xs text-gray-500">{item.subtitle}</p>
-
-        <div className="mt-3 flex flex-wrap gap-2">
-          <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-            {item.guaranteeLabel}
-          </span>
-        </div>
       </div>
 
-      <div className="space-y-2 text-sm text-gray-600">
-        <p>Minimum: {item.min}</p>
-        <p>Maksimum: {item.max}</p>
-        <p>Alış Fiyatımız: {item.costPriceTl} TL</p>
-        <p>Satış Fiyatımız: {item.salePrice} TL</p>
+      <div className="grid grid-cols-2 gap-3 text-sm">
+        <div className="rounded-2xl bg-slate-50 p-3">
+          <p className="text-xs text-gray-500">Minimum</p>
+          <p className="font-bold text-gray-900">{formatPrice(item.min)}</p>
+        </div>
+
+        <div className="rounded-2xl bg-slate-50 p-3">
+          <p className="text-xs text-gray-500">Maksimum</p>
+          <p className="font-bold text-gray-900">{formatPrice(item.max)}</p>
+        </div>
+
+        <div className="rounded-2xl bg-slate-50 p-3">
+          <p className="text-xs text-gray-500">Satış</p>
+          <p className="font-bold text-gray-900">
+            {formatPrice(item.salePriceTl)} TL / 1000
+          </p>
+        </div>
+
+        <div className="rounded-2xl bg-slate-50 p-3">
+          <p className="text-xs text-gray-500">Hız</p>
+          <p className="line-clamp-1 font-bold text-gray-900">{item.speed}</p>
+        </div>
       </div>
 
       <div className="mt-5 space-y-3">
@@ -130,43 +203,106 @@ function ServiceCard({ item }: CardProps) {
           inputMode="numeric"
           pattern="[0-9]*"
           placeholder="Miktar gir"
-          className="w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none focus:border-gray-400"
-        />
-
-        <input
-          type="text"
-          value={customerName}
-          onChange={(e) => setCustomerName(e.target.value)}
-          placeholder="Ad Soyad"
-          className="w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none focus:border-gray-400"
-        />
-
-        <input
-          type="text"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          placeholder="Kullanıcı adı / iletişim"
-          className="w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none focus:border-gray-400"
+          className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-gray-400"
         />
 
         {isBelowMin && (
           <p className="text-xs font-medium text-red-500">
-            Minimum {item.min} adet girmelisin.
+            Minimum {formatPrice(item.min)} adet girmelisin.
           </p>
         )}
 
         {isAboveMax && (
           <p className="text-xs font-medium text-red-500">
-            Maksimum {item.max} adet girebilirsin.
+            Maksimum {formatPrice(item.max)} adet girebilirsin.
           </p>
         )}
 
-        <div className="rounded-2xl bg-slate-50 px-4 py-3">
-          <p className="text-xs text-gray-500">Toplam Satış Fiyatı</p>
-          <p className="mt-1 text-xl font-bold text-gray-900">
+        <input
+          type="text"
+          value={targetUsername}
+          onChange={(e) => setTargetUsername(e.target.value)}
+          placeholder="Hedef kullanıcı adı"
+          className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-gray-400"
+        />
+
+        <input
+          type="text"
+          value={targetLink}
+          onChange={(e) => setTargetLink(e.target.value)}
+          placeholder="Hedef link"
+          className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-gray-400"
+        />
+
+        {!hasTarget && (targetUsername !== "" || targetLink !== "") && (
+          <p className="text-xs font-medium text-red-500">
+            Hedef kullanıcı adı veya hedef link girmelisin.
+          </p>
+        )}
+
+        <input
+          type="text"
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+          placeholder="Ad Soyad"
+          className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-gray-400"
+        />
+
+        <input
+          type="text"
+          value={phoneNumber}
+          onChange={(e) => setPhoneNumber(e.target.value)}
+          placeholder="Telefon numarası"
+          className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-gray-400"
+        />
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <select
+            value={contactType}
+            onChange={(e) => setContactType(e.target.value as ContactType)}
+            className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-gray-400"
+          >
+            <option value="Telegram">Telegram</option>
+            <option value="WhatsApp">WhatsApp</option>
+            <option value="Instagram">Instagram</option>
+            <option value="E-posta">E-posta</option>
+          </select>
+
+          <input
+            type="text"
+            value={contactValue}
+            onChange={(e) => setContactValue(e.target.value)}
+            placeholder="İletişim bilgisi"
+            className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-gray-400"
+          />
+        </div>
+
+        <select
+          value={paymentMethod}
+          onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+          className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-gray-400"
+        >
+          <option value="turkey_bank">Türkiye Banka Havalesi / EFT</option>
+          <option value="support">Destek ile iletişime geç</option>
+        </select>
+
+        <textarea
+          value={orderNote}
+          onChange={(e) => setOrderNote(e.target.value)}
+          placeholder="Sipariş notu / özel istek"
+          rows={3}
+          className="w-full resize-none rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-gray-400"
+        />
+
+        <div className="rounded-2xl bg-slate-950 px-4 py-4 text-white">
+          <p className="text-xs text-slate-300">Toplam Satış Fiyatı</p>
+          <p className="mt-1 text-2xl font-black">
             {quantityNumber >= item.min && quantityNumber <= item.max
-              ? `${totalPrice} TL`
+              ? `${formatPrice(totalPrice)} TL`
               : "-"}
+          </p>
+          <p className="mt-2 text-xs text-slate-400">
+            Fiyatlara KDV + vergiler dahildir.
           </p>
         </div>
       </div>
@@ -183,6 +319,20 @@ function ServiceCard({ item }: CardProps) {
 }
 
 export default function ServicesClient({ items }: Props) {
+  if (!items.length) {
+    return (
+      <div className="rounded-3xl border border-dashed border-gray-300 bg-white p-8 text-center">
+        <h2 className="text-xl font-bold text-gray-900">
+          Bu kategori için hizmet bulunamadı
+        </h2>
+        <p className="mt-2 text-sm text-gray-500">
+          Şu anda seçilen kategoriye uygun aktif hizmet görünmüyor. Lütfen farklı
+          bir kategori veya bölge seçmeyi deneyin.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {items.map((item) => (
