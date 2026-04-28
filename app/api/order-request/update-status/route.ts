@@ -3,11 +3,13 @@ import { NextResponse } from "next/server";
 import { getMysqlPool } from "@/lib/mysql";
 
 const ALLOWED_ORDER_STATUSES = [
+  "pending_payment",
   "pending",
   "processing",
   "completed",
   "cancelled",
   "refunded",
+  "failed",
 ] as const;
 
 type OrderStatus = (typeof ALLOWED_ORDER_STATUSES)[number];
@@ -16,6 +18,7 @@ type ExistingOrder = {
   id: number;
   order_number: string | null;
   full_name: string | null;
+  contact_type: string | null;
   contact_value: string | null;
   platform: string | null;
   category: string | null;
@@ -65,22 +68,26 @@ function formatMoney(value: number | null | undefined, currency?: string | null)
 
 function getStatusLabel(status: OrderStatus) {
   const map: Record<OrderStatus, string> = {
+    pending_payment: "Ödeme Bekliyor",
     pending: "Bekliyor",
     processing: "İşlemde",
     completed: "Tamamlandı",
     cancelled: "İptal Edildi",
     refunded: "İade Edildi",
+    failed: "Başarısız",
   };
 
   return map[status];
 }
 
 function getStatusTelegramTitle(status: OrderStatus) {
+  if (status === "pending_payment") return "🟠 Sipariş ödeme bekliyor";
+  if (status === "pending") return "🕒 Sipariş beklemeye alındı";
+  if (status === "processing") return "🔄 Sipariş işleme alındı";
   if (status === "completed") return "✅ Sipariş tamamlandı";
   if (status === "cancelled") return "❌ Sipariş iptal edildi";
   if (status === "refunded") return "↩️ Sipariş iade edildi";
-  if (status === "processing") return "🔄 Sipariş işleme alındı";
-  return "🕒 Sipariş beklemeye alındı";
+  return "⚠️ Sipariş başarısız olarak işaretlendi";
 }
 
 async function sendTelegramMessage(text: string) {
@@ -88,7 +95,10 @@ async function sendTelegramMessage(text: string) {
   const chatId = process.env.TELEGRAM_CHAT_ID;
 
   if (!token || !chatId) {
-    throw new Error("Telegram token veya chat id eksik.");
+    return {
+      ok: false,
+      warning: "Telegram token veya chat id eksik.",
+    };
   }
 
   const body = JSON.stringify({
@@ -96,43 +106,78 @@ async function sendTelegramMessage(text: string) {
     text,
   });
 
-  return await new Promise<string>((resolve, reject) => {
-    const req = https.request(
-      {
-        hostname: "api.telegram.org",
-        path: `/bot${token}/sendMessage`,
-        method: "POST",
-        family: 4,
-        headers: {
-          "Content-Type": "application/json",
-          "Content-Length": Buffer.byteLength(body),
+  try {
+    const responseText = await new Promise<string>((resolve, reject) => {
+      const request = https.request(
+        {
+          hostname: "api.telegram.org",
+          path: `/bot${token}/sendMessage`,
+          method: "POST",
+          family: 4,
+          headers: {
+            "Content-Type": "application/json",
+            "Content-Length": Buffer.byteLength(body),
+          },
         },
-      },
-      (res) => {
-        let data = "";
+        (response) => {
+          let data = "";
 
-        res.on("data", (chunk) => {
-          data += chunk;
-        });
+          response.on("data", (chunk) => {
+            data += chunk;
+          });
 
-        res.on("end", () => {
-          if (!res.statusCode || res.statusCode < 200 || res.statusCode >= 300) {
-            reject(new Error(`Telegram HTTP ${res.statusCode}: ${data}`));
-            return;
-          }
+          response.on("end", () => {
+            if (
+              !response.statusCode ||
+              response.statusCode < 200 ||
+              response.statusCode >= 300
+            ) {
+              reject(new Error(`Telegram HTTP ${response.statusCode}: ${data}`));
+              return;
+            }
 
-          resolve(data);
-        });
-      }
-    );
+            resolve(data);
+          });
+        }
+      );
 
-    req.on("error", (err) => {
-      reject(err);
+      request.on("error", (error) => {
+        reject(error);
+      });
+
+      request.write(body);
+      request.end();
     });
 
-    req.write(body);
-    req.end();
-  });
+    try {
+      const json = JSON.parse(responseText);
+
+      if (!json.ok) {
+        return {
+          ok: false,
+          warning: "Telegram API status bildirimini kabul etmedi.",
+        };
+      }
+    } catch {
+      return {
+        ok: false,
+        warning: "Telegram cevabı beklenen formatta alınamadı.",
+      };
+    }
+
+    return {
+      ok: true,
+      warning: null,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      warning:
+        error instanceof Error
+          ? `Telegram gönderim hatası: ${error.message}`
+          : "Telegram gönderiminde bilinmeyen hata oluştu.",
+    };
+  }
 }
 
 function buildStatusTelegramMessage({
@@ -154,7 +199,7 @@ function buildStatusTelegramMessage({
     `${getStatusTelegramTitle(nextStatus)}\n\n` +
     `🔢 Sipariş No: ${order.order_number || "-"}\n` +
     `👤 Ad Soyad: ${order.full_name || "-"}\n` +
-    `📩 İletişim: ${order.contact_value || "-"}\n` +
+    `📩 İletişim: ${order.contact_type || "-"} / ${order.contact_value || "-"}\n` +
     `📱 Platform: ${order.platform || "-"}\n` +
     `🗂️ Kategori: ${order.category || "-"}\n` +
     `🆔 Panel Servis ID: ${order.service_id || "-"}\n` +
@@ -195,9 +240,19 @@ function buildStatusTelegramMessage({
     );
   }
 
+  if (nextStatus === "failed") {
+    return (
+      base +
+      `⚠️ Durum: ${getStatusLabel(nextStatus)}\n` +
+      `📝 Hata Notu: ${completionNote || "-"}`
+    );
+  }
+
   return (
     base +
     `🔄 Yeni Durum: ${getStatusLabel(nextStatus)}\n` +
+    `🔢 Başlangıç Miktarı: ${startCount ?? "-"}\n` +
+    `🏁 Bitiş Miktarı: ${endCount ?? "-"}\n` +
     `📝 Not: ${completionNote || "-"}`
   );
 }
@@ -218,14 +273,14 @@ export async function POST(req: Request) {
 
     if (!Number.isInteger(id) || id <= 0 || !status) {
       return NextResponse.json(
-        { error: "Sipariş id ve status gerekli." },
+        { success: false, error: "Sipariş id ve status gerekli." },
         { status: 400 }
       );
     }
 
     if (!isValidOrderStatus(status)) {
       return NextResponse.json(
-        { error: "Geçersiz sipariş durumu." },
+        { success: false, error: "Geçersiz sipariş durumu." },
         { status: 400 }
       );
     }
@@ -238,6 +293,7 @@ export async function POST(req: Request) {
         id,
         order_number,
         full_name,
+        contact_type,
         contact_value,
         platform,
         category,
@@ -264,7 +320,7 @@ export async function POST(req: Request) {
 
     if (!row) {
       return NextResponse.json(
-        { error: "Sipariş bulunamadı." },
+        { success: false, error: "Sipariş bulunamadı." },
         { status: 404 }
       );
     }
@@ -273,6 +329,7 @@ export async function POST(req: Request) {
       id: Number(row.id),
       order_number: row.order_number,
       full_name: row.full_name,
+      contact_type: row.contact_type,
       contact_value: row.contact_value,
       platform: row.platform,
       category: row.category,
@@ -304,18 +361,18 @@ export async function POST(req: Request) {
       [status, startCount, endCount, completionNote, id]
     );
 
-    try {
-      const telegramMessage = buildStatusTelegramMessage({
-        order: existingOrder,
-        nextStatus: status,
-        startCount,
-        endCount,
-        completionNote,
-      });
+    const telegramMessage = buildStatusTelegramMessage({
+      order: existingOrder,
+      nextStatus: status,
+      startCount,
+      endCount,
+      completionNote,
+    });
 
-      await sendTelegramMessage(telegramMessage);
-    } catch (telegramError) {
-      console.error("Telegram sipariş status bildirimi gönderilemedi:", telegramError);
+    const telegramResult = await sendTelegramMessage(telegramMessage);
+
+    if (!telegramResult.ok && telegramResult.warning) {
+      console.error(telegramResult.warning);
     }
 
     return NextResponse.json(
@@ -324,13 +381,20 @@ export async function POST(req: Request) {
         id,
         previousStatus: existingOrder.status,
         nextStatus: status,
+        telegramWarning: telegramResult.warning,
       },
       { status: 200 }
     );
   } catch (error) {
+    console.error("Order status update error:", error);
+
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : "Sunucu hatası oluştu.",
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Sunucu hatası oluştu.",
       },
       { status: 500 }
     );

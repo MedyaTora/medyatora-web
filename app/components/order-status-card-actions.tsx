@@ -18,11 +18,13 @@ type Props = {
 };
 
 const statusOptions = [
+  { value: "pending_payment", label: "Ödeme Bekliyor" },
   { value: "pending", label: "Bekliyor" },
   { value: "processing", label: "İşlemde" },
   { value: "completed", label: "Tamamlandı" },
   { value: "cancelled", label: "İptal Edildi" },
   { value: "refunded", label: "İade Edildi" },
+  { value: "failed", label: "Başarısız" },
 ];
 
 function onlyDigits(value: string) {
@@ -35,6 +37,16 @@ function cleanTelegramUsername(value: string) {
     .replace("http://t.me/", "")
     .replace("t.me/", "")
     .replace("@", "")
+    .trim();
+}
+
+function cleanInstagramUsername(value: string) {
+  return value
+    .replace("https://instagram.com/", "")
+    .replace("https://www.instagram.com/", "")
+    .replace("instagram.com/", "")
+    .replace("@", "")
+    .split("?")[0]
     .trim();
 }
 
@@ -60,9 +72,70 @@ function buildCustomerMessage({
   completionNote: string;
 }) {
   const statusLabel = getStatusLabel(status);
+  const name = fullName?.trim() || "Değerli müşterimiz";
+
+  if (status === "pending_payment") {
+    return `Merhaba ${name}
+
+MedyaTora siparişiniz alınmıştır ve ödeme kontrolü beklenmektedir.
+
+Sipariş No: ${orderNumber || "-"}
+Hizmet: ${serviceTitle || "-"}
+Durum: ${statusLabel}
+
+Not: ${completionNote || "Ödeme dekontunuzu ilettikten sonra siparişiniz işleme alınacaktır."}
+
+Detay için buradan dönüş yapabilirsiniz.`;
+  }
+
+  if (status === "pending") {
+    return `Merhaba ${name}
+
+MedyaTora siparişiniz alınmıştır.
+
+Sipariş No: ${orderNumber || "-"}
+Hizmet: ${serviceTitle || "-"}
+Durum: ${statusLabel}
+
+Not: ${completionNote || "Siparişiniz kısa süre içinde kontrol edilecektir."}
+
+Detay için buradan dönüş yapabilirsiniz.`;
+  }
+
+  if (status === "processing") {
+    return `Merhaba ${name}
+
+MedyaTora siparişiniz işleme alınmıştır.
+
+Sipariş No: ${orderNumber || "-"}
+Hizmet: ${serviceTitle || "-"}
+Durum: ${statusLabel}
+
+Başlangıç: ${startCount || "-"}
+Not: ${completionNote || "Siparişiniz işlem sürecindedir."}
+
+Detay için buradan dönüş yapabilirsiniz.`;
+  }
+
+  if (status === "completed") {
+    return `Merhaba ${name}
+
+MedyaTora siparişiniz tamamlanmıştır.
+
+Sipariş No: ${orderNumber || "-"}
+Hizmet: ${serviceTitle || "-"}
+Durum: ${statusLabel}
+
+Başlangıç: ${startCount || "-"}
+Bitiş: ${endCount || "-"}
+
+Not: ${completionNote || "Bizi tercih ettiğiniz için teşekkür ederiz."}
+
+Detay için buradan dönüş yapabilirsiniz.`;
+  }
 
   if (status === "cancelled") {
-    return `Merhaba ${fullName || ""}
+    return `Merhaba ${name}
 
 MedyaTora siparişinizle ilgili bilgi vermek istiyorum.
 
@@ -76,7 +149,7 @@ Detay için buradan dönüş yapabilirsiniz.`;
   }
 
   if (status === "refunded") {
-    return `Merhaba ${fullName || ""}
+    return `Merhaba ${name}
 
 MedyaTora siparişinizle ilgili bilgi vermek istiyorum.
 
@@ -89,7 +162,21 @@ Not: ${completionNote || "Siparişiniz için iade işlemi işaretlendi."}
 Detay için buradan dönüş yapabilirsiniz.`;
   }
 
-  return `Merhaba ${fullName || ""}
+  if (status === "failed") {
+    return `Merhaba ${name}
+
+MedyaTora siparişinizle ilgili bilgi vermek istiyorum.
+
+Sipariş No: ${orderNumber || "-"}
+Hizmet: ${serviceTitle || "-"}
+Durum: ${statusLabel}
+
+Not: ${completionNote || "Sipariş işlemi başarısız olarak işaretlendi."}
+
+Detay için buradan dönüş yapabilirsiniz.`;
+  }
+
+  return `Merhaba ${name}
 
 MedyaTora siparişinizle ilgili bilgi vermek istiyorum.
 
@@ -135,20 +222,14 @@ function buildContactLink({
     if (!username) return null;
 
     return {
-      label: "Telegram Yaz",
+      label: "Telegram Aç",
       href: `https://t.me/${username}`,
       className: "bg-sky-500 hover:bg-sky-400 text-black",
     };
   }
 
   if (type.includes("instagram")) {
-    const username = value
-      .replace("https://instagram.com/", "")
-      .replace("https://www.instagram.com/", "")
-      .replace("instagram.com/", "")
-      .replace("@", "")
-      .trim();
-
+    const username = cleanInstagramUsername(value);
     if (!username) return null;
 
     return {
@@ -184,19 +265,16 @@ export default function OrderStatusCardActions({
   serviceTitle,
 }: Props) {
   const [status, setStatus] = useState(initialStatus || "pending");
-
   const [startCount, setStartCount] = useState(
     initialStartCount !== null && initialStartCount !== undefined
       ? String(initialStartCount)
       : ""
   );
-
   const [endCount, setEndCount] = useState(
     initialEndCount !== null && initialEndCount !== undefined
       ? String(initialEndCount)
       : ""
   );
-
   const [completionNote, setCompletionNote] = useState(initialCompletionNote || "");
   const [message, setMessage] = useState("");
 
@@ -312,7 +390,7 @@ export default function OrderStatusCardActions({
         </div>
 
         <div>
-          <label className="mb-2 block text-xs text-white/50">Not</label>
+          <label className="mb-2 block text-xs text-white/50">Admin / İşlem Notu</label>
           <input
             value={completionNote}
             onChange={(e) => setCompletionNote(e.target.value)}
