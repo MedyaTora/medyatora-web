@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-import { createClient } from "@supabase/supabase-js";
+import { getMysqlPool } from "@/lib/mysql";
 
 type CustomerRow = {
   id: string;
@@ -86,67 +86,106 @@ function TextCard({
 export default async function CustomerDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const resolvedParams = await params;
+  const customerId = Number(resolvedParams.id);
 
-  if (!supabaseUrl || !supabaseServiceRoleKey) {
-    return <ErrorScreen message="Supabase environment variables eksik." />;
-  }
-
-  const customerId = params.id?.trim();
-
-  if (!customerId) {
+  if (!Number.isInteger(customerId) || customerId <= 0) {
     return <ErrorScreen message="Geçersiz müşteri id." />;
   }
 
-  const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+  const pool = getMysqlPool();
 
-  const { data: customer, error: customerError } = await supabase
-    .from("customers")
-    .select(`
-      id,
-      created_at,
-      full_name,
-      username,
-      account_link,
-      account_type,
-      content_type,
-      daily_post_count,
-      main_problem,
-      main_missing,
-      contact_type,
-      contact_value
-    `)
-    .eq("id", customerId)
-    .single();
-
-  const { data: analysisList, error: analysisError } = await supabase
-    .from("analysis_requests")
-    .select(`
-      id,
-      customer_id,
-      coupon_code,
-      package_type,
-      package_price,
-      currency,
-      status,
-      created_at
-    `)
-    .eq("customer_id", customerId)
-    .order("created_at", { ascending: false });
-
-  if (customerError || !customer) {
-    return <ErrorScreen message="Müşteri bulunamadı." />;
+  function toDateValue(value: unknown) {
+    if (!value) return "";
+    if (value instanceof Date) return value.toISOString();
+    return String(value);
   }
 
-  if (analysisError) {
-    return <ErrorScreen message={analysisError.message} />;
+  let customerData: CustomerRow;
+  let analyses: AnalysisHistoryRow[] = [];
+
+  try {
+    const [customerRows] = await pool.query(
+      `
+      SELECT
+        id,
+        created_at,
+        full_name,
+        username,
+        account_link,
+        account_type,
+        content_type,
+        daily_post_count,
+        main_problem,
+        main_missing,
+        contact_type,
+        contact_value
+      FROM customers
+      WHERE id = ?
+      LIMIT 1
+      `,
+      [customerId]
+    );
+
+    const customer = (customerRows as any[])[0];
+
+    if (!customer) {
+      return <ErrorScreen message="Müşteri bulunamadı." />;
+    }
+
+    customerData = {
+      id: String(customer.id),
+      created_at: toDateValue(customer.created_at),
+      full_name: customer.full_name,
+      username: customer.username,
+      account_link: customer.account_link,
+      account_type: customer.account_type,
+      content_type: customer.content_type,
+      daily_post_count: customer.daily_post_count,
+      main_problem: customer.main_problem,
+      main_missing: customer.main_missing,
+      contact_type: customer.contact_type,
+      contact_value: customer.contact_value,
+    };
+
+    const [analysisRows] = await pool.query(
+      `
+      SELECT
+        id,
+        customer_id,
+        coupon_code,
+        package_type,
+        package_price,
+        currency,
+        status,
+        created_at
+      FROM analysis_requests
+      WHERE customer_id = ?
+      ORDER BY created_at DESC
+      `,
+      [customerId]
+    );
+
+    analyses = (analysisRows as any[]).map((row) => ({
+      id: String(row.id),
+      customer_id: String(row.customer_id),
+      coupon_code: row.coupon_code,
+      package_type: row.package_type,
+      package_price: row.package_price === null ? null : Number(row.package_price),
+      currency: row.currency,
+      status: row.status,
+      created_at: toDateValue(row.created_at),
+    }));
+  } catch (error) {
+    return (
+      <ErrorScreen
+        message={error instanceof Error ? error.message : "MySQL müşteri detayı okunamadı."}
+      />
+    );
   }
 
-  const customerData = customer as CustomerRow;
-  const analyses = (analysisList || []) as AnalysisHistoryRow[];
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#171717_0%,#090909_55%,#050505_100%)] p-4 text-white md:p-8">

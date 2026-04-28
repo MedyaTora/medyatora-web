@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { getMysqlPool } from "@/lib/mysql";
 
 type VisitorTrackBody = {
   visitor_id?: string;
@@ -15,6 +15,10 @@ type VisitorTrackBody = {
   browser_language?: string;
 };
 
+function getPool() {
+  return getMysqlPool();
+}
+
 function getClientIp(req: NextRequest) {
   const forwardedFor = req.headers.get("x-forwarded-for");
 
@@ -22,25 +26,11 @@ function getClientIp(req: NextRequest) {
     return forwardedFor.split(",")[0]?.trim() || "";
   }
 
-  return (
-    req.headers.get("x-real-ip") ||
-    req.headers.get("cf-connecting-ip") ||
-    ""
-  );
+  return req.headers.get("x-real-ip") || req.headers.get("cf-connecting-ip") || "";
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !serviceRoleKey) {
-      return NextResponse.json(
-        { error: "Supabase env eksik." },
-        { status: 500 }
-      );
-    }
-
     const body = (await req.json().catch(() => ({}))) as VisitorTrackBody;
 
     const visitorId = String(body.visitor_id || "").trim();
@@ -53,16 +43,12 @@ export async function POST(req: NextRequest) {
     const eventData = body.event_data || null;
 
     if (!visitorId) {
-      return NextResponse.json(
-        { error: "visitor_id eksik." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "visitor_id eksik." }, { status: 400 });
     }
 
     const ipAddress = getClientIp(req);
     const userAgent = req.headers.get("user-agent") || "";
     const referrer = req.headers.get("referer") || "";
-    const now = new Date().toISOString();
 
     const screenWidth =
       typeof body.screen_width === "number" ? body.screen_width : null;
@@ -73,52 +59,94 @@ export async function POST(req: NextRequest) {
     const timezone = String(body.timezone || "").trim();
     const browserLanguage = String(body.browser_language || "").trim();
 
-    const supabase = createClient(supabaseUrl, serviceRoleKey);
+    const pool = getPool();
 
-    const { error: sessionError } = await supabase
-      .from("visitor_sessions")
-      .upsert(
-        {
-          visitor_id: visitorId,
-          ip_address: ipAddress,
-          current_path: path,
-          locale,
-          user_agent: userAgent,
-          referrer,
-          screen_width: screenWidth,
-          screen_height: screenHeight,
-          timezone,
-          browser_language: browserLanguage,
-          last_seen_at: now,
-        },
-        {
-          onConflict: "visitor_id",
-        }
-      );
-
-    if (sessionError) throw sessionError;
+    await pool.execute(
+      `
+      INSERT INTO visitor_sessions (
+        session_id,
+        visitor_id,
+        ip_address,
+        current_path,
+        locale,
+        user_agent,
+        referrer,
+        screen_width,
+        screen_height,
+        timezone,
+        browser_language,
+        first_seen_at,
+        last_seen_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+      ON DUPLICATE KEY UPDATE
+        visitor_id = VALUES(visitor_id),
+        ip_address = VALUES(ip_address),
+        current_path = VALUES(current_path),
+        locale = VALUES(locale),
+        user_agent = VALUES(user_agent),
+        referrer = VALUES(referrer),
+        screen_width = VALUES(screen_width),
+        screen_height = VALUES(screen_height),
+        timezone = VALUES(timezone),
+        browser_language = VALUES(browser_language),
+        last_seen_at = NOW()
+      `,
+      [
+        visitorId,
+        visitorId,
+        ipAddress,
+        path,
+        locale,
+        userAgent,
+        referrer,
+        screenWidth,
+        screenHeight,
+        timezone,
+        browserLanguage,
+      ]
+    );
 
     if (eventType !== "heartbeat") {
-      const { error: eventError } = await supabase
-        .from("visitor_events")
-        .insert({
-          visitor_id: visitorId,
-          ip_address: ipAddress,
-          event_type: eventType,
-          event_label: eventLabel,
-          event_value: eventValue,
-          event_data: eventData,
+      await pool.execute(
+        `
+        INSERT INTO visitor_events (
+          session_id,
+          visitor_id,
+          ip_address,
+          event_type,
+          event_label,
+          event_value,
+          event_data,
           path,
           locale,
-          user_agent: userAgent,
+          user_agent,
           referrer,
-          screen_width: screenWidth,
-          screen_height: screenHeight,
+          screen_width,
+          screen_height,
           timezone,
-          browser_language: browserLanguage,
-        });
-
-      if (eventError) throw eventError;
+          browser_language
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `,
+        [
+          visitorId,
+          visitorId,
+          ipAddress,
+          eventType,
+          eventLabel,
+          eventValue,
+          eventData ? JSON.stringify(eventData) : null,
+          path,
+          locale,
+          userAgent,
+          referrer,
+          screenWidth,
+          screenHeight,
+          timezone,
+          browserLanguage,
+        ]
+      );
     }
 
     return NextResponse.json({ ok: true });

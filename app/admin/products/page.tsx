@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@supabase/supabase-js";
+import { getMysqlPool } from "@/lib/mysql";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -51,15 +51,8 @@ type ProductRow = {
   last_panel_sync_at: string | null;
 };
 
-function createAdminSupabaseClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error("Supabase environment variables eksik.");
-  }
-
-  return createClient(supabaseUrl, serviceRoleKey);
+function getPool() {
+  return getMysqlPool();
 }
 
 function getText(formData: FormData, key: string) {
@@ -161,30 +154,42 @@ async function updateProduct(formData: FormData) {
       ? false
       : publicVisible;
 
-  const supabase = createAdminSupabaseClient();
+  const pool = getPool();
 
-  const { error } = await supabase
-    .from("services")
-    .update({
-      product_type: productType,
-      review_status: reviewStatus,
-      public_page: publicPage,
-      public_visible: finalPublicVisible,
-      public_category: publicCategory,
-      manual_title: manualTitle,
-      manual_description: manualDescription,
-      manual_sale_price_tl: manualSalePriceTl,
-      is_active: isActive,
-      admin_locked: true,
-      admin_updated_at: new Date().toISOString(),
-      admin_decision_reason: adminDecisionReason,
-      admin_note: adminDecisionReason,
-    })
-    .eq("id", id);
-
-  if (error) {
-    throw new Error(error.message);
-  }
+  await pool.execute(
+    `
+    UPDATE services
+    SET
+      product_type = ?,
+      review_status = ?,
+      public_page = ?,
+      public_visible = ?,
+      public_category = ?,
+      manual_title = ?,
+      manual_description = ?,
+      manual_sale_price_tl = ?,
+      is_active = ?,
+      admin_locked = 1,
+      admin_updated_at = NOW(),
+      admin_decision_reason = ?,
+      admin_note = ?
+    WHERE id = ?
+    `,
+    [
+      productType,
+      reviewStatus,
+      publicPage,
+      finalPublicVisible ? 1 : 0,
+      publicCategory,
+      manualTitle,
+      manualDescription,
+      manualSalePriceTl,
+      isActive ? 1 : 0,
+      adminDecisionReason,
+      adminDecisionReason,
+      id,
+    ]
+  );
 
   revalidatePath("/admin/products");
   revalidatePath("/paketler");
@@ -202,79 +207,136 @@ export default async function AdminProductsPage({
   const reviewStatus = (params.review_status || "").trim();
   const publicPage = (params.public_page || "").trim();
 
-  const supabase = createAdminSupabaseClient();
+  const pool = getPool();
 
-  let query = supabase
-    .from("services")
-    .select(
-      `
-        id,
-        panel_service_id,
-        site_code,
-        platform,
-        category,
-        original_name,
-        clean_title,
-        subtitle,
-        guarantee_label,
-        min,
-        max,
-        speed,
-        level,
-        description,
-        tl_cost_price,
-        tl_sale_price,
-        usd_cost_price,
-        usd_sale_price,
-        rub_sale_price,
-        is_active,
-        product_type,
-        public_visible,
-        review_status,
-        public_page,
-        public_category,
-        admin_note,
-        manual_title,
-        manual_description,
-        manual_sale_price_tl,
-        admin_locked,
-        admin_updated_at,
-        admin_decision_reason,
-        source_type,
-        is_manual,
-        auto_reject_reason,
-        last_panel_sync_at
-      `,
-      { count: "exact" }
-    )
-    .order("admin_locked", { ascending: true })
-    .order("panel_service_id", { ascending: true })
-    .limit(100);
+  const conditions: string[] = [];
+  const sqlParams: unknown[] = [];
 
-  if (productType) query = query.eq("product_type", productType);
-  if (reviewStatus) query = query.eq("review_status", reviewStatus);
-  if (publicPage) query = query.eq("public_page", publicPage);
+  if (productType) {
+    conditions.push("product_type = ?");
+    sqlParams.push(productType);
+  }
+
+  if (reviewStatus) {
+    conditions.push("review_status = ?");
+    sqlParams.push(reviewStatus);
+  }
+
+  if (publicPage) {
+    conditions.push("public_page = ?");
+    sqlParams.push(publicPage);
+  }
 
   if (q) {
     const numericQ = Number(q);
 
     if (Number.isFinite(numericQ)) {
-      query = query.or(
-        `id.eq.${numericQ},panel_service_id.eq.${numericQ},site_code.eq.${numericQ},original_name.ilike.%${q}%,clean_title.ilike.%${q}%`
+      conditions.push(
+        "(id = ? OR panel_service_id = ? OR site_code = ? OR original_name LIKE ? OR clean_title LIKE ?)"
       );
+      sqlParams.push(numericQ, numericQ, numericQ, `%${q}%`, `%${q}%`);
     } else {
-      query = query.or(`original_name.ilike.%${q}%,clean_title.ilike.%${q}%`);
+      conditions.push("(original_name LIKE ? OR clean_title LIKE ?)");
+      sqlParams.push(`%${q}%`, `%${q}%`);
     }
   }
 
-  const { data, error, count } = await query;
-  const products = (data || []) as ProductRow[];
+  const whereSql = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
 
-  const { data: summaryRows } = await supabase
-    .from("services")
-    .select("product_type, public_page, review_status, public_visible");
+  const [rows] = await pool.query(
+    `
+    SELECT
+      id,
+      panel_service_id,
+      site_code,
+      platform,
+      category,
+      original_name,
+      clean_title,
+      subtitle,
+      guarantee_label,
+      min,
+      max,
+      speed,
+      level,
+      description,
+      tl_cost_price,
+      tl_sale_price,
+      usd_cost_price,
+      usd_sale_price,
+      rub_sale_price,
+      is_active,
+      product_type,
+      public_visible,
+      review_status,
+      public_page,
+      public_category,
+      admin_note,
+      manual_title,
+      manual_description,
+      manual_sale_price_tl,
+      admin_locked,
+      admin_updated_at,
+      admin_decision_reason,
+      source_type,
+      is_manual,
+      auto_reject_reason,
+      last_panel_sync_at
+    FROM services
+    ${whereSql}
+    ORDER BY admin_locked ASC, panel_service_id ASC
+    LIMIT 100
+    `,
+    sqlParams
+  );
 
-  const summary = (summaryRows || []).reduce<Record<string, number>>((acc, item: any) => {
+  const products = (rows as any[]).map((row) => ({
+    id: Number(row.id),
+    panel_service_id: row.panel_service_id === null ? null : Number(row.panel_service_id),
+    site_code: row.site_code === null ? null : Number(row.site_code),
+    platform: row.platform,
+    category: row.category,
+    original_name: row.original_name,
+    clean_title: row.clean_title,
+    subtitle: row.subtitle,
+    guarantee_label: row.guarantee_label,
+    min: row.min === null ? null : Number(row.min),
+    max: row.max === null ? null : Number(row.max),
+    speed: row.speed,
+    level: row.level,
+    description: row.description,
+    tl_cost_price: row.tl_cost_price === null ? null : Number(row.tl_cost_price),
+    tl_sale_price: row.tl_sale_price === null ? null : Number(row.tl_sale_price),
+    usd_cost_price: row.usd_cost_price === null ? null : Number(row.usd_cost_price),
+    usd_sale_price: row.usd_sale_price === null ? null : Number(row.usd_sale_price),
+    rub_sale_price: row.rub_sale_price === null ? null : Number(row.rub_sale_price),
+    is_active: row.is_active === 1,
+    product_type: row.product_type,
+    public_visible: row.public_visible === 1,
+    review_status: row.review_status,
+    public_page: row.public_page,
+    public_category: row.public_category,
+    admin_note: row.admin_note,
+    manual_title: row.manual_title,
+    manual_description: row.manual_description,
+    manual_sale_price_tl:
+      row.manual_sale_price_tl === null ? null : Number(row.manual_sale_price_tl),
+    admin_locked: row.admin_locked === 1,
+    admin_updated_at: row.admin_updated_at ? String(row.admin_updated_at) : null,
+    admin_decision_reason: row.admin_decision_reason,
+    source_type: row.source_type,
+    is_manual: row.is_manual === 1,
+    auto_reject_reason: row.auto_reject_reason,
+    last_panel_sync_at: row.last_panel_sync_at ? String(row.last_panel_sync_at) : null,
+  })) as ProductRow[];
+
+  const count = products.length;
+
+  const [summaryRows] = await pool.query(
+    "SELECT product_type, public_page, review_status, public_visible FROM services"
+  );
+
+  const summary = (summaryRows as any[]).reduce<Record<string, number>>((acc, item: any) => {
     const key = `${item.product_type || "unknown"} / ${item.public_page || "unknown"} / ${
       item.review_status || "unknown"
     } / ${item.public_visible ? "açık" : "kapalı"}`;
@@ -472,11 +534,7 @@ export default async function AdminProductsPage({
             </p>
           </div>
 
-          {error ? (
-            <div className="rounded-2xl border border-rose-400/20 bg-rose-400/10 p-4 text-sm text-rose-300">
-              Ürünler alınamadı: {error.message}
-            </div>
-          ) : products.length === 0 ? (
+          {products.length === 0 ? (
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-white/50">
               Sonuç bulunamadı.
             </div>

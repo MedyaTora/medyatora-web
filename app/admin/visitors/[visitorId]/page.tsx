@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-import { createClient } from "@supabase/supabase-js";
+import { getMysqlPool } from "@/lib/mysql";
 
 type EventDataValue =
   | string
@@ -10,6 +10,24 @@ type EventDataValue =
   | null
   | EventDataValue[]
   | { [key: string]: EventDataValue };
+
+function getPool() {
+  return getMysqlPool();
+}
+
+function parseEventData(value: unknown): EventDataValue | null {
+  if (!value) return null;
+
+  if (typeof value === "string") {
+    try {
+      return JSON.parse(value) as EventDataValue;
+    } catch {
+      return value;
+    }
+  }
+
+  return value as EventDataValue;
+}
 
 type VisitorSessionRow = {
   id: number;
@@ -210,18 +228,11 @@ export default async function VisitorDetailPage({
   const { visitorId } = await params;
   const decodedVisitorId = decodeURIComponent(visitorId);
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const pool = getPool();
 
-  if (!supabaseUrl || !supabaseServiceRoleKey) {
-    return <ErrorScreen message="Supabase environment variables eksik." />;
-  }
-
-  const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
-
-  const { data: sessionData, error: sessionError } = await supabase
-    .from("visitor_sessions")
-    .select(`
+  const [sessionRows] = await pool.query(
+    `
+    SELECT
       id,
       visitor_id,
       ip_address,
@@ -235,13 +246,16 @@ export default async function VisitorDetailPage({
       browser_language,
       first_seen_at,
       last_seen_at
-    `)
-    .eq("visitor_id", decodedVisitorId)
-    .maybeSingle();
+    FROM visitor_sessions
+    WHERE visitor_id = ?
+    LIMIT 1
+    `,
+    [decodedVisitorId]
+  );
 
-  const { data: eventData, error: eventError } = await supabase
-    .from("visitor_events")
-    .select(`
+  const [eventRows] = await pool.query(
+    `
+    SELECT
       id,
       visitor_id,
       ip_address,
@@ -258,15 +272,57 @@ export default async function VisitorDetailPage({
       timezone,
       browser_language,
       created_at
-    `)
-    .eq("visitor_id", decodedVisitorId)
-    .order("created_at", { ascending: false });
+    FROM visitor_events
+    WHERE visitor_id = ?
+    ORDER BY created_at DESC
+    `,
+    [decodedVisitorId]
+  );
 
-  if (sessionError) return <ErrorScreen message={sessionError.message} />;
-  if (eventError) return <ErrorScreen message={eventError.message} />;
+  const rawSession = (sessionRows as any[])[0] || null;
 
-  const session = sessionData as VisitorSessionRow | null;
-  const events = (eventData || []) as VisitorEventRow[];
+  const session = rawSession
+    ? ({
+        id: Number(rawSession.id),
+        visitor_id: rawSession.visitor_id,
+        ip_address: rawSession.ip_address,
+        current_path: rawSession.current_path,
+        locale: rawSession.locale,
+        user_agent: rawSession.user_agent,
+        referrer: rawSession.referrer,
+        screen_width:
+          rawSession.screen_width === null ? null : Number(rawSession.screen_width),
+        screen_height:
+          rawSession.screen_height === null ? null : Number(rawSession.screen_height),
+        timezone: rawSession.timezone,
+        browser_language: rawSession.browser_language,
+        first_seen_at: rawSession.first_seen_at
+          ? String(rawSession.first_seen_at)
+          : null,
+        last_seen_at: rawSession.last_seen_at
+          ? String(rawSession.last_seen_at)
+          : null,
+      } as VisitorSessionRow)
+    : null;
+
+  const events = (eventRows as any[]).map((event) => ({
+    id: Number(event.id),
+    visitor_id: event.visitor_id,
+    ip_address: event.ip_address,
+    event_type: event.event_type,
+    event_label: event.event_label,
+    event_value: event.event_value,
+    event_data: parseEventData(event.event_data),
+    path: event.path,
+    locale: event.locale,
+    user_agent: event.user_agent,
+    referrer: event.referrer,
+    screen_width: event.screen_width === null ? null : Number(event.screen_width),
+    screen_height: event.screen_height === null ? null : Number(event.screen_height),
+    timezone: event.timezone,
+    browser_language: event.browser_language,
+    created_at: event.created_at ? String(event.created_at) : null,
+  })) as VisitorEventRow[];
 
   if (!session) {
     return <ErrorScreen message="Ziyaretçi bulunamadı." />;

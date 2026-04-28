@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-import { createClient } from "@supabase/supabase-js";
+import { getMysqlPool } from "@/lib/mysql";
 
 type OrderDetailRow = {
   id: number;
@@ -114,62 +114,106 @@ export default async function OrderDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !supabaseServiceRoleKey) {
-    return <ErrorScreen message="Supabase environment variables eksik." />;
-  }
-
   const resolvedParams = await params;
   const orderId = Number(resolvedParams.id);
 
-  if (!Number.isFinite(orderId) || orderId <= 0) {
+  if (!Number.isInteger(orderId) || orderId <= 0) {
     return <ErrorScreen message="Geçersiz sipariş id." />;
   }
 
-  const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+  const pool = getMysqlPool();
 
-  const { data, error } = await supabase
-    .from("order_requests")
-    .select(`
-      id,
-      created_at,
-      batch_code,
-      order_number,
-      full_name,
-      phone_number,
-      contact_type,
-      contact_value,
-      platform,
-      category,
-      service_id,
-      site_code,
-      service_title,
-      quantity,
-      unit_price,
-      total_price,
-      unit_cost_price,
-      total_cost_price,
-      guarantee_label,
-      speed,
-      currency,
-      target_username,
-      target_link,
-      order_note,
-      status,
-      start_count,
-      end_count,
-      completion_note
-    `)
-    .eq("id", orderId)
-    .single();
-
-  if (error || !data) {
-    return <ErrorScreen message="Sipariş bulunamadı." />;
+  function toDateValue(value: unknown) {
+    if (!value) return "";
+    if (value instanceof Date) return value.toISOString();
+    return String(value);
   }
 
-  const order = data as OrderDetailRow;
+  let order: OrderDetailRow;
+
+  try {
+    const [rows] = await pool.query(
+      `
+      SELECT
+        id,
+        created_at,
+        batch_code,
+        order_number,
+        full_name,
+        phone_number,
+        contact_type,
+        contact_value,
+        platform,
+        category,
+        service_id,
+        site_code,
+        service_title,
+        quantity,
+        unit_price,
+        total_price,
+        unit_cost_price,
+        total_cost_price,
+        guarantee_label,
+        speed,
+        currency,
+        target_username,
+        target_link,
+        order_note,
+        status,
+        start_count,
+        end_count,
+        completion_note
+      FROM order_requests
+      WHERE id = ?
+      LIMIT 1
+      `,
+      [orderId]
+    );
+
+    const row = (rows as any[])[0];
+
+    if (!row) {
+      return <ErrorScreen message="Sipariş bulunamadı." />;
+    }
+
+    order = {
+      id: Number(row.id),
+      created_at: toDateValue(row.created_at),
+      batch_code: row.batch_code,
+      order_number: row.order_number,
+      full_name: row.full_name,
+      phone_number: row.phone_number,
+      contact_type: row.contact_type,
+      contact_value: row.contact_value,
+      platform: row.platform,
+      category: row.category,
+      service_id: row.service_id === null ? null : Number(row.service_id),
+      site_code: row.site_code === null ? null : Number(row.site_code),
+      service_title: row.service_title,
+      quantity: row.quantity === null ? null : Number(row.quantity),
+      unit_price: row.unit_price === null ? null : Number(row.unit_price),
+      total_price: row.total_price === null ? null : Number(row.total_price),
+      unit_cost_price: row.unit_cost_price === null ? null : Number(row.unit_cost_price),
+      total_cost_price: row.total_cost_price === null ? null : Number(row.total_cost_price),
+      guarantee_label: row.guarantee_label,
+      speed: row.speed,
+      currency: row.currency,
+      target_username: row.target_username,
+      target_link: row.target_link,
+      order_note: row.order_note,
+      status: row.status,
+      start_count: row.start_count === null ? null : Number(row.start_count),
+      end_count: row.end_count === null ? null : Number(row.end_count),
+      completion_note: row.completion_note,
+    };
+  } catch (error) {
+    return (
+      <ErrorScreen
+        message={error instanceof Error ? error.message : "MySQL sipariş detayı okunamadı."}
+      />
+    );
+  }
+
   const profit = calculateProfit(order);
 
   return (

@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { getMysqlPool } from "@/lib/mysql";
 
 export type QualityLevel = "Core" | "Plus" | "Prime";
 
@@ -77,15 +77,8 @@ type GetInstagramServicesParams = {
   country?: string;
 };
 
-function createAdminSupabaseClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error("Supabase environment variables eksik.");
-  }
-
-  return createClient(supabaseUrl, serviceRoleKey);
+function getPool() {
+  return getMysqlPool();
 }
 
 function safeNumber(value: unknown) {
@@ -684,46 +677,78 @@ async function fetchServicesFromDb(params: {
   platform: string;
   category: string;
 }): Promise<DbServiceRow[]> {
-  const supabase = createAdminSupabaseClient();
+  try {
+    const pool = getPool();
 
-  const { data, error } = await supabase
-    .from("services")
-    .select(`
-      id,
-      panel_service_id,
-      site_code,
-      platform,
-      category,
-      original_name,
-      clean_title,
-      subtitle,
-      guarantee,
-      guarantee_label,
-      min,
-      max,
-      speed,
-      level,
-      description,
-      tl_cost_price,
-      usd_cost_price,
-      tl_sale_price,
-      usd_sale_price,
-      rub_sale_price,
-      manual_title,
-      manual_description,
-      manual_sale_price_tl
-    `)
-    .eq("is_active", true)
-    .eq("platform", params.platform)
-    .eq("category", params.category)
-    .order("panel_service_id", { ascending: true });
+    const [rows] = await pool.query(
+      `
+      SELECT
+        id,
+        panel_service_id,
+        site_code,
+        platform,
+        category,
+        original_name,
+        clean_title,
+        subtitle,
+        guarantee,
+        guarantee_label,
+        min,
+        max,
+        speed,
+        level,
+        description,
+        tl_cost_price,
+        usd_cost_price,
+        tl_sale_price,
+        usd_sale_price,
+        rub_sale_price,
+        manual_title,
+        manual_description,
+        manual_sale_price_tl
+      FROM services
+      WHERE is_active = 1
+        AND public_visible = 1
+        AND review_status = 'approved'
+        AND product_type = 'single'
+        AND public_page = 'paketler'
+        AND platform = ?
+        AND category = ?
+      ORDER BY panel_service_id ASC
+      `,
+      [params.platform, params.category]
+    );
 
-  if (error) {
-    console.error("Servisler çekilemedi:", error.message);
+    return (rows as any[]).map((row) => ({
+      id: Number(row.id),
+      panel_service_id: Number(row.panel_service_id),
+      site_code: Number(row.site_code),
+      platform: row.platform || "",
+      category: row.category || "",
+      original_name: row.original_name || "",
+      clean_title: row.clean_title || "",
+      subtitle: row.subtitle || "",
+      guarantee: Boolean(row.guarantee),
+      guarantee_label: row.guarantee_label || "",
+      min: Number(row.min || 0),
+      max: Number(row.max || 0),
+      speed: row.speed || "",
+      level: row.level || "",
+      description: row.description || "",
+      tl_cost_price: Number(row.tl_cost_price || 0),
+      usd_cost_price: Number(row.usd_cost_price || 0),
+      tl_sale_price: Number(row.tl_sale_price || 0),
+      usd_sale_price: Number(row.usd_sale_price || 0),
+      rub_sale_price: Number(row.rub_sale_price || 0),
+      manual_title: row.manual_title || null,
+      manual_description: row.manual_description || null,
+      manual_sale_price_tl:
+        row.manual_sale_price_tl === null ? null : Number(row.manual_sale_price_tl || 0),
+    })) as DbServiceRow[];
+  } catch (error) {
+    console.error("Servisler MySQL'den çekilemedi:", error);
     return [];
   }
-
-  return (data || []) as DbServiceRow[];
 }
 
 export async function getPlatformServices({

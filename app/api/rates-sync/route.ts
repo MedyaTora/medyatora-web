@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { getMysqlPool } from "@/lib/mysql";
 
 type ExchangeRateApiResponse = {
   result?: string;
@@ -10,15 +10,8 @@ type ExchangeRateApiResponse = {
   };
 };
 
-function createAdminSupabaseClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error("Supabase environment variables eksik.");
-  }
-
-  return createClient(supabaseUrl, serviceRoleKey);
+function getPool() {
+  return getMysqlPool();
 }
 
 function isAuthorized(req: Request) {
@@ -39,18 +32,29 @@ async function insertSyncLog(log: {
   total_updated: number;
 }) {
   try {
-    const supabase = createAdminSupabaseClient();
+    const pool = getPool();
 
-    await supabase.from("sync_logs").insert([
-      {
-        sync_type: "exchange_rates_sync",
-        status: log.status,
-        message: log.message,
-        total_fetched: log.total_fetched,
-        total_inserted: log.total_inserted,
-        total_updated: log.total_updated,
-      },
-    ]);
+    await pool.execute(
+      `
+      INSERT INTO sync_logs (
+        sync_type,
+        status,
+        message,
+        total_fetched,
+        total_inserted,
+        total_updated
+      )
+      VALUES (?, ?, ?, ?, ?, ?)
+      `,
+      [
+        "exchange_rates_sync",
+        log.status,
+        log.message,
+        log.total_fetched,
+        log.total_inserted,
+        log.total_updated,
+      ]
+    );
   } catch (error) {
     console.error("exchange_rates_sync log insert error:", error);
   }
@@ -97,54 +101,56 @@ async function fetchRatesFromApi() {
 }
 
 async function syncRates() {
-  const supabase = createAdminSupabaseClient();
+  const pool = getPool();
   const { tryRate, rubRate } = await fetchRatesFromApi();
 
-  const rows = [
-    {
-      base_currency: "USD",
-      target_currency: "TRY",
-      rate: tryRate,
-      fetched_at: new Date().toISOString(),
-    },
-    {
-      base_currency: "USD",
-      target_currency: "RUB",
-      rate: rubRate,
-      fetched_at: new Date().toISOString(),
-    },
-  ];
+  try {
+    await pool.execute(
+      `
+      INSERT INTO exchange_rates (
+        base_currency,
+        target_currency,
+        rate,
+        source,
+        updated_at
+      )
+      VALUES
+        ('USD', 'TRY', ?, 'exchange-rate-api', NOW()),
+        ('USD', 'RUB', ?, 'exchange-rate-api', NOW())
+      ON DUPLICATE KEY UPDATE
+        rate = VALUES(rate),
+        source = VALUES(source),
+        updated_at = NOW()
+      `,
+      [tryRate, rubRate]
+    );
 
-  const { error } = await supabase
-    .from("exchange_rates")
-    .upsert(rows, { onConflict: "base_currency,target_currency" });
+    await insertSyncLog({
+      status: "success",
+      message: "USD->TRY ve USD->RUB kurları MySQL üzerinde güncellendi",
+      total_fetched: 2,
+      total_inserted: 0,
+      total_updated: 2,
+    });
 
-  if (error) {
+    return {
+      success: true,
+      mode: "mysql-rates-sync",
+      base: "USD",
+      TRY: tryRate,
+      RUB: rubRate,
+    };
+  } catch (error) {
     await insertSyncLog({
       status: "failed",
-      message: error.message,
+      message: error instanceof Error ? error.message : "Kur senkronizasyonu başarısız.",
       total_fetched: 2,
       total_inserted: 0,
       total_updated: 0,
     });
 
-    throw new Error(error.message);
+    throw error;
   }
-
-  await insertSyncLog({
-    status: "success",
-    message: "USD->TRY ve USD->RUB kurları güncellendi",
-    total_fetched: 2,
-    total_inserted: 2,
-    total_updated: 0,
-  });
-
-  return {
-    success: true,
-    base: "USD",
-    TRY: tryRate,
-    RUB: rubRate,
-  };
 }
 
 export async function POST(req: Request) {

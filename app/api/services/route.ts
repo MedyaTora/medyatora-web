@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { getMysqlPool } from "@/lib/mysql";
 import {
   mapDbServicesToRankedOrderItems,
   type DbServiceRow,
@@ -43,23 +43,19 @@ const ALLOWED_PLATFORMS = new Set([
   "other",
 ]);
 
-const PAGE_SIZE = 1000;
-const MAX_PAGES = 20;
+const PAGE_SIZE = 20000;
+
+function toNumber(value: unknown) {
+  const num = Number(value || 0);
+  return Number.isFinite(num) ? num : 0;
+}
+
+function toBoolean(value: unknown) {
+  return value === true || value === 1 || value === "1";
+}
 
 export async function GET(req: NextRequest) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !supabaseServiceRoleKey) {
-      return NextResponse.json(
-        { error: "Supabase environment variables eksik." },
-        { status: 500 }
-      );
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
-
     const { searchParams } = new URL(req.url);
     const platform = searchParams.get("platform")?.trim() || null;
     const category = searchParams.get("category")?.trim() || null;
@@ -71,89 +67,105 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const allRows: DbServiceRow[] = [];
+    const pool = getMysqlPool();
 
-    for (let page = 0; page < MAX_PAGES; page += 1) {
-      const from = page * PAGE_SIZE;
-      const to = from + PAGE_SIZE - 1;
+    const sqlParams: unknown[] = [];
+    const conditions = [
+      "is_active = 1",
+      "public_visible = 1",
+      "review_status = 'approved'",
+      "product_type = 'single'",
+      "public_page = 'paketler'",
+      "tl_sale_price > 0",
+      "usd_sale_price > 0",
+      "rub_sale_price > 0",
+      "min > 0",
+      "max > 0",
+    ];
 
-      let query = supabase
-        .from("services")
-        .select(`
-          id,
-          panel_service_id,
-          site_code,
-          platform,
-          category,
-          original_name,
-          clean_title,
-          subtitle,
-          guarantee,
-          guarantee_label,
-          min,
-          max,
-          speed,
-          level,
-          description,
-          tl_cost_price,
-          usd_cost_price,
-          tl_sale_price,
-          usd_sale_price,
-          rub_sale_price,
-          manual_title,
-          manual_description,
-          manual_sale_price_tl
-        `)
-        .eq("is_active", true)
-        .eq("public_visible", true)
-        .eq("review_status", "approved")
-        .eq("product_type", "single")
-        .eq("public_page", "paketler")
-        .gt("tl_sale_price", 0)
-        .gt("usd_sale_price", 0)
-        .gt("rub_sale_price", 0)
-        .gt("min", 0)
-        .gt("max", 0)
-        .order("panel_service_id", { ascending: true })
-        .range(from, to);
-
-      if (platform) {
-        query = query.eq("platform", platform);
-      }
-
-      if (category) {
-        query = query.eq("category", category);
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error("Servisler alınamadı:", error.message);
-
-        return NextResponse.json(
-          { error: "Servisler alınamadı." },
-          { status: 400 }
-        );
-      }
-
-      const rows = (data || []) as DbServiceRow[];
-      allRows.push(...rows);
-
-      if (rows.length < PAGE_SIZE) {
-        break;
-      }
+    if (platform) {
+      conditions.push("platform = ?");
+      sqlParams.push(platform);
     }
 
+    if (category) {
+      conditions.push("category = ?");
+      sqlParams.push(category);
+    }
+
+    sqlParams.push(PAGE_SIZE);
+
+    const [dbRows] = await pool.query(
+      `
+      SELECT
+        id,
+        panel_service_id,
+        site_code,
+        platform,
+        category,
+        original_name,
+        clean_title,
+        subtitle,
+        guarantee,
+        guarantee_label,
+        min,
+        max,
+        speed,
+        level,
+        description,
+        tl_cost_price,
+        usd_cost_price,
+        tl_sale_price,
+        usd_sale_price,
+        rub_sale_price,
+        manual_title,
+        manual_description,
+        manual_sale_price_tl
+      FROM services
+      WHERE ${conditions.join(" AND ")}
+      ORDER BY panel_service_id ASC
+      LIMIT ?
+      `,
+      sqlParams
+    );
+
+    const allRows = (dbRows as any[]).map((row) => ({
+      id: Number(row.id),
+      panel_service_id: Number(row.panel_service_id),
+      site_code: Number(row.site_code),
+      platform: row.platform || "",
+      category: row.category || "",
+      original_name: row.original_name || "",
+      clean_title: row.clean_title || "",
+      subtitle: row.subtitle || "",
+      guarantee: toBoolean(row.guarantee),
+      guarantee_label: row.guarantee_label || "",
+      min: toNumber(row.min),
+      max: toNumber(row.max),
+      speed: row.speed || "",
+      level: row.level || "",
+      description: row.description || "",
+      tl_cost_price: toNumber(row.tl_cost_price),
+      usd_cost_price: toNumber(row.usd_cost_price),
+      tl_sale_price: toNumber(row.tl_sale_price),
+      usd_sale_price: toNumber(row.usd_sale_price),
+      rub_sale_price: toNumber(row.rub_sale_price),
+      manual_title: row.manual_title,
+      manual_description: row.manual_description,
+      manual_sale_price_tl:
+        row.manual_sale_price_tl === null ? null : toNumber(row.manual_sale_price_tl),
+    })) as DbServiceRow[];
+
     const rows = allRows.filter((item) => {
-      const platform = (item.platform || "").trim();
-      const category = (item.category || "").trim();
+      const itemPlatform = (item.platform || "").trim();
+      const itemCategory = (item.category || "").trim();
       const cleanTitle = (item.clean_title || "").trim();
       const manualTitle = (item.manual_title || "").trim();
       const guaranteeLabel = (item.guarantee_label || "").trim();
       const subtitle = (item.subtitle || "").trim();
 
-      const hasValidPlatform = platform.length > 0 && platform !== "other";
-      const hasValidCategory = category.length > 0 && category !== "other";
+      const hasValidPlatform = itemPlatform.length > 0 && itemPlatform !== "other";
+      const hasValidCategory = itemCategory.length > 0 && itemCategory !== "other";
 
       const hasVisibleTitle = cleanTitle.length > 0 || manualTitle.length > 0;
       const hasVisibleGuarantee = guaranteeLabel.length > 0;
@@ -195,6 +207,8 @@ export async function GET(req: NextRequest) {
       }
     );
   } catch (error) {
+    console.error("MySQL servisler alınamadı:", error);
+
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Sunucu hatası oluştu.",

@@ -1,6 +1,6 @@
 import https from "https";
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { getMysqlPool } from "@/lib/mysql";
 
 const ALLOWED_ORDER_STATUSES = [
   "pending",
@@ -33,17 +33,6 @@ type ExistingOrder = {
   status: string | null;
 };
 
-function createAdminSupabaseClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error("Supabase environment variables eksik.");
-  }
-
-  return createClient(supabaseUrl, serviceRoleKey);
-}
-
 function isValidOrderStatus(value: unknown): value is OrderStatus {
   return (
     typeof value === "string" &&
@@ -52,6 +41,15 @@ function isValidOrderStatus(value: unknown): value is OrderStatus {
 }
 
 function normalizeOptionalNumber(value: unknown) {
+  if (value === null || value === undefined || value === "") return null;
+
+  const num = Number(value);
+  if (!Number.isFinite(num)) return null;
+
+  return Math.floor(num);
+}
+
+function normalizeMoney(value: unknown) {
   if (value === null || value === undefined || value === "") return null;
 
   const num = Number(value);
@@ -150,9 +148,7 @@ function buildStatusTelegramMessage({
   endCount: number | null;
   completionNote: string | null;
 }) {
-  const profit =
-    (typeof order.total_price === "number" ? order.total_price : 0) -
-    (typeof order.total_cost_price === "number" ? order.total_cost_price : 0);
+  const profit = (order.total_price || 0) - (order.total_cost_price || 0);
 
   const base =
     `${getStatusTelegramTitle(nextStatus)}\n\n` +
@@ -220,7 +216,7 @@ export async function POST(req: Request) {
         ? body.completion_note.trim() || null
         : null;
 
-    if (!Number.isFinite(id) || !status) {
+    if (!Number.isInteger(id) || id <= 0 || !status) {
       return NextResponse.json(
         { error: "Sipariş id ve status gerekli." },
         { status: 400 }
@@ -234,11 +230,11 @@ export async function POST(req: Request) {
       );
     }
 
-    const supabase = createAdminSupabaseClient();
+    const pool = getMysqlPool();
 
-    const { data: existingOrder, error: existingOrderError } = await supabase
-      .from("order_requests")
-      .select(`
+    const [existingRows] = await pool.query(
+      `
+      SELECT
         id,
         order_number,
         full_name,
@@ -257,80 +253,77 @@ export async function POST(req: Request) {
         speed,
         currency,
         status
-      `)
-      .eq("id", id)
-      .single();
+      FROM order_requests
+      WHERE id = ?
+      LIMIT 1
+      `,
+      [id]
+    );
 
-    if (existingOrderError || !existingOrder) {
+    const row = (existingRows as any[])[0];
+
+    if (!row) {
       return NextResponse.json(
-        { error: existingOrderError?.message || "Sipariş bulunamadı." },
+        { error: "Sipariş bulunamadı." },
         { status: 404 }
       );
     }
 
-    const order = existingOrder as ExistingOrder;
+    const existingOrder: ExistingOrder = {
+      id: Number(row.id),
+      order_number: row.order_number,
+      full_name: row.full_name,
+      contact_value: row.contact_value,
+      platform: row.platform,
+      category: row.category,
+      service_id: row.service_id === null ? null : Number(row.service_id),
+      site_code: row.site_code === null ? null : Number(row.site_code),
+      service_title: row.service_title,
+      quantity: row.quantity === null ? null : Number(row.quantity),
+      unit_price: normalizeMoney(row.unit_price),
+      total_price: normalizeMoney(row.total_price),
+      unit_cost_price: normalizeMoney(row.unit_cost_price),
+      total_cost_price: normalizeMoney(row.total_cost_price),
+      guarantee_label: row.guarantee_label,
+      speed: row.speed,
+      currency: row.currency,
+      status: row.status,
+    };
 
-    const { error: updateError } = await supabase
-      .from("order_requests")
-      .update({
-        status,
-        start_count: startCount,
-        end_count: endCount,
-        completion_note: completionNote,
-      })
-      .eq("id", id);
+    await pool.execute(
+      `
+      UPDATE order_requests
+      SET
+        status = ?,
+        start_count = ?,
+        end_count = ?,
+        completion_note = ?,
+        updated_at = NOW()
+      WHERE id = ?
+      `,
+      [status, startCount, endCount, completionNote, id]
+    );
 
-    if (updateError) {
-      return NextResponse.json(
-        { error: updateError.message || "Sipariş güncellenemedi." },
-        { status: 400 }
-      );
-    }
-
-    let telegramWarning: string | null = null;
-
-    const shouldNotifyTelegram =
-      status === "completed" ||
-      status === "cancelled" ||
-      status === "refunded";
-
-    if (shouldNotifyTelegram) {
+    try {
       const telegramMessage = buildStatusTelegramMessage({
-        order,
+        order: existingOrder,
         nextStatus: status,
         startCount,
         endCount,
         completionNote,
       });
 
-      try {
-        const telegramText = await sendTelegramMessage(telegramMessage);
-
-        try {
-          const telegramJson = JSON.parse(telegramText);
-
-          if (!telegramJson.ok) {
-            telegramWarning = "Telegram API sipariş bildirimini kabul etmedi.";
-            console.error("Telegram API error response:", telegramText);
-          }
-        } catch {
-          telegramWarning = "Telegram cevabı beklenen formatta alınamadı.";
-          console.error("Telegram parse error:", telegramText);
-        }
-      } catch (telegramError) {
-        telegramWarning =
-          telegramError instanceof Error
-            ? `Telegram gönderim hatası: ${telegramError.message}`
-            : "Telegram gönderiminde bilinmeyen hata oluştu";
-
-        console.error(telegramWarning);
-      }
+      await sendTelegramMessage(telegramMessage);
+    } catch (telegramError) {
+      console.error("Telegram sipariş status bildirimi gönderilemedi:", telegramError);
     }
 
     return NextResponse.json(
       {
         success: true,
-        telegramWarning,
+        id,
+        previousStatus: existingOrder.status,
+        nextStatus: status,
       },
       { status: 200 }
     );

@@ -1,6 +1,6 @@
 import https from "https";
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { getMysqlPool } from "@/lib/mysql";
 
 type CurrencyCode = "TL" | "USD" | "RUB";
 type ContactType = "Telegram" | "WhatsApp" | "Instagram" | "E-posta";
@@ -161,16 +161,6 @@ async function sendTelegramMessage(text: string) {
 
 export async function POST(req: Request) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !supabaseServiceRoleKey) {
-      return NextResponse.json(
-        { error: "Supabase environment variables eksik." },
-        { status: 500 }
-      );
-    }
-
     const rawBody = await req.json();
 
     if (!rawBody || typeof rawBody !== "object") {
@@ -257,7 +247,6 @@ export async function POST(req: Request) {
     }
 
     const safeItems = items as OrderItemPayload[];
-    const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
     const batchCode = createBatchCode();
 
     const rows = safeItems.map((item) => ({
@@ -269,13 +258,8 @@ export async function POST(req: Request) {
       contact_value: contactValue,
       platform: item.platform.trim(),
       category: item.category.trim(),
-
-      // Gerçek panel servis ID
       service_id: Number(item.service_id),
-
-      // Müşteriye gösterilen gizlenmiş ürün kodu
       site_code: Number(item.site_code),
-
       service_title: item.service_title.trim(),
       quantity: Number(item.quantity),
       unit_price: Number(item.unit_price),
@@ -292,18 +276,83 @@ export async function POST(req: Request) {
       status: "pending",
     }));
 
-    const { data: insertedRows, error: orderError } = await supabase
-      .from("order_requests")
-      .insert(rows)
-      .select(
-        "order_number, service_id, site_code, service_title, quantity, total_price, total_cost_price, currency, payment_method"
-      );
+    const pool = getMysqlPool();
+    const connection = await pool.getConnection();
 
-    if (orderError) {
+    try {
+      await connection.beginTransaction();
+
+      for (const row of rows) {
+        await connection.execute(
+          `
+          INSERT INTO order_requests (
+            batch_code,
+            order_number,
+            full_name,
+            phone_number,
+            contact_type,
+            contact_value,
+            platform,
+            category,
+            service_id,
+            site_code,
+            service_title,
+            quantity,
+            unit_price,
+            total_price,
+            unit_cost_price,
+            total_cost_price,
+            guarantee_label,
+            speed,
+            currency,
+            payment_method,
+            target_username,
+            target_link,
+            order_note,
+            status
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `,
+          [
+            row.batch_code,
+            row.order_number,
+            row.full_name,
+            row.phone_number,
+            row.contact_type,
+            row.contact_value,
+            row.platform,
+            row.category,
+            row.service_id,
+            row.site_code,
+            row.service_title,
+            row.quantity,
+            row.unit_price,
+            row.total_price,
+            row.unit_cost_price,
+            row.total_cost_price,
+            row.guarantee_label,
+            row.speed,
+            row.currency,
+            row.payment_method,
+            row.target_username,
+            row.target_link,
+            row.order_note,
+            row.status,
+          ]
+        );
+      }
+
+      await connection.commit();
+    } catch (dbError) {
+      await connection.rollback();
+
+      console.error("MySQL order insert error:", dbError);
+
       return NextResponse.json(
         { error: "Sipariş kaydedilemedi." },
         { status: 400 }
       );
+    } finally {
+      connection.release();
     }
 
     const lines = rows
@@ -326,7 +375,7 @@ export async function POST(req: Request) {
       )
       .join("\n\n");
 
-    const orderNumberLines = (insertedRows || [])
+    const orderNumberLines = rows
       .map(
         (row) =>
           `• ${row.order_number} | Panel ID: ${row.service_id} | Ürün Kodu: ${row.site_code}`
@@ -385,7 +434,7 @@ export async function POST(req: Request) {
       {
         success: true,
         batchCode,
-        orderNumbers: insertedRows?.map((row) => row.order_number) || [],
+        orderNumbers: rows.map((row) => row.order_number),
         telegramWarning,
       },
       { status: 200 }

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@supabase/supabase-js";
+import { getMysqlPool } from "@/lib/mysql";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -56,15 +56,8 @@ type ProductRow = {
   last_panel_sync_at: string | null;
 };
 
-function createAdminSupabaseClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error("Supabase environment variables eksik.");
-  }
-
-  return createClient(supabaseUrl, serviceRoleKey);
+function getPool() {
+  return getMysqlPool();
 }
 
 function getText(formData: FormData, key: string) {
@@ -185,30 +178,42 @@ async function updateProductDetail(formData: FormData) {
       ? false
       : publicVisible;
 
-  const supabase = createAdminSupabaseClient();
+  const pool = getPool();
 
-  const { error } = await supabase
-    .from("services")
-    .update({
-      product_type: productType,
-      review_status: reviewStatus,
-      public_page: publicPage,
-      public_visible: finalPublicVisible,
-      public_category: publicCategory,
-      manual_title: manualTitle,
-      manual_description: manualDescription,
-      manual_sale_price_tl: manualSalePriceTl,
-      is_active: isActive,
-      admin_locked: true,
-      admin_updated_at: new Date().toISOString(),
-      admin_decision_reason: adminDecisionReason,
-      admin_note: adminDecisionReason,
-    })
-    .eq("id", id);
-
-  if (error) {
-    throw new Error(error.message);
-  }
+  await pool.execute(
+    `
+    UPDATE services
+    SET
+      product_type = ?,
+      review_status = ?,
+      public_page = ?,
+      public_visible = ?,
+      public_category = ?,
+      manual_title = ?,
+      manual_description = ?,
+      manual_sale_price_tl = ?,
+      is_active = ?,
+      admin_locked = 1,
+      admin_updated_at = NOW(),
+      admin_decision_reason = ?,
+      admin_note = ?
+    WHERE id = ?
+    `,
+    [
+      productType,
+      reviewStatus,
+      publicPage,
+      finalPublicVisible ? 1 : 0,
+      publicCategory,
+      manualTitle,
+      manualDescription,
+      manualSalePriceTl,
+      isActive ? 1 : 0,
+      adminDecisionReason,
+      adminDecisionReason,
+      id,
+    ]
+  );
 
   revalidatePath(`/admin/products/${id}`);
   revalidatePath("/admin/products");
@@ -223,59 +228,113 @@ export default async function AdminProductDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const supabase = createAdminSupabaseClient();
+  const pool = getPool();
 
-  const { data, error } = await supabase
-    .from("services")
-    .select(
-      `
-        id,
-        panel_service_id,
-        site_code,
-        platform,
-        category,
-        original_name,
-        clean_title,
-        subtitle,
-        guarantee,
-        guarantee_label,
-        min,
-        max,
-        speed,
-        level,
-        description,
-        tl_cost_price,
-        tl_sale_price,
-        usd_cost_price,
-        usd_sale_price,
-        rub_sale_price,
-        is_active,
-        product_type,
-        public_visible,
-        review_status,
-        public_page,
-        public_category,
-        admin_note,
-        manual_title,
-        manual_description,
-        manual_sale_price_tl,
-        admin_locked,
-        admin_updated_at,
-        admin_decision_reason,
-        source_type,
-        is_manual,
-        auto_reject_reason,
-        last_panel_sync_at
-      `
-    )
-    .eq("id", id)
-    .maybeSingle();
+  const [rows] = await pool.query(
+    `
+    SELECT
+      id,
+      panel_service_id,
+      site_code,
+      platform,
+      category,
+      original_name,
+      clean_title,
+      subtitle,
+      guarantee,
+      guarantee_label,
+      min,
+      max,
+      speed,
+      level,
+      description,
+      tl_cost_price,
+      tl_sale_price,
+      usd_cost_price,
+      usd_sale_price,
+      rub_sale_price,
+      is_active,
+      product_type,
+      public_visible,
+      review_status,
+      public_page,
+      public_category,
+      admin_note,
+      manual_title,
+      manual_description,
+      manual_sale_price_tl,
+      admin_locked,
+      admin_updated_at,
+      admin_decision_reason,
+      source_type,
+      is_manual,
+      auto_reject_reason,
+      last_panel_sync_at
+    FROM services
+    WHERE id = ?
+    LIMIT 1
+    `,
+    [id]
+  );
 
-  if (error || !data) {
+  const dbProduct = (rows as any[])[0];
+
+  if (!dbProduct) {
     notFound();
   }
 
-  const product = data as ProductRow;
+  const product = {
+    id: Number(dbProduct.id),
+    panel_service_id:
+      dbProduct.panel_service_id === null ? null : Number(dbProduct.panel_service_id),
+    site_code: dbProduct.site_code === null ? null : Number(dbProduct.site_code),
+    platform: dbProduct.platform,
+    category: dbProduct.category,
+    original_name: dbProduct.original_name,
+    clean_title: dbProduct.clean_title,
+    subtitle: dbProduct.subtitle,
+    guarantee: dbProduct.guarantee === 1,
+    guarantee_label: dbProduct.guarantee_label,
+    min: dbProduct.min === null ? null : Number(dbProduct.min),
+    max: dbProduct.max === null ? null : Number(dbProduct.max),
+    speed: dbProduct.speed,
+    level: dbProduct.level,
+    description: dbProduct.description,
+    tl_cost_price:
+      dbProduct.tl_cost_price === null ? null : Number(dbProduct.tl_cost_price),
+    tl_sale_price:
+      dbProduct.tl_sale_price === null ? null : Number(dbProduct.tl_sale_price),
+    usd_cost_price:
+      dbProduct.usd_cost_price === null ? null : Number(dbProduct.usd_cost_price),
+    usd_sale_price:
+      dbProduct.usd_sale_price === null ? null : Number(dbProduct.usd_sale_price),
+    rub_sale_price:
+      dbProduct.rub_sale_price === null ? null : Number(dbProduct.rub_sale_price),
+    is_active: dbProduct.is_active === 1,
+    product_type: dbProduct.product_type,
+    public_visible: dbProduct.public_visible === 1,
+    review_status: dbProduct.review_status,
+    public_page: dbProduct.public_page,
+    public_category: dbProduct.public_category,
+    admin_note: dbProduct.admin_note,
+    manual_title: dbProduct.manual_title,
+    manual_description: dbProduct.manual_description,
+    manual_sale_price_tl:
+      dbProduct.manual_sale_price_tl === null
+        ? null
+        : Number(dbProduct.manual_sale_price_tl),
+    admin_locked: dbProduct.admin_locked === 1,
+    admin_updated_at: dbProduct.admin_updated_at
+      ? String(dbProduct.admin_updated_at)
+      : null,
+    admin_decision_reason: dbProduct.admin_decision_reason,
+    source_type: dbProduct.source_type,
+    is_manual: dbProduct.is_manual === 1,
+    auto_reject_reason: dbProduct.auto_reject_reason,
+    last_panel_sync_at: dbProduct.last_panel_sync_at
+      ? String(dbProduct.last_panel_sync_at)
+      : null,
+  } as ProductRow;
   const visiblePrice = getVisiblePrice(product);
 
   return (

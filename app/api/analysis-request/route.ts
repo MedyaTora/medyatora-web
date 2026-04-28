@@ -1,6 +1,6 @@
 import https from "https";
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { getMysqlPool } from "@/lib/mysql";
 
 type ContactType = "Telegram" | "WhatsApp" | "Instagram" | "E-posta";
 
@@ -11,23 +11,32 @@ const ALLOWED_CONTACT_TYPES: ContactType[] = [
   "E-posta",
 ];
 
-function createAdminSupabaseClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error("Supabase environment variables eksik.");
-  }
-
-  return createClient(supabaseUrl, serviceRoleKey);
-}
-
 function isNonEmptyString(value: unknown) {
   return typeof value === "string" && value.trim().length > 0;
 }
 
 function normalizeString(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeContactType(value: unknown): ContactType | "" {
+  const raw = normalizeString(value);
+  const normalized = raw.toLowerCase().replace(/\s+/g, "");
+
+  if (normalized === "telegram") return "Telegram";
+  if (normalized === "whatsapp" || normalized === "wa") return "WhatsApp";
+  if (normalized === "instagram" || normalized === "ig") return "Instagram";
+  if (
+    normalized === "e-posta" ||
+    normalized === "eposta" ||
+    normalized === "email" ||
+    normalized === "e-mail" ||
+    normalized === "mail"
+  ) {
+    return "E-posta";
+  }
+
+  return "";
 }
 
 function normalizeDailyPostCount(value: unknown) {
@@ -105,7 +114,7 @@ export async function POST(req: Request) {
     const couponCode = normalizeCoupon(body?.coupon_code);
     const mainProblem = normalizeString(body?.main_problem);
     const mainMissing = normalizeString(body?.main_missing);
-    const contactType = normalizeString(body?.contact_type) as ContactType;
+    const contactType = normalizeContactType(body?.contact_type);
     const contactValue = normalizeString(body?.contact_value);
 
     if (!isNonEmptyString(fullName)) {
@@ -150,7 +159,7 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!ALLOWED_CONTACT_TYPES.includes(contactType)) {
+    if (!contactType || !ALLOWED_CONTACT_TYPES.includes(contactType)) {
       return NextResponse.json(
         { error: "Geçerli bir iletişim türü seçiniz." },
         { status: 400 }
@@ -164,54 +173,82 @@ export async function POST(req: Request) {
       );
     }
 
-    const supabase = createAdminSupabaseClient();
-
-    const { data: customer, error: customerError } = await supabase
-      .from("customers")
-      .insert([
-        {
-          full_name: fullName,
-          username,
-          account_link: accountLink,
-          account_type: accountType,
-          content_type: contentType,
-          daily_post_count: dailyPostCount,
-          main_problem: mainProblem,
-          main_missing: mainMissing,
-          contact_type: contactType,
-          contact_value: contactValue,
-        },
-      ])
-      .select("id")
-      .single();
-
-    if (customerError || !customer) {
-      return NextResponse.json(
-        { error: customerError?.message || "Müşteri kaydı oluşturulamadı." },
-        { status: 400 }
-      );
-    }
-
     const packagePrice = couponCode === "ANALIZ100" ? 0 : 5;
 
-    const { error: analysisError } = await supabase
-      .from("analysis_requests")
-      .insert([
-        {
-          customer_id: customer.id,
-          coupon_code: couponCode || null,
-          package_type: "analysis",
-          package_price: packagePrice,
-          currency: "USD",
-          status: "pending",
-        },
-      ]);
+    const pool = getMysqlPool();
+    const connection = await pool.getConnection();
 
-    if (analysisError) {
+    try {
+      await connection.beginTransaction();
+
+      const [customerResult] = await connection.execute(
+        `
+        INSERT INTO customers (
+          full_name,
+          username,
+          account_link,
+          account_type,
+          content_type,
+          daily_post_count,
+          main_problem,
+          main_missing,
+          contact_type,
+          contact_value
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `,
+        [
+          fullName,
+          username || null,
+          accountLink || null,
+          accountType,
+          contentType,
+          dailyPostCount,
+          mainProblem,
+          mainMissing,
+          contactType,
+          contactValue,
+        ]
+      );
+
+      const insertId = (customerResult as { insertId?: number }).insertId;
+
+      if (!insertId) {
+        throw new Error("Müşteri ID alınamadı.");
+      }
+
+      await connection.execute(
+        `
+        INSERT INTO analysis_requests (
+          customer_id,
+          coupon_code,
+          package_type,
+          package_price,
+          currency,
+          status
+        ) VALUES (?, ?, ?, ?, ?, ?)
+        `,
+        [
+          insertId,
+          couponCode || null,
+          "analysis",
+          packagePrice,
+          "USD",
+          "pending",
+        ]
+      );
+
+      await connection.commit();
+    } catch (dbError) {
+      await connection.rollback();
+
+      console.error("MySQL analysis insert error:", dbError);
+
       return NextResponse.json(
-        { error: analysisError.message || "Analiz başvurusu oluşturulamadı." },
+        { error: "Analiz başvurusu kaydedilemedi." },
         { status: 400 }
       );
+    } finally {
+      connection.release();
     }
 
     const telegramMessage =

@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-import { createClient } from "@supabase/supabase-js";
+import { getMysqlPool } from "@/lib/mysql";
 import StatusSelect from "../components/status-select";
 import OrderStatusCardActions from "../components/order-status-card-actions";
 
@@ -288,13 +288,6 @@ export default async function AdminPage({
 }) {
   const params = (await searchParams) || {};
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !supabaseServiceRoleKey) {
-    return <ErrorScreen message="Supabase environment variables eksik." />;
-  }
-
   const q = params.q?.trim() || "";
   const analysisStatus = params.analysisStatus || "all";
   const orderStatus = params.orderStatus || "all";
@@ -310,117 +303,146 @@ export default async function AdminPage({
   if (orderStatus !== "all") queryParams.set("orderStatus", orderStatus);
   if (platform !== "all") queryParams.set("platform", platform);
 
-  const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+  const pool = getMysqlPool();
 
-  const { data: analysisData, error: analysisError } = await supabase
-    .from("analysis_requests")
-    .select(`
-      id,
-      coupon_code,
-      package_type,
-      package_price,
-      currency,
-      status,
-      created_at,
-      customers (
+  function toDateValue(value: unknown) {
+    if (!value) return null;
+    if (value instanceof Date) return value.toISOString();
+    return String(value);
+  }
+
+  let allItems: AnalysisRequestRow[] = [];
+  let allOrders: OrderRequestRow[] = [];
+  let allVisitorSessions: VisitorSessionRow[] = [];
+  let allVisitorEvents: VisitorEventRow[] = [];
+  let customerCount = 0;
+
+  try {
+    const [analysisRows] = await pool.query(
+      `
+      SELECT
+        a.id,
+        a.coupon_code,
+        a.package_type,
+        a.package_price,
+        a.currency,
+        a.status,
+        a.created_at,
+        c.full_name,
+        c.username,
+        c.account_link,
+        c.account_type,
+        c.content_type,
+        c.daily_post_count,
+        c.main_problem,
+        c.main_missing,
+        c.contact_type,
+        c.contact_value
+      FROM analysis_requests a
+      LEFT JOIN customers c ON c.id = a.customer_id
+      ORDER BY a.created_at DESC
+      `
+    );
+
+    allItems = (analysisRows as any[]).map((row) => ({
+      id: String(row.id),
+      coupon_code: row.coupon_code,
+      package_type: row.package_type,
+      package_price: Number(row.package_price || 0),
+      currency: row.currency,
+      status: row.status,
+      created_at: toDateValue(row.created_at) || "",
+      customers: {
+        full_name: row.full_name,
+        username: row.username,
+        account_link: row.account_link,
+        account_type: row.account_type,
+        content_type: row.content_type,
+        daily_post_count: row.daily_post_count,
+        main_problem: row.main_problem,
+        main_missing: row.main_missing,
+        contact_type: row.contact_type,
+        contact_value: row.contact_value,
+      },
+    }));
+
+    const [orderRows] = await pool.query(
+      `
+      SELECT
+        id,
+        created_at,
+        batch_code,
+        order_number,
         full_name,
-        username,
-        account_link,
-        account_type,
-        content_type,
-        daily_post_count,
-        main_problem,
-        main_missing,
+        phone_number,
         contact_type,
-        contact_value
-      )
-    `)
-    .order("created_at", { ascending: false });
+        contact_value,
+        platform,
+        category,
+        service_id,
+        site_code,
+        service_title,
+        quantity,
+        total_price,
+        total_cost_price,
+        currency,
+        payment_method,
+        target_username,
+        target_link,
+        order_note,
+        status,
+        NULL AS start_count,
+        NULL AS end_count,
+        NULL AS completion_note
+      FROM order_requests
+      ORDER BY created_at DESC
+      `
+    );
 
-  const { data: orderData, error: orderError } = await supabase
-    .from("order_requests")
-    .select(`
-      id,
-      created_at,
-      batch_code,
-      order_number,
-      full_name,
-      phone_number,
-      contact_type,
-      contact_value,
-      platform,
-      category,
-      service_id,
-      site_code,
-      service_title,
-      quantity,
-      total_price,
-      total_cost_price,
-      currency,
-      payment_method,
-      target_username,
-      target_link,
-      order_note,
-      status,
-      start_count,
-      end_count,
-      completion_note
-    `)
-    .order("created_at", { ascending: false });
+    allOrders = (orderRows as any[]).map((row) => ({
+      id: Number(row.id),
+      created_at: toDateValue(row.created_at) || "",
+      batch_code: row.batch_code,
+      order_number: row.order_number,
+      full_name: row.full_name,
+      phone_number: row.phone_number,
+      contact_type: row.contact_type,
+      contact_value: row.contact_value,
+      platform: row.platform,
+      category: row.category,
+      service_id: row.service_id === null ? null : Number(row.service_id),
+      site_code: row.site_code === null ? null : Number(row.site_code),
+      service_title: row.service_title,
+      quantity: row.quantity === null ? null : Number(row.quantity),
+      total_price: row.total_price === null ? null : Number(row.total_price),
+      total_cost_price: row.total_cost_price === null ? null : Number(row.total_cost_price),
+      currency: row.currency,
+      payment_method: row.payment_method,
+      target_username: row.target_username,
+      target_link: row.target_link,
+      order_note: row.order_note,
+      status: row.status,
+      start_count: null,
+      end_count: null,
+      completion_note: null,
+    }));
 
-  const { data: visitorSessionData, error: visitorSessionError } = await supabase
-    .from("visitor_sessions")
-    .select(`
-      id,
-      visitor_id,
-      ip_address,
-      current_path,
-      locale,
-      user_agent,
-      referrer,
-      screen_width,
-      screen_height,
-      timezone,
-      browser_language,
-      first_seen_at,
-      last_seen_at
-    `)
-    .order("last_seen_at", { ascending: false });
+    const [customerCountRows] = await pool.query(
+      `SELECT COUNT(*) AS total FROM customers`
+    );
 
-  const { data: visitorEventData, error: visitorEventError } = await supabase
-    .from("visitor_events")
-    .select(`
-      id,
-      visitor_id,
-      ip_address,
-      event_type,
-      path,
-      locale,
-      user_agent,
-      referrer,
-      screen_width,
-      screen_height,
-      timezone,
-      browser_language,
-      created_at
-    `)
-    .order("created_at", { ascending: false })
-    .limit(100);
+    customerCount = Number((customerCountRows as any[])[0]?.total || 0);
 
-  const { count: customerCount, error: customerCountError } = await supabase
-    .from("customers")
-    .select("*", { count: "exact", head: true });
-
-  if (analysisError) return <ErrorScreen message={analysisError.message} />;
-  if (orderError) return <ErrorScreen message={orderError.message} />;
-  if (visitorSessionError) return <ErrorScreen message={visitorSessionError.message} />;
-  if (visitorEventError) return <ErrorScreen message={visitorEventError.message} />;
-  if (customerCountError) return <ErrorScreen message={customerCountError.message} />;
-
-  const allItems = (analysisData || []) as AnalysisRequestRow[];
-  const allOrders = (orderData || []) as OrderRequestRow[];
-  const allVisitorSessions = (visitorSessionData || []) as VisitorSessionRow[];
-  const allVisitorEvents = (visitorEventData || []) as VisitorEventRow[];
+    // Ziyaretçi tabloları henüz MySQL'e taşınmadığı için admin panelde şimdilik boş gösteriyoruz.
+    allVisitorSessions = [];
+    allVisitorEvents = [];
+  } catch (error) {
+    return (
+      <ErrorScreen
+        message={error instanceof Error ? error.message : "MySQL admin verileri okunamadı."}
+      />
+    );
+  }
 
   const filteredAnalysis = allItems.filter((item) => {
     const customer = normalizeCustomer(item.customers);

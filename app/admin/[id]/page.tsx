@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-import { createClient } from "@supabase/supabase-js";
+import { getMysqlPool } from "@/lib/mysql";
 
 type CustomerInfo = {
   full_name: string | null;
@@ -94,56 +94,93 @@ function TextCard({
 export default async function AnalysisDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const resolvedParams = await params;
+  const analysisId = Number(resolvedParams.id);
 
-  if (!supabaseUrl || !supabaseServiceRoleKey) {
-    return <ErrorScreen message="Supabase environment variables eksik." />;
-  }
-
-  const analysisId = params.id?.trim();
-
-  if (!analysisId) {
+  if (!Number.isInteger(analysisId) || analysisId <= 0) {
     return <ErrorScreen message="Geçersiz kayıt id." />;
   }
 
-  const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+  const pool = getMysqlPool();
 
-  const { data, error } = await supabase
-    .from("analysis_requests")
-    .select(`
-      id,
-      coupon_code,
-      package_type,
-      package_price,
-      currency,
-      status,
-      admin_note,
-      created_at,
-      updated_at,
-      customers (
-        full_name,
-        username,
-        account_link,
-        account_type,
-        content_type,
-        daily_post_count,
-        main_problem,
-        main_missing,
-        contact_type,
-        contact_value
-      )
-    `)
-    .eq("id", analysisId)
-    .single();
-
-  if (error || !data) {
-    return <ErrorScreen message="Kayıt bulunamadı." />;
+  function toDateValue(value: unknown) {
+    if (!value) return null;
+    if (value instanceof Date) return value.toISOString();
+    return String(value);
   }
 
-  const item = data as AnalysisRequestDetailRow;
+  let item: AnalysisRequestDetailRow;
+
+  try {
+    const [rows] = await pool.query(
+      `
+      SELECT
+        a.id,
+        a.coupon_code,
+        a.package_type,
+        a.package_price,
+        a.currency,
+        a.status,
+        a.admin_note,
+        a.created_at,
+        a.updated_at,
+        c.full_name,
+        c.username,
+        c.account_link,
+        c.account_type,
+        c.content_type,
+        c.daily_post_count,
+        c.main_problem,
+        c.main_missing,
+        c.contact_type,
+        c.contact_value
+      FROM analysis_requests a
+      LEFT JOIN customers c ON c.id = a.customer_id
+      WHERE a.id = ?
+      LIMIT 1
+      `,
+      [analysisId]
+    );
+
+    const row = (rows as any[])[0];
+
+    if (!row) {
+      return <ErrorScreen message="Kayıt bulunamadı." />;
+    }
+
+    item = {
+      id: String(row.id),
+      coupon_code: row.coupon_code,
+      package_type: row.package_type,
+      package_price: row.package_price === null ? null : Number(row.package_price),
+      currency: row.currency,
+      status: row.status,
+      admin_note: row.admin_note,
+      created_at: toDateValue(row.created_at) || "",
+      updated_at: toDateValue(row.updated_at),
+      customers: {
+        full_name: row.full_name,
+        username: row.username,
+        account_link: row.account_link,
+        account_type: row.account_type,
+        content_type: row.content_type,
+        daily_post_count: row.daily_post_count,
+        main_problem: row.main_problem,
+        main_missing: row.main_missing,
+        contact_type: row.contact_type,
+        contact_value: row.contact_value,
+      },
+    };
+  } catch (error) {
+    return (
+      <ErrorScreen
+        message={error instanceof Error ? error.message : "MySQL analiz detayı okunamadı."}
+      />
+    );
+  }
+
   const customer = normalizeCustomer(item.customers);
 
   return (

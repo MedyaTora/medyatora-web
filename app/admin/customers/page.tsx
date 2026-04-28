@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-import { createClient } from "@supabase/supabase-js";
+import { getMysqlPool } from "@/lib/mysql";
 
 type CustomerRow = {
   id: string;
@@ -64,41 +64,61 @@ export default async function CustomersPage({
     page?: string;
   };
 }) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !supabaseServiceRoleKey) {
-    return <ErrorScreen message="Supabase environment variables eksik." />;
-  }
-
   const q = searchParams?.q?.trim() || "";
   const page = Math.max(Number(searchParams?.page || 1), 1);
 
-  const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+  const pool = getMysqlPool();
 
-  const { data, error } = await supabase
-    .from("customers")
-    .select(`
-      id,
-      created_at,
-      full_name,
-      username,
-      account_link,
-      account_type,
-      content_type,
-      daily_post_count,
-      main_problem,
-      main_missing,
-      contact_type,
-      contact_value
-    `)
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    return <ErrorScreen message={error.message} />;
+  function toDateValue(value: unknown) {
+    if (!value) return "";
+    if (value instanceof Date) return value.toISOString();
+    return String(value);
   }
 
-  const customers = (data || []) as CustomerRow[];
+  let customers: CustomerRow[] = [];
+
+  try {
+    const [rows] = await pool.query(
+      `
+      SELECT
+        id,
+        created_at,
+        full_name,
+        username,
+        account_link,
+        account_type,
+        content_type,
+        daily_post_count,
+        main_problem,
+        main_missing,
+        contact_type,
+        contact_value
+      FROM customers
+      ORDER BY created_at DESC
+      `
+    );
+
+    customers = (rows as any[]).map((row) => ({
+      id: String(row.id),
+      created_at: toDateValue(row.created_at),
+      full_name: row.full_name,
+      username: row.username,
+      account_link: row.account_link,
+      account_type: row.account_type,
+      content_type: row.content_type,
+      daily_post_count: row.daily_post_count,
+      main_problem: row.main_problem,
+      main_missing: row.main_missing,
+      contact_type: row.contact_type,
+      contact_value: row.contact_value,
+    }));
+  } catch (error) {
+    return (
+      <ErrorScreen
+        message={error instanceof Error ? error.message : "MySQL müşteri listesi okunamadı."}
+      />
+    );
+  }
 
   const filteredCustomers = customers.filter((item) => {
     if (!q) return true;

@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-import { createClient } from "@supabase/supabase-js";
+import { getMysqlPool } from "@/lib/mysql";
 
 type CurrencyCode = "TL" | "USD" | "RUB" | string;
 
@@ -168,56 +168,87 @@ export default async function ProfitPage({
 }) {
   const params = (await searchParams) || {};
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !supabaseServiceRoleKey) {
-    return <ErrorScreen message="Supabase environment variables eksik." />;
-  }
-
   const selectedMonth = params.month || getCurrentMonthValue();
   const selectedCurrency = params.currency || "all";
   const { startIso, endIso } = getMonthRange(selectedMonth);
 
-  const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+  const pool = getMysqlPool();
 
-  let query = supabase
-    .from("order_requests")
-    .select(`
-      id,
-      created_at,
-      order_number,
-      batch_code,
-      full_name,
-      platform,
-      category,
-      service_id,
-      site_code,
-      service_title,
-      quantity,
-      unit_price,
-      total_price,
-      unit_cost_price,
-      total_cost_price,
-      currency,
-      status
-    `)
-    .eq("status", "completed")
-    .gte("created_at", startIso)
-    .lt("created_at", endIso)
-    .order("created_at", { ascending: false });
-
-  if (selectedCurrency !== "all") {
-    query = query.eq("currency", selectedCurrency);
+  function toDateValue(value: unknown) {
+    if (!value) return "";
+    if (value instanceof Date) return value.toISOString();
+    return String(value);
   }
 
-  const { data, error } = await query;
+  let orders: ProfitOrderRow[] = [];
 
-  if (error) {
-    return <ErrorScreen message={error.message || "Kâr verileri alınamadı."} />;
+  try {
+    const sqlParams: unknown[] = [startIso, endIso];
+
+    let currencyCondition = "";
+
+    if (selectedCurrency !== "all") {
+      currencyCondition = "AND currency = ?";
+      sqlParams.push(selectedCurrency);
+    }
+
+    const [rows] = await pool.query(
+      `
+      SELECT
+        id,
+        created_at,
+        order_number,
+        batch_code,
+        full_name,
+        platform,
+        category,
+        service_id,
+        site_code,
+        service_title,
+        quantity,
+        unit_price,
+        total_price,
+        unit_cost_price,
+        total_cost_price,
+        currency,
+        status
+      FROM order_requests
+      WHERE status = 'completed'
+        AND created_at >= ?
+        AND created_at < ?
+        ${currencyCondition}
+      ORDER BY created_at DESC
+      `,
+      sqlParams
+    );
+
+    orders = (rows as any[]).map((row) => ({
+      id: Number(row.id),
+      created_at: toDateValue(row.created_at),
+      order_number: row.order_number,
+      batch_code: row.batch_code,
+      full_name: row.full_name,
+      platform: row.platform,
+      category: row.category,
+      service_id: row.service_id === null ? null : Number(row.service_id),
+      site_code: row.site_code === null ? null : Number(row.site_code),
+      service_title: row.service_title,
+      quantity: row.quantity === null ? null : Number(row.quantity),
+      unit_price: row.unit_price === null ? null : Number(row.unit_price),
+      total_price: row.total_price === null ? null : Number(row.total_price),
+      unit_cost_price: row.unit_cost_price === null ? null : Number(row.unit_cost_price),
+      total_cost_price: row.total_cost_price === null ? null : Number(row.total_cost_price),
+      currency: row.currency,
+      status: row.status,
+    }));
+  } catch (error) {
+    return (
+      <ErrorScreen
+        message={error instanceof Error ? error.message : "MySQL kâr verileri alınamadı."}
+      />
+    );
   }
 
-  const orders = (data || []) as ProfitOrderRow[];
   const currencyTotals = getCurrencyTotals(orders);
 
   const availableCurrencies = Array.from(

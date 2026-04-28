@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { getMysqlPool } from "@/lib/mysql";
 
 type PanelService = {
   service: number;
@@ -46,19 +46,12 @@ type NormalizedServiceRow = {
   last_synced_at: string;
 };
 
-type ExistingServiceRow = {
-  panel_service_id: number;
-};
+function getPool() {
+  return getMysqlPool();
+}
 
-function createAdminSupabaseClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error("Supabase environment variables eksik.");
-  }
-
-  return createClient(supabaseUrl, serviceRoleKey);
+function mysqlNow() {
+  return new Date().toISOString().slice(0, 19).replace("T", " ");
 }
 
 function isAuthorized(req: Request) {
@@ -543,19 +536,18 @@ function calculateSalePrice(costTl: number): number {
 }
 
 async function getUsdRates() {
-  const supabase = createAdminSupabaseClient();
+  const pool = getPool();
 
-  const { data, error } = await supabase
-    .from("exchange_rates")
-    .select("target_currency, rate")
-    .eq("base_currency", "USD")
-    .in("target_currency", ["TRY", "RUB"]);
+  const [rows] = await pool.query(
+    `
+    SELECT target_currency, rate
+    FROM exchange_rates
+    WHERE base_currency = 'USD'
+      AND target_currency IN ('TRY', 'RUB')
+    `
+  );
 
-  if (error) {
-    throw new Error(`Kur tablosu okunamadı: ${error.message}`);
-  }
-
-  const rates = (data || []) as ExchangeRateRow[];
+  const rates = (rows as any[]) as ExchangeRateRow[];
   const tryRate = rates.find((r) => r.target_currency === "TRY")?.rate;
   const rubRate = rates.find((r) => r.target_currency === "RUB")?.rate;
 
@@ -577,18 +569,29 @@ async function insertSyncLog(log: {
   total_updated: number;
 }) {
   try {
-    const supabase = createAdminSupabaseClient();
+    const pool = getPool();
 
-    await supabase.from("sync_logs").insert([
-      {
-        sync_type: "panel_services_sync",
-        status: log.status,
-        message: log.message,
-        total_fetched: log.total_fetched,
-        total_inserted: log.total_inserted,
-        total_updated: log.total_updated,
-      },
-    ]);
+    await pool.execute(
+      `
+      INSERT INTO sync_logs (
+        sync_type,
+        status,
+        message,
+        total_fetched,
+        total_inserted,
+        total_updated
+      )
+      VALUES (?, ?, ?, ?, ?, ?)
+      `,
+      [
+        "panel_services_sync",
+        log.status,
+        log.message,
+        log.total_fetched,
+        log.total_inserted,
+        log.total_updated,
+      ]
+    );
   } catch (error) {
     console.error("sync_logs insert error:", error);
   }
@@ -690,7 +693,7 @@ function normalizePanelServices(
         cancel: !!service.cancel,
         dripfeed: !!service.dripfeed,
         is_active: true,
-        last_synced_at: new Date().toISOString(),
+        last_synced_at: mysqlNow(),
       };
     })
     .filter((item): item is NormalizedServiceRow => item !== null);
@@ -728,132 +731,163 @@ function buildSafeSyncUpdate(item: NormalizedServiceRow) {
 async function deactivateMissingServices(syncedIds: number[]): Promise<number> {
   if (syncedIds.length === 0) return 0;
 
-  const supabase = createAdminSupabaseClient();
+  const pool = getPool();
 
-  const { data: activeServices, error: activeError } = await supabase
-    .from("services")
-    .select("panel_service_id")
-    .eq("is_active", true);
-
-  if (activeError) {
-    throw new Error(`Aktif servisler okunamadı: ${activeError.message}`);
-  }
-
-  const activeIds = (activeServices || []).map(
-    (row) => row.panel_service_id as number
+  const [activeRows] = await pool.query(
+    "SELECT panel_service_id FROM services WHERE is_active = 1"
   );
 
+  const activeIds = (activeRows as any[]).map((row) => Number(row.panel_service_id));
   const idsToDeactivate = activeIds.filter((id) => !syncedIds.includes(id));
 
   if (idsToDeactivate.length === 0) {
     return 0;
   }
 
-  const { error: deactivateError } = await supabase
-    .from("services")
-    .update({
-      is_active: false,
-      last_synced_at: new Date().toISOString(),
-    })
-    .in("panel_service_id", idsToDeactivate);
+  const placeholders = idsToDeactivate.map(() => "?").join(",");
 
-  if (deactivateError) {
-    throw new Error(`Eski servisler pasife alınamadı: ${deactivateError.message}`);
-  }
+  await pool.execute(
+    `
+    UPDATE services
+    SET is_active = 0, last_synced_at = NOW()
+    WHERE panel_service_id IN (${placeholders})
+    `,
+    idsToDeactivate
+  );
 
   return idsToDeactivate.length;
 }
 
 async function syncPanelServices() {
-  const supabase = createAdminSupabaseClient();
+  const pool = getPool();
   const { tryRate, rubRate } = await getUsdRates();
   const panelServices = await fetchPanelServices();
   const items = normalizePanelServices(panelServices, tryRate, rubRate);
   const syncedIds = items.map((item) => item.panel_service_id);
 
-  const { data: existingRows, error: existingError } = await supabase
-    .from("services")
-    .select("panel_service_id")
-    .in("panel_service_id", syncedIds);
-
-  if (existingError) {
-    await insertSyncLog({
-      status: "failed",
-      message: existingError.message,
-      total_fetched: panelServices.length,
-      total_inserted: 0,
-      total_updated: 0,
-    });
-
-    throw new Error(existingError.message);
-  }
-
-  const existingIds = new Set(
-    ((existingRows || []) as ExistingServiceRow[]).map((row) => row.panel_service_id)
-  );
-
-  const itemsToInsert = items.filter((item) => !existingIds.has(item.panel_service_id));
-  const itemsToUpdate = items.filter((item) => existingIds.has(item.panel_service_id));
-
-  if (itemsToInsert.length > 0) {
-    const { error: insertError } = await supabase.from("services").insert(itemsToInsert);
-
-    if (insertError) {
-      await insertSyncLog({
-        status: "failed",
-        message: insertError.message,
-        total_fetched: panelServices.length,
-        total_inserted: 0,
-        total_updated: 0,
-      });
-
-      throw new Error(insertError.message);
-    }
-  }
-
+  let insertedCount = 0;
   let updatedCount = 0;
 
-  for (const item of itemsToUpdate) {
-    const { error: updateError } = await supabase
-      .from("services")
-      .update(buildSafeSyncUpdate(item))
-      .eq("panel_service_id", item.panel_service_id);
+  try {
+    for (const item of items) {
+      const [result] = await pool.execute(
+        `
+        INSERT INTO services (
+          panel_service_id,
+          site_code,
+          platform,
+          category,
+          original_name,
+          clean_title,
+          subtitle,
+          guarantee,
+          guarantee_label,
+          min,
+          max,
+          speed,
+          level,
+          description,
+          usd_cost_price,
+          tl_cost_price,
+          tl_sale_price,
+          usd_sale_price,
+          rub_sale_price,
+          refill,
+          cancel,
+          dripfeed,
+          is_active,
+          last_synced_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+          original_name = VALUES(original_name),
+          platform = VALUES(platform),
+          category = VALUES(category),
+          min = VALUES(min),
+          max = VALUES(max),
+          speed = VALUES(speed),
+          level = VALUES(level),
+          guarantee = VALUES(guarantee),
+          guarantee_label = VALUES(guarantee_label),
+          usd_cost_price = VALUES(usd_cost_price),
+          tl_cost_price = VALUES(tl_cost_price),
+          tl_sale_price = VALUES(tl_sale_price),
+          usd_sale_price = VALUES(usd_sale_price),
+          rub_sale_price = VALUES(rub_sale_price),
+          refill = VALUES(refill),
+          cancel = VALUES(cancel),
+          dripfeed = VALUES(dripfeed),
+          is_active = 1,
+          last_synced_at = VALUES(last_synced_at)
+        `,
+        [
+          item.panel_service_id,
+          item.site_code,
+          item.platform,
+          item.category,
+          item.original_name,
+          item.clean_title,
+          item.subtitle,
+          item.guarantee ? 1 : 0,
+          item.guarantee_label,
+          item.min,
+          item.max,
+          item.speed,
+          item.level,
+          item.description,
+          item.usd_cost_price,
+          item.tl_cost_price,
+          item.tl_sale_price,
+          item.usd_sale_price,
+          item.rub_sale_price,
+          item.refill ? 1 : 0,
+          item.cancel ? 1 : 0,
+          item.dripfeed ? 1 : 0,
+          item.is_active ? 1 : 0,
+          item.last_synced_at,
+        ]
+      );
 
-    if (updateError) {
-      await insertSyncLog({
-        status: "failed",
-        message: updateError.message,
-        total_fetched: panelServices.length,
-        total_inserted: itemsToInsert.length,
-        total_updated: updatedCount,
-      });
+      const info = result as any;
 
-      throw new Error(updateError.message);
+      if (info.affectedRows === 1) {
+        insertedCount += 1;
+      } else {
+        updatedCount += 1;
+      }
     }
 
-    updatedCount += 1;
+    const deactivatedCount = await deactivateMissingServices(syncedIds);
+
+    await insertSyncLog({
+      status: "success",
+      message: `Panel servisleri MySQL'e senkronize edildi. TRY: ${tryRate}, RUB: ${rubRate}. Yeni eklenen: ${insertedCount}. Güncellenen: ${updatedCount}. Pasife alınan servis: ${deactivatedCount}`,
+      total_fetched: panelServices.length,
+      total_inserted: insertedCount,
+      total_updated: updatedCount + deactivatedCount,
+    });
+
+    return {
+      success: true,
+      mode: "mysql-safe-sync",
+      totalFetched: panelServices.length,
+      totalInserted: insertedCount,
+      totalUpdated: updatedCount,
+      totalDeactivated: deactivatedCount,
+      tryRate,
+      rubRate,
+    };
+  } catch (error) {
+    await insertSyncLog({
+      status: "failed",
+      message: error instanceof Error ? error.message : "Panel servisleri senkronize edilemedi.",
+      total_fetched: panelServices.length,
+      total_inserted: insertedCount,
+      total_updated: updatedCount,
+    });
+
+    throw error;
   }
-
-  const deactivatedCount = await deactivateMissingServices(syncedIds);
-
-  await insertSyncLog({
-    status: "success",
-    message: `Panel servisleri güvenli şekilde senkronize edildi. TRY: ${tryRate}, RUB: ${rubRate}. Yeni eklenen: ${itemsToInsert.length}. Güncellenen: ${updatedCount}. Pasife alınan servis: ${deactivatedCount}`,
-    total_fetched: panelServices.length,
-    total_inserted: itemsToInsert.length,
-    total_updated: updatedCount + deactivatedCount,
-  });
-
-  return {
-    success: true,
-    mode: "safe-sync",
-    totalFetched: panelServices.length,
-    totalInserted: itemsToInsert.length,
-    totalUpdated: updatedCount,
-    totalDeactivated: deactivatedCount,
-    tryRate,
-    rubRate,
-  };
 }
 
 export async function POST(req: Request) {
