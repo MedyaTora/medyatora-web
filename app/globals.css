@@ -1,8 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #050812;
+  --foreground: #ffffff;
+
+  --mt-bg: #050812;
+  --mt-panel: rgba(18, 24, 38, 0.96);
+  --mt-border: rgba(255, 255, 255, 0.1);
+  --mt-border-strong: rgba(255, 255, 255, 0.16);
+  --mt-text-soft: rgba(255, 255, 255, 0.68);
+  --mt-emerald: #34d399;
+  --mt-sky: #38bdf8;
+  --mt-amber: #fbbf24;
 }
 
 @theme inline {
@@ -12,15 +21,189 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
+  background: var(--mt-bg);
 }
 
 body {
-  background: var(--background);
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(16, 185, 129, 0.12), transparent 34rem),
+    radial-gradient(circle at top right, rgba(56, 189, 248, 0.1), transparent 30rem),
+    #050812;
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgba(52, 211, 153, 0.35);
+  color: white;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(52, 211, 153, 0.42) rgba(255, 255, 255, 0.06);
+}
+
+*::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+*::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.045);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    180deg,
+    rgba(52, 211, 153, 0.7),
+    rgba(56, 189, 248, 0.45)
+  );
+  border-radius: 999px;
+  border: 2px solid rgba(5, 8, 18, 0.9);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(52, 211, 153, 0.9),
+    rgba(56, 189, 248, 0.65)
+  );
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a {
+  transition:
+    transform 180ms ease,
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    opacity 180ms ease,
+    box-shadow 180ms ease;
+}
+
+button:not(:disabled):active,
+a:active {
+  transform: scale(0.985);
+}
+
+input,
+select,
+textarea {
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  box-shadow:
+    0 0 0 1px rgba(52, 211, 153, 0.42),
+    0 0 0 5px rgba(52, 211, 153, 0.08);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: rgba(255, 255, 255, 0.28);
+}
+
+@keyframes mtFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes mtSoftPulse {
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+main > div {
+  animation: mtFadeUp 420ms ease both;
+}
+
+.fixed.inset-0 > div {
+  animation: mtFadeUp 220ms ease both;
+}
+
+.rounded-\[34px\],
+.rounded-\[32px\],
+.rounded-\[28px\] {
+  box-shadow:
+    0 18px 80px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.rounded-\[34px\]:hover,
+.rounded-\[32px\]:hover,
+.rounded-\[28px\]:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.bg-emerald-400,
+.bg-emerald-500 {
+  box-shadow: 0 12px 34px rgba(52, 211, 153, 0.16);
+}
+
+.bg-sky-500 {
+  box-shadow: 0 12px 34px rgba(56, 189, 248, 0.16);
+}
+
+@media (max-width: 640px) {
+  body {
+    background:
+      radial-gradient(circle at top, rgba(52, 211, 153, 0.1), transparent 24rem),
+      #050812;
+  }
+
+  main {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
+  }
 }

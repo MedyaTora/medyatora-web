@@ -11,7 +11,6 @@ import { trackVisitorAction } from "../components/visitor-tracker";
 import * as SiIcons from "react-icons/si";
 
 import {
-  FaBoxesStacked,
   FaFileInvoice,
   FaShieldHalved,
   FaUserCheck,
@@ -491,7 +490,7 @@ function OrderBeforeNotice({ t }: { t: ReturnType<typeof getDictionary> }) {
   ];
 
   return (
-    <section className="rounded-[32px] border border-amber-400/20 bg-gradient-to-br from-amber-400/10 to-white/[0.035] p-5 shadow-[0_18px_70px_rgba(0,0,0,0.28)] backdrop-blur sm:p-6">
+    <section className="rounded-[32px] border border-amber-400/20 bg-gradient-to-br from-amber-400/10 to-white/[0.035] p-5 shadow-[0_18px_70px_rgba(0,0,0,0.28)] ring-1 ring-white/[0.025] backdrop-blur-xl sm:p-6">
       <div className="mb-5">
         <p className="text-xs font-bold uppercase tracking-[0.22em] text-amber-300">
           {t.orderBeforeBadge}
@@ -510,7 +509,7 @@ function OrderBeforeNotice({ t }: { t: ReturnType<typeof getDictionary> }) {
         {notices.map((item) => (
           <div
             key={item.title}
-            className="rounded-2xl border border-white/10 bg-black/20 p-4"
+            className="rounded-2xl border border-white/10 bg-black/20 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition hover:-translate-y-0.5 hover:border-amber-300/25 hover:bg-black/25"
           >
             <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-amber-300">
               <item.icon />
@@ -1094,12 +1093,27 @@ export default function SmmToraPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#172033_0%,#0b1020_48%,#050812_100%)] px-4 py-6 text-white sm:px-6">
+    <main className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(52,211,153,0.18)_0%,transparent_30%),radial-gradient(circle_at_top_right,rgba(56,189,248,0.18)_0%,transparent_32%),radial-gradient(circle_at_50%_0%,rgba(99,102,241,0.16)_0%,transparent_38%),linear-gradient(180deg,#101a32_0%,#0b1020_42%,#070b16_100%)] px-4 py-6 text-white sm:px-6">
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#1c2740_0%,#0c1326_35%,#060914_70%,#03050d_100%)]" />
+
+        <div className="absolute left-[-120px] top-[-80px] h-[320px] w-[320px] rounded-full bg-emerald-500/12 blur-3xl" />
+        <div className="absolute right-[-100px] top-[120px] h-[280px] w-[280px] rounded-full bg-sky-500/12 blur-3xl" />
+        <div className="absolute bottom-[-120px] left-[18%] h-[260px] w-[260px] rounded-full bg-cyan-400/10 blur-3xl" />
+        <div className="absolute bottom-[-100px] right-[12%] h-[300px] w-[300px] rounded-full bg-indigo-500/10 blur-3xl" />
+
+        <div className="absolute inset-0 opacity-[0.05] [background-image:linear-gradient(to_right,white_1px,transparent_1px),linear-gradient(to_bottom,white_1px,transparent_1px)] [background-size:36px_36px]" />
+
+        <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.03),transparent_22%,transparent_78%,rgba(255,255,255,0.02))]" />
+      </div>
       <ServiceTermsModal />
 
       <div className="mx-auto max-w-7xl space-y-5">
-        <section className="overflow-hidden rounded-[34px] border border-white/10 bg-[#121826]/95 p-5 shadow-[0_18px_80px_rgba(0,0,0,0.35)] backdrop-blur sm:p-6">
-          <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
+        <section className="relative overflow-hidden rounded-[34px] border border-white/10 bg-[#121826]/90 p-5 shadow-[0_24px_100px_rgba(0,0,0,0.42)] ring-1 ring-white/[0.03] backdrop-blur-xl sm:p-6">
+          <div className="pointer-events-none absolute -right-32 -top-32 h-72 w-72 rounded-full bg-emerald-400/10 blur-3xl" />
+          <div className="pointer-events-none absolute -left-24 bottom-0 h-64 w-64 rounded-full bg-sky-400/10 blur-3xl" />
+
+          <div className="relative flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
             <div className="min-w-0">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-xs font-semibold text-emerald-300">
                 <span className="h-2 w-2 rounded-full bg-emerald-400" />
@@ -1126,7 +1140,7 @@ export default function SmmToraPage() {
                   return (
                     <div
                       key={title as string}
-                      className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3"
+                      className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:border-emerald-400/20 hover:bg-white/[0.075]"
                     >
                       <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-black/20 text-emerald-300">
                         <IconComponent />
@@ -1139,7 +1153,7 @@ export default function SmmToraPage() {
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 xl:min-w-[430px]">
-              <div className="rounded-3xl border border-white/10 bg-white/[0.035] p-4">
+              <div className="rounded-3xl border border-white/10 bg-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
                 <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-white/45">
                   {t.language}
                 </p>
@@ -1152,10 +1166,10 @@ export default function SmmToraPage() {
                         key={locale}
                         type="button"
                         onClick={() => setSelectedLocale(locale)}
-                        className={`rounded-full px-4 py-2 text-xs font-bold transition sm:text-sm ${
+                        className={`rounded-full border px-4 py-2 text-xs font-bold transition sm:text-sm ${
                           active
-                            ? "bg-emerald-400 text-black"
-                            : "bg-white/10 text-white/80 hover:bg-white/15"
+                            ? "border-emerald-300 bg-emerald-400 text-black shadow-[0_10px_28px_rgba(52,211,153,0.18)]"
+                            : "border-white/10 bg-white/10 text-white/80 hover:border-white/20 hover:bg-white/15"
                         }`}
                       >
                         {locale.toUpperCase()}
@@ -1165,7 +1179,7 @@ export default function SmmToraPage() {
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-white/10 bg-white/[0.035] p-4">
+              <div className="rounded-3xl border border-white/10 bg-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
                 <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-white/45">
                   {t.currency}
                 </p>
@@ -1181,10 +1195,10 @@ export default function SmmToraPage() {
                           setSelectedCurrency(currency);
                           clearStatusMessages();
                         }}
-                        className={`rounded-full px-4 py-2 text-xs font-bold transition sm:text-sm ${
+                        className={`rounded-full border px-4 py-2 text-xs font-bold transition sm:text-sm ${
                           active
-                            ? "bg-emerald-400 text-black"
-                            : "bg-white/10 text-white/80 hover:bg-white/15"
+                            ? "border-emerald-300 bg-emerald-400 text-black shadow-[0_10px_28px_rgba(52,211,153,0.18)]"
+                            : "border-white/10 bg-white/10 text-white/80 hover:border-white/20 hover:bg-white/15"
                         }`}
                       >
                         {currency}
@@ -1199,7 +1213,7 @@ export default function SmmToraPage() {
 
         <OrderBeforeNotice t={t} />
 
-        <section className="rounded-[34px] border border-white/10 bg-[#121826]/95 p-5 shadow-[0_18px_80px_rgba(0,0,0,0.32)] backdrop-blur sm:p-6">
+        <section className="rounded-[34px] border border-white/10 bg-[#121826]/90 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.34)] ring-1 ring-white/[0.025] backdrop-blur-xl sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/45">
@@ -1213,7 +1227,7 @@ export default function SmmToraPage() {
             <button
               type="button"
               onClick={goToCart}
-              className="rounded-2xl border border-sky-400/20 bg-sky-400/10 px-4 py-2 text-sm font-bold text-sky-300 transition hover:bg-sky-400/15"
+              className="rounded-2xl border border-sky-400/20 bg-sky-400/10 px-4 py-2 text-sm font-bold text-sky-300 transition hover:-translate-y-0.5 hover:bg-sky-400/15"
             >
               {t.goToCart}
             </button>
@@ -1253,10 +1267,10 @@ export default function SmmToraPage() {
                           },
                         });
                       }}
-                      className={`group relative overflow-hidden rounded-3xl border p-4 text-left transition hover:-translate-y-0.5 ${
+                      className={`group relative overflow-hidden rounded-3xl border p-4 text-left transition duration-200 hover:-translate-y-1 ${
                         active
-                          ? "border-emerald-400 bg-emerald-400/10 shadow-[0_0_0_1px_rgba(52,211,153,0.14)]"
-                          : "border-white/10 bg-white/[0.045] hover:border-white/20 hover:bg-white/[0.075]"
+                          ? "border-emerald-400/80 bg-emerald-400/12 shadow-[0_18px_50px_rgba(52,211,153,0.12),0_0_0_1px_rgba(52,211,153,0.16)]"
+                          : "border-white/10 bg-white/[0.045] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] hover:border-white/20 hover:bg-white/[0.08] hover:shadow-[0_16px_45px_rgba(0,0,0,0.22)]"
                       }`}
                     >
                       <div
@@ -1306,7 +1320,7 @@ export default function SmmToraPage() {
                   <button
                     type="button"
                     onClick={() => setShowAllPlatforms((prev) => !prev)}
-                    className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold text-white/75 transition hover:bg-white/10 hover:text-white"
+                    className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold text-white/75 transition hover:-translate-y-0.5 hover:bg-white/10 hover:text-white"
                   >
                     {showAllPlatforms
                       ? t.showLessPlatforms
@@ -1318,7 +1332,7 @@ export default function SmmToraPage() {
           )}
         </section>
 
-        <section className="rounded-[34px] border border-white/10 bg-[#121826]/95 p-5 shadow-[0_18px_80px_rgba(0,0,0,0.32)] backdrop-blur sm:p-6">
+        <section className="rounded-[34px] border border-white/10 bg-[#121826]/90 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.34)] ring-1 ring-white/[0.025] backdrop-blur-xl sm:p-6">
           <p className="mb-4 text-xs font-bold uppercase tracking-[0.2em] text-white/45">
             {t.categorySelection}
           </p>
@@ -1358,10 +1372,10 @@ export default function SmmToraPage() {
                         },
                       });
                     }}
-                    className={`rounded-full px-4 py-2 text-xs font-bold transition sm:text-sm ${
+                    className={`rounded-full border px-4 py-2 text-xs font-bold transition sm:text-sm ${
                       active
-                        ? "bg-emerald-400 text-black"
-                        : "bg-white/10 text-white/80 hover:bg-white/15"
+                        ? "border-emerald-300 bg-emerald-400 text-black shadow-[0_10px_28px_rgba(52,211,153,0.18)]"
+                        : "border-white/10 bg-white/10 text-white/80 hover:border-white/20 hover:bg-white/15"
                     }`}
                   >
                     {getCategoryLabel(category.name, selectedLocale)}
@@ -1374,7 +1388,7 @@ export default function SmmToraPage() {
 
         <section className="grid gap-5 xl:grid-cols-[1.12fr_0.88fr]">
           <div className="space-y-5">
-            <div className="rounded-[34px] border border-white/10 bg-[#121826]/95 p-5 shadow-[0_18px_80px_rgba(0,0,0,0.32)] backdrop-blur sm:p-6">
+            <div className="rounded-[34px] border border-white/10 bg-[#121826]/90 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.34)] ring-1 ring-white/[0.025] backdrop-blur-xl sm:p-6">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/45">
@@ -1390,7 +1404,7 @@ export default function SmmToraPage() {
                     <button
                       type="button"
                       onClick={() => scrollProducts("up")}
-                      className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-white/80 transition hover:bg-white/10 sm:text-sm"
+                      className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-white/80 transition hover:-translate-y-0.5 hover:bg-white/10 sm:text-sm"
                     >
                       {t.up}
                     </button>
@@ -1398,7 +1412,7 @@ export default function SmmToraPage() {
                     <button
                       type="button"
                       onClick={() => scrollProducts("down")}
-                      className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-white/80 transition hover:bg-white/10 sm:text-sm"
+                      className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-white/80 transition hover:-translate-y-0.5 hover:bg-white/10 sm:text-sm"
                     >
                       {t.down}
                     </button>
@@ -1410,7 +1424,7 @@ export default function SmmToraPage() {
                 <button
                   type="button"
                   onClick={() => setShowServiceFilters((prev) => !prev)}
-                  className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm font-bold text-white/80 transition hover:bg-white/[0.1] hover:text-white"
+                  className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm font-bold text-white/80 transition hover:-translate-y-0.5 hover:bg-white/[0.1] hover:text-white"
                 >
                   <span>{t.filter}</span>
                 </button>
@@ -1425,7 +1439,7 @@ export default function SmmToraPage() {
                   value={serviceSearch}
                   onChange={(e) => setServiceSearch(e.target.value)}
                   placeholder={t.searchPlaceholder}
-                  className="w-full rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-sm text-white outline-none placeholder:text-white/30 focus:border-emerald-400"
+                  className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-sm text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
                 />
 
                 {serviceSearch.trim() ? (
@@ -1437,7 +1451,7 @@ export default function SmmToraPage() {
               </div>
 
               {showServiceFilters && (
-                <div className="mb-4 rounded-3xl border border-white/10 bg-black/20 p-4">
+                <div className="mb-4 rounded-3xl border border-white/10 bg-black/20 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
                   <div className="grid gap-3 md:grid-cols-4">
                     <div>
                       <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-white/40">
@@ -1448,7 +1462,7 @@ export default function SmmToraPage() {
                         onChange={(event) =>
                           setQualityFilter(event.target.value as QualityFilter)
                         }
-                        className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none"
+                        className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-sm text-white outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
                       >
                         <option value="all" className="bg-[#111827]">
                           {t.all}
@@ -1474,7 +1488,7 @@ export default function SmmToraPage() {
                         onChange={(event) =>
                           setGuaranteeFilter(event.target.value as GuaranteeFilter)
                         }
-                        className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none"
+                        className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-sm text-white outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
                       >
                         <option value="all" className="bg-[#111827]">
                           {t.all}
@@ -1497,7 +1511,7 @@ export default function SmmToraPage() {
                         onChange={(event) =>
                           setRegionFilter(event.target.value as RegionFilter)
                         }
-                        className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none"
+                        className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-sm text-white outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
                       >
                         <option value="all" className="bg-[#111827]">
                           {t.all}
@@ -1523,7 +1537,7 @@ export default function SmmToraPage() {
                         onChange={(event) =>
                           setPriceSort(event.target.value as PriceSort)
                         }
-                        className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none"
+                        className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-sm text-white outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
                       >
                         <option value="smart" className="bg-[#111827]">
                           {t.recommendedSort}
@@ -1542,7 +1556,7 @@ export default function SmmToraPage() {
                     <button
                       type="button"
                       onClick={resetServiceFilters}
-                      className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-bold text-white/70 transition hover:bg-white/[0.08] hover:text-white"
+                      className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-bold text-white/70 transition hover:-translate-y-0.5 hover:bg-white/[0.08] hover:text-white"
                     >
                       {t.clearFilters}
                     </button>
@@ -1608,10 +1622,10 @@ export default function SmmToraPage() {
                             },
                           });
                         }}
-                        className={`w-full rounded-2xl border px-4 py-4 text-left transition ${
+                        className={`group relative w-full overflow-hidden rounded-3xl border px-4 py-4 text-left transition duration-200 hover:-translate-y-0.5 ${
                           active
-                            ? "border-emerald-400 bg-emerald-500/15 shadow-[0_0_0_1px_rgba(52,211,153,0.12)]"
-                            : "border-white/10 bg-white/5 hover:bg-white/10"
+                            ? "border-emerald-400/80 bg-gradient-to-br from-emerald-500/18 to-white/[0.055] shadow-[0_18px_55px_rgba(52,211,153,0.12),0_0_0_1px_rgba(52,211,153,0.14)]"
+                            : "border-white/10 bg-white/[0.045] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] hover:border-white/20 hover:bg-white/[0.075] hover:shadow-[0_16px_45px_rgba(0,0,0,0.22)]"
                         }`}
                       >
                         <div className="flex items-start justify-between gap-4">
@@ -1658,8 +1672,10 @@ export default function SmmToraPage() {
                             </div>
                           </div>
 
-                          <div className="shrink-0 rounded-2xl border border-emerald-400/15 bg-emerald-400/5 px-3 py-2 text-right">
-                            <p className="text-[11px] text-white/45 sm:text-xs">{t.per1000}</p>
+                          <div className="shrink-0 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-right shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                            <p className="text-[11px] text-white/45 sm:text-xs">
+                              {t.per1000}
+                            </p>
                             <p className="mt-1 text-base font-bold text-emerald-300 sm:text-lg">
                               {formatPrice(unitPrice, selectedCurrency)}
                             </p>
@@ -1672,7 +1688,7 @@ export default function SmmToraPage() {
               )}
             </div>
 
-            <div className="rounded-[34px] border border-white/10 bg-[#121826]/95 p-5 shadow-[0_18px_80px_rgba(0,0,0,0.32)] backdrop-blur sm:p-6">
+            <div className="rounded-[34px] border border-white/10 bg-[#121826]/90 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.34)] ring-1 ring-white/[0.025] backdrop-blur-xl sm:p-6">
               <div className="mb-4 flex flex-wrap gap-2">
                 {[
                   ["service", t.serviceInfo],
@@ -1683,10 +1699,10 @@ export default function SmmToraPage() {
                     key={key}
                     type="button"
                     onClick={() => setInfoTab(key as "service" | "before" | "notes")}
-                    className={`rounded-xl px-4 py-2 text-sm font-bold transition ${
+                    className={`rounded-xl border px-4 py-2 text-sm font-bold transition ${
                       infoTab === key
-                        ? "bg-emerald-500 text-black"
-                        : "bg-white/5 text-white/75"
+                        ? "border-emerald-300 bg-emerald-400 text-black shadow-[0_10px_28px_rgba(52,211,153,0.18)]"
+                        : "border-white/10 bg-white/5 text-white/75 hover:bg-white/10"
                     }`}
                   >
                     {label}
@@ -1721,14 +1737,14 @@ export default function SmmToraPage() {
           </div>
 
           <div className="space-y-5">
-            <div className="rounded-[34px] border border-white/10 bg-[#121826]/95 p-5 shadow-[0_18px_80px_rgba(0,0,0,0.32)] backdrop-blur sm:p-6">
+            <div className="rounded-[34px] border border-white/10 bg-[#121826]/90 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.34)] ring-1 ring-white/[0.025] backdrop-blur-xl sm:p-6">
               <p className="mb-4 text-xs font-bold uppercase tracking-[0.2em] text-white/45">
                 {t.orderInfo}
               </p>
 
               {selectedService ? (
                 <div className="mb-4 space-y-3">
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                  <div className="rounded-2xl border border-emerald-400/15 bg-gradient-to-br from-emerald-400/10 to-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="font-bold text-white">
                         {getLocalizedServiceTitle(selectedService.title, selectedLocale)}
@@ -1761,8 +1777,10 @@ export default function SmmToraPage() {
                     </p>
                   </div>
 
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                    <p className="text-sm font-bold text-white/85">{t.productDescription}</p>
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.055] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
+                    <p className="text-sm font-bold text-white/85">
+                      {t.productDescription}
+                    </p>
                     <p className="mt-2 whitespace-pre-line text-sm leading-6 text-white/60">
                       {getLocalizedServiceDescription(
                         selectedService.description,
@@ -1772,7 +1790,7 @@ export default function SmmToraPage() {
                   </div>
                 </div>
               ) : (
-                <div className="mb-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm text-white/50">
+                <div className="mb-4 rounded-2xl border border-white/10 bg-white/[0.055] p-4 text-sm text-white/50">
                   {t.selectProductFirst}
                 </div>
               )}
@@ -1799,14 +1817,14 @@ export default function SmmToraPage() {
                     }
                   }}
                   placeholder={t.targetUsername}
-                  className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none placeholder:text-white/30 focus:border-emerald-400"
+                  className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
                 />
 
                 <input
                   value={targetLink}
                   onChange={(e) => setTargetLink(e.target.value)}
                   placeholder={t.targetLink}
-                  className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none placeholder:text-white/30 focus:border-emerald-400"
+                  className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
                 />
 
                 <input
@@ -1838,7 +1856,7 @@ export default function SmmToraPage() {
                     }
                   }}
                   placeholder={t.quantity}
-                  className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none placeholder:text-white/30 focus:border-emerald-400"
+                  className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
                 />
 
                 {selectedService && (
@@ -1853,10 +1871,10 @@ export default function SmmToraPage() {
                   value={orderNote}
                   onChange={(e) => setOrderNote(e.target.value)}
                   placeholder={t.orderNote}
-                  className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none placeholder:text-white/30 focus:border-emerald-400"
+                  className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
                 />
 
-                <div className="rounded-2xl border border-emerald-400/10 bg-emerald-400/5 p-4">
+                <div className="rounded-2xl border border-emerald-400/20 bg-gradient-to-br from-emerald-400/12 to-emerald-400/[0.035] p-4 shadow-[0_14px_42px_rgba(52,211,153,0.08),inset_0_1px_0_rgba(255,255,255,0.04)]">
                   <p className="text-sm text-white/50">{t.totalSalePrice}</p>
                   <p className="mt-1 text-2xl font-bold text-white">
                     {totalPrice > 0 ? formatPrice(totalPrice, selectedCurrency) : "-"}
@@ -1868,7 +1886,7 @@ export default function SmmToraPage() {
                     type="button"
                     onClick={handleOpenSingleCheckout}
                     disabled={!canUseCurrentForm}
-                    className="rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-bold text-black transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-4 py-3 text-sm font-black text-black shadow-[0_16px_38px_rgba(52,211,153,0.18)] transition hover:-translate-y-0.5 hover:from-emerald-300 hover:to-emerald-400 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
                   >
                     {t.buyNow}
                   </button>
@@ -1877,7 +1895,7 @@ export default function SmmToraPage() {
                     type="button"
                     onClick={handleAddToCart}
                     disabled={!canUseCurrentForm}
-                    className="rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-3 text-sm font-bold text-emerald-300 transition hover:bg-emerald-400/15 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-3 text-sm font-bold text-emerald-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:bg-emerald-400/15 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
                   >
                     {t.addToCart}
                   </button>
@@ -1885,7 +1903,7 @@ export default function SmmToraPage() {
                   <button
                     type="button"
                     onClick={goToCart}
-                    className="rounded-2xl border border-sky-400/20 bg-sky-400/10 px-4 py-3 text-sm font-bold text-sky-300 transition hover:bg-sky-400/15"
+                    className="rounded-2xl border border-sky-400/20 bg-sky-400/10 px-4 py-3 text-sm font-bold text-sky-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:bg-sky-400/15"
                   >
                     {t.goToCart}
                   </button>
@@ -1895,7 +1913,7 @@ export default function SmmToraPage() {
 
             <div
               ref={cartSectionRef}
-              className="rounded-[34px] border border-white/10 bg-[#121826]/95 p-5 shadow-[0_18px_80px_rgba(0,0,0,0.32)] backdrop-blur sm:p-6"
+              className="rounded-[34px] border border-white/10 bg-[#121826]/90 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.34)] ring-1 ring-white/[0.025] backdrop-blur-xl sm:p-6"
             >
               <div className="mb-4 flex items-center justify-between gap-3">
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/45">
@@ -1906,7 +1924,7 @@ export default function SmmToraPage() {
                   <button
                     type="button"
                     onClick={handleOpenCartCheckout}
-                    className="rounded-xl bg-emerald-500 px-4 py-2 text-xs font-bold text-black transition hover:bg-emerald-400 sm:text-sm"
+                    className="rounded-xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-4 py-2 text-xs font-black text-black shadow-[0_12px_30px_rgba(52,211,153,0.16)] transition hover:-translate-y-0.5 hover:from-emerald-300 hover:to-emerald-400 sm:text-sm"
                   >
                     {t.bulkBuy}
                   </button>
@@ -1922,18 +1940,22 @@ export default function SmmToraPage() {
                   {cartItems.map((item) => (
                     <div
                       key={item.cartId}
-                      className="rounded-2xl border border-white/10 bg-white/[0.04] p-4"
+                      className="rounded-3xl border border-white/10 bg-white/[0.055] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition hover:border-white/15 hover:bg-white/[0.075]"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="text-sm font-bold text-white">{item.service_title}</p>
+                          <p className="text-sm font-bold text-white">
+                            {item.service_title}
+                          </p>
                           <div className="mt-2 space-y-1 text-xs text-white/55 sm:text-sm">
                             <p>{t.serviceNo}: {item.site_code}</p>
                             <p>{t.targetUsername}: {item.target_username}</p>
                             <p>{t.targetLink}: {item.target_link || "-"}</p>
                             <p>{t.quantity}: {item.quantity}</p>
                             <p>{t.orderNote}: {item.order_note || "-"}</p>
-                            <p>{t.per1000}: {formatPrice(item.unit_price, selectedCurrency)}</p>
+                            <p>
+                              {t.per1000}: {formatPrice(item.unit_price, selectedCurrency)}
+                            </p>
                             <p>
                               {t.totalSalePrice}:{" "}
                               {formatPrice(item.total_price, selectedCurrency)}
@@ -1945,7 +1967,7 @@ export default function SmmToraPage() {
                           <button
                             type="button"
                             onClick={() => handleEditCartItem(item.cartId)}
-                            className="rounded-xl border border-amber-400/20 bg-amber-400/10 px-3 py-2 text-xs font-bold text-amber-300 transition hover:bg-amber-400/15"
+                            className="rounded-xl border border-amber-400/20 bg-amber-400/10 px-3 py-2 text-xs font-bold text-amber-300 transition hover:-translate-y-0.5 hover:bg-amber-400/15"
                           >
                             {t.edit}
                           </button>
@@ -1953,7 +1975,7 @@ export default function SmmToraPage() {
                           <button
                             type="button"
                             onClick={() => handleRemoveCartItem(item.cartId)}
-                            className="rounded-xl border border-rose-400/20 bg-rose-400/10 px-3 py-2 text-xs font-bold text-rose-300 transition hover:bg-rose-400/15"
+                            className="rounded-xl border border-rose-400/20 bg-rose-400/10 px-3 py-2 text-xs font-bold text-rose-300 transition hover:-translate-y-0.5 hover:bg-rose-400/15"
                           >
                             {t.remove}
                           </button>
@@ -1965,7 +1987,7 @@ export default function SmmToraPage() {
               )}
 
               <div className="mt-4 space-y-3">
-                <div className="rounded-2xl border border-emerald-400/15 bg-emerald-400/5 p-4">
+                <div className="rounded-2xl border border-emerald-400/20 bg-gradient-to-br from-emerald-400/12 to-emerald-400/[0.035] p-4 shadow-[0_14px_42px_rgba(52,211,153,0.08),inset_0_1px_0_rgba(255,255,255,0.04)]">
                   <div className="flex items-center justify-between text-sm text-white/60">
                     <span>{t.cartTotal}</span>
                     <span className="text-lg font-bold text-emerald-300">
@@ -1996,8 +2018,8 @@ export default function SmmToraPage() {
       </div>
 
       {checkoutMode && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-[28px] border border-white/10 bg-[#121826] p-5 shadow-[0_20px_80px_rgba(0,0,0,0.45)]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+          <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-[32px] border border-white/10 bg-[#121826]/95 p-5 shadow-[0_28px_120px_rgba(0,0,0,0.58)] ring-1 ring-white/[0.035] backdrop-blur-xl">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-2xl font-bold text-white">{t.checkoutTitle}</h2>
@@ -2009,7 +2031,7 @@ export default function SmmToraPage() {
               <button
                 type="button"
                 onClick={() => setCheckoutMode(null)}
-                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/70 hover:bg-white/10"
+                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/70 transition hover:bg-white/10"
               >
                 {t.close}
               </button>
@@ -2020,7 +2042,7 @@ export default function SmmToraPage() {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder={t.fullName}
-                className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none placeholder:text-white/30 focus:border-emerald-400"
+                className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
               />
 
               <input
@@ -2028,13 +2050,13 @@ export default function SmmToraPage() {
                 onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))}
                 placeholder={t.phoneNumber}
                 inputMode="numeric"
-                className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none placeholder:text-white/30 focus:border-emerald-400"
+                className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
               />
 
               <select
                 value={contactType}
                 onChange={(e) => setContactType(e.target.value as ContactType)}
-                className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none focus:border-emerald-400"
+                className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
               >
                 <option value="" className="bg-[#121826]">
                   {t.contactTypeSelect}
@@ -2050,7 +2072,7 @@ export default function SmmToraPage() {
                 value={contactValue}
                 onChange={(e) => setContactValue(e.target.value)}
                 placeholder={t.contactValue}
-                className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none placeholder:text-white/30 focus:border-emerald-400"
+                className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
               />
             </div>
 
@@ -2059,7 +2081,7 @@ export default function SmmToraPage() {
               <p className="mt-1">{t.contactWarning2}</p>
             </div>
 
-            <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+            <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.055] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
               <p className="text-sm font-bold text-white">{t.paymentMethod}</p>
               <p className="mt-1 text-sm leading-6 text-white/60">
                 {t.paymentMethodDesc}
@@ -2088,7 +2110,7 @@ export default function SmmToraPage() {
                   }}
                   className={`rounded-2xl border p-4 text-left transition ${
                     paymentMethod === "turkey_bank"
-                      ? "border-emerald-400 bg-emerald-400/10"
+                      ? "border-emerald-400 bg-emerald-400/10 shadow-[0_12px_34px_rgba(52,211,153,0.12)]"
                       : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
                   }`}
                 >
@@ -2120,7 +2142,7 @@ export default function SmmToraPage() {
                   }}
                   className={`rounded-2xl border p-4 text-left transition ${
                     paymentMethod === "support"
-                      ? "border-sky-400 bg-sky-400/10"
+                      ? "border-sky-400 bg-sky-400/10 shadow-[0_12px_34px_rgba(56,189,248,0.12)]"
                       : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
                   }`}
                 >
@@ -2163,7 +2185,7 @@ export default function SmmToraPage() {
               )}
             </div>
 
-            <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+            <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.055] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
               <div className="flex items-center justify-between text-sm text-white/60">
                 <span>{t.servicesToConfirm}</span>
                 <span>{checkoutItems.length}</span>
@@ -2190,7 +2212,7 @@ export default function SmmToraPage() {
                 type="button"
                 onClick={submitItems}
                 disabled={!isCheckoutValid || loading}
-                className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-bold text-black transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-5 py-3 text-sm font-black text-black shadow-[0_16px_38px_rgba(52,211,153,0.18)] transition hover:-translate-y-0.5 hover:from-emerald-300 hover:to-emerald-400 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
               >
                 {loading ? t.sending : t.confirmPurchase}
               </button>
@@ -2200,8 +2222,8 @@ export default function SmmToraPage() {
       )}
 
       {successOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-2xl rounded-[28px] border border-white/10 bg-[#121826] p-5 shadow-[0_20px_80px_rgba(0,0,0,0.45)]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-2xl rounded-[32px] border border-white/10 bg-[#121826]/95 p-5 shadow-[0_28px_120px_rgba(0,0,0,0.58)] ring-1 ring-white/[0.035] backdrop-blur-xl">
             <h2 className="text-2xl font-bold text-white">{t.orderConfirmedTitle}</h2>
 
             <p className="mt-2 text-sm leading-6 text-white/60">
@@ -2212,7 +2234,7 @@ export default function SmmToraPage() {
               {createdOrderNumbers.map((number) => (
                 <div
                   key={number}
-                  className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4"
+                  className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]"
                 >
                   <p className="text-sm text-emerald-200">{t.yourOrderNumber}</p>
                   <p className="mt-1 text-lg font-bold text-white">{number}</p>
@@ -2220,7 +2242,7 @@ export default function SmmToraPage() {
               ))}
             </div>
 
-            <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+            <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.055] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
               <p className="text-sm font-bold text-white">{t.paymentStepTitle}</p>
 
               <p className="mt-1 text-sm leading-6 text-white/60">
@@ -2232,7 +2254,7 @@ export default function SmmToraPage() {
                   href={buildTelegramLink(createdOrderNumbers, selectedLocale)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="rounded-2xl bg-sky-500 px-5 py-3 text-center text-sm font-bold text-black transition hover:bg-sky-400"
+                  className="rounded-2xl bg-sky-500 px-5 py-3 text-center text-sm font-bold text-black shadow-[0_16px_38px_rgba(56,189,248,0.16)] transition hover:-translate-y-0.5 hover:bg-sky-400"
                 >
                   {t.telegramPaymentInfo}
                 </a>
@@ -2241,7 +2263,7 @@ export default function SmmToraPage() {
                   href={buildWhatsappLink(createdOrderNumbers, selectedLocale)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="rounded-2xl bg-emerald-500 px-5 py-3 text-center text-sm font-bold text-black transition hover:bg-emerald-400"
+                  className="rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-5 py-3 text-center text-sm font-black text-black shadow-[0_16px_38px_rgba(52,211,153,0.18)] transition hover:-translate-y-0.5 hover:from-emerald-300 hover:to-emerald-400"
                 >
                   {t.whatsappPaymentInfo}
                 </a>
@@ -2252,7 +2274,7 @@ export default function SmmToraPage() {
               <button
                 type="button"
                 onClick={() => setSuccessOpen(false)}
-                className="rounded-2xl bg-white px-5 py-3 text-sm font-bold text-black transition hover:bg-white/90"
+                className="rounded-2xl bg-white px-5 py-3 text-sm font-bold text-black transition hover:-translate-y-0.5 hover:bg-white/90"
               >
                 {t.ok}
               </button>
