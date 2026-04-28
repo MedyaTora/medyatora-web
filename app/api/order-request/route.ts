@@ -1,6 +1,11 @@
 import https from "https";
 import { NextResponse } from "next/server";
 import { getMysqlPool, hasMysqlConfig } from "@/lib/mysql";
+import {
+  mapDbServiceToOrderItem,
+  type DbServiceRow,
+  type OrderServiceItem,
+} from "@/lib/services";
 
 type CurrencyCode = "TL" | "USD" | "RUB";
 type ContactType = "Telegram" | "WhatsApp" | "Instagram" | "E-posta";
@@ -9,16 +14,16 @@ type PaymentMethod = "turkey_bank" | "support";
 type OrderItemPayload = {
   service_id: number;
   site_code: number;
-  service_title: string;
-  platform: string;
-  category: string;
+  service_title?: string;
+  platform?: string;
+  category?: string;
   quantity: number;
-  unit_price: number;
-  total_price: number;
-  unit_cost_price: number;
-  total_cost_price: number;
-  guarantee_label: string;
-  speed: string;
+  unit_price?: number;
+  total_price?: number;
+  unit_cost_price?: number;
+  total_cost_price?: number;
+  guarantee_label?: string;
+  speed?: string;
   target_username?: string;
   target_link?: string;
   order_note?: string;
@@ -53,9 +58,10 @@ function getPaymentMethodLabel(method: PaymentMethod) {
 function createBatchCode() {
   const random = Math.random().toString(36).slice(2, 8).toUpperCase();
   const now = new Date();
-  const datePart = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(
-    now.getDate()
-  ).padStart(2, "0")}`;
+  const datePart = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(
+    2,
+    "0"
+  )}${String(now.getDate()).padStart(2, "0")}`;
 
   return `MT-BATCH-${datePart}-${random}`;
 }
@@ -63,19 +69,16 @@ function createBatchCode() {
 function createOrderNumber() {
   const random = Math.random().toString(36).slice(2, 7).toUpperCase();
   const now = new Date();
-  const datePart = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(
-    now.getDate()
-  ).padStart(2, "0")}`;
+  const datePart = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(
+    2,
+    "0"
+  )}${String(now.getDate()).padStart(2, "0")}`;
 
   return `MT-ORD-${datePart}-${random}`;
 }
 
 function isPositiveNumber(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) && value > 0;
-}
-
-function isZeroOrPositiveNumber(value: unknown) {
-  return typeof value === "number" && Number.isFinite(value) && value >= 0;
 }
 
 function isNonEmptyString(value: unknown) {
@@ -94,7 +97,28 @@ function roundMoney(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
-function validateItem(item: unknown): item is OrderItemPayload {
+function toNumber(value: unknown) {
+  const num = Number(value || 0);
+  return Number.isFinite(num) ? num : 0;
+}
+
+function toBoolean(value: unknown) {
+  return value === true || value === 1 || value === "1";
+}
+
+function getUnitSalePrice(service: OrderServiceItem, currency: CurrencyCode) {
+  if (currency === "USD") return service.salePriceUsd;
+  if (currency === "RUB") return service.salePriceRub;
+  return service.salePriceTl;
+}
+
+function getUnitCostPrice(service: OrderServiceItem, currency: CurrencyCode) {
+  if (currency === "USD") return service.costPriceUsd;
+  if (currency === "RUB") return service.costPriceRub;
+  return service.costPriceTl;
+}
+
+function validateItemBasic(item: unknown): item is OrderItemPayload {
   if (!item || typeof item !== "object") return false;
 
   const x = item as Record<string, unknown>;
@@ -102,16 +126,7 @@ function validateItem(item: unknown): item is OrderItemPayload {
   return (
     isPositiveNumber(x.service_id) &&
     isPositiveNumber(x.site_code) &&
-    isNonEmptyString(x.service_title) &&
-    isNonEmptyString(x.platform) &&
-    isNonEmptyString(x.category) &&
-    isPositiveNumber(x.quantity) &&
-    isZeroOrPositiveNumber(x.unit_price) &&
-    isZeroOrPositiveNumber(x.total_price) &&
-    isZeroOrPositiveNumber(x.unit_cost_price) &&
-    isZeroOrPositiveNumber(x.total_cost_price) &&
-    isNonEmptyString(x.guarantee_label) &&
-    isNonEmptyString(x.speed)
+    isPositiveNumber(x.quantity)
   );
 }
 
@@ -205,6 +220,94 @@ async function sendTelegramMessage(text: string) {
   }
 }
 
+async function getVerifiedServiceForOrder(params: {
+  serviceId: number;
+  siteCode: number;
+}) {
+  const pool = getMysqlPool();
+
+  const [rows] = await pool.query(
+    `
+    SELECT
+      id,
+      panel_service_id,
+      site_code,
+      platform,
+      category,
+      original_name,
+      clean_title,
+      subtitle,
+      guarantee,
+      guarantee_label,
+      min,
+      max,
+      speed,
+      level,
+      description,
+      tl_cost_price,
+      usd_cost_price,
+      tl_sale_price,
+      usd_sale_price,
+      rub_sale_price,
+      manual_title,
+      manual_description,
+      manual_sale_price_tl
+    FROM services
+    WHERE is_active = 1
+      AND public_visible = 1
+      AND review_status = 'approved'
+      AND product_type = 'single'
+      AND public_page = 'paketler'
+      AND panel_service_id = ?
+      AND site_code = ?
+      AND tl_sale_price > 0
+      AND usd_sale_price > 0
+      AND rub_sale_price > 0
+      AND min > 0
+      AND max > 0
+    LIMIT 1
+    `,
+    [params.serviceId, params.siteCode]
+  );
+
+  const row = (rows as any[])[0];
+
+  if (!row) {
+    return null;
+  }
+
+  const dbRow: DbServiceRow = {
+    id: Number(row.id),
+    panel_service_id: Number(row.panel_service_id),
+    site_code: Number(row.site_code),
+    platform: row.platform || "",
+    category: row.category || "",
+    original_name: row.original_name || "",
+    clean_title: row.clean_title || "",
+    subtitle: row.subtitle || "",
+    guarantee: toBoolean(row.guarantee),
+    guarantee_label: row.guarantee_label || "",
+    min: toNumber(row.min),
+    max: toNumber(row.max),
+    speed: row.speed || "",
+    level: row.level || "",
+    description: row.description || "",
+    tl_cost_price: toNumber(row.tl_cost_price),
+    usd_cost_price: toNumber(row.usd_cost_price),
+    tl_sale_price: toNumber(row.tl_sale_price),
+    usd_sale_price: toNumber(row.usd_sale_price),
+    rub_sale_price: toNumber(row.rub_sale_price),
+    manual_title: row.manual_title || null,
+    manual_description: row.manual_description || null,
+    manual_sale_price_tl:
+      row.manual_sale_price_tl === null
+        ? null
+        : toNumber(row.manual_sale_price_tl),
+  };
+
+  return mapDbServiceToOrderItem(dbRow);
+}
+
 export async function POST(req: Request) {
   try {
     const rawBody = await req.json();
@@ -226,9 +329,7 @@ export async function POST(req: Request) {
         : "";
 
     const contactType = body.contact_type;
-
     const contactValue = normalizeString(body.contact_value);
-
     const currency = body.currency;
     const paymentMethod = body.payment_method;
     const items = Array.isArray(body.items) ? body.items : [];
@@ -282,9 +383,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const hasInvalidItem = items.some((item) => !validateItem(item));
-
-    if (hasInvalidItem) {
+    if (items.some((item) => !validateItemBasic(item))) {
       return NextResponse.json(
         { success: false, error: "Sipariş hizmetlerinden biri geçersiz." },
         { status: 400 }
@@ -304,43 +403,72 @@ export async function POST(req: Request) {
       );
     }
 
-    const safeItems = items as OrderItemPayload[];
     const batchCode = createBatchCode();
 
-    const rows = safeItems.map((item) => {
-      const quantity = Number(item.quantity);
-      const unitPrice = roundMoney(Number(item.unit_price));
-      const totalPrice = roundMoney(Number(item.total_price));
-      const unitCostPrice = roundMoney(Number(item.unit_cost_price));
-      const totalCostPrice = roundMoney(Number(item.total_cost_price));
+    const rows = [];
 
-      return {
+    for (const item of items as OrderItemPayload[]) {
+      const quantity = Number(item.quantity);
+      const serviceId = Number(item.service_id);
+      const siteCode = Number(item.site_code);
+
+      const verifiedService = await getVerifiedServiceForOrder({
+        serviceId,
+        siteCode,
+      });
+
+      if (!verifiedService) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Ürün doğrulanamadı. Ürün kodu: ${siteCode}`,
+          },
+          { status: 400 }
+        );
+      }
+
+      if (quantity < verifiedService.min || quantity > verifiedService.max) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `${verifiedService.siteCode} kodlu ürün için miktar ${verifiedService.min} - ${verifiedService.max} aralığında olmalıdır.`,
+          },
+          { status: 400 }
+        );
+      }
+
+      const unitPrice = roundMoney(getUnitSalePrice(verifiedService, currency));
+      const unitCostPrice = roundMoney(getUnitCostPrice(verifiedService, currency));
+      const totalPrice = roundMoney((quantity / 1000) * unitPrice);
+      const totalCostPrice = roundMoney((quantity / 1000) * unitCostPrice);
+
+      rows.push({
         batch_code: batchCode,
         order_number: createOrderNumber(),
         full_name: fullName,
         phone_number: phoneNumber,
         contact_type: contactType,
         contact_value: contactValue,
-        platform: item.platform.trim(),
-        category: item.category.trim(),
-        service_id: Number(item.service_id),
-        site_code: Number(item.site_code),
-        service_title: item.service_title.trim(),
+        platform: verifiedService.platform,
+        category: verifiedService.category,
+        service_id: verifiedService.id,
+        site_code: verifiedService.siteCode,
+        service_title: verifiedService.title,
         quantity,
         unit_price: unitPrice,
         total_price: totalPrice,
         unit_cost_price: unitCostPrice,
         total_cost_price: totalCostPrice,
-        guarantee_label: item.guarantee_label.trim(),
-        speed: item.speed.trim(),
+        guarantee_label: verifiedService.guaranteeLabel,
+        speed: verifiedService.speed,
         currency,
         payment_method: paymentMethod,
-        target_username: item.target_username?.trim() || null,
-        target_link: item.target_link?.trim() || null,
-        order_note: item.order_note?.trim() || null,
+        target_username: normalizeString(item.target_username),
+        target_link: normalizeString(item.target_link) || null,
+        order_note: normalizeString(item.order_note) || null,
         status: paymentMethod === "turkey_bank" ? "pending_payment" : "pending",
-      };
-    });
+      });
+    }
 
     const pool = getMysqlPool();
     const connection = await pool.getConnection();
