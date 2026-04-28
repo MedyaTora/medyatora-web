@@ -6,6 +6,9 @@ type VisitorTrackBody = {
   path?: string;
   locale?: string;
   event_type?: string;
+  event_label?: string;
+  event_value?: string;
+  event_data?: Record<string, unknown>;
   screen_width?: number;
   screen_height?: number;
   timezone?: string;
@@ -44,6 +47,10 @@ export async function POST(req: NextRequest) {
     const path = String(body.path || "/").trim();
     const locale = String(body.locale || "tr").trim();
     const eventType = String(body.event_type || "page_view").trim();
+
+    const eventLabel = String(body.event_label || "").trim();
+    const eventValue = String(body.event_value || "").trim();
+    const eventData = body.event_data || null;
 
     if (!visitorId) {
       return NextResponse.json(
@@ -98,6 +105,9 @@ export async function POST(req: NextRequest) {
           visitor_id: visitorId,
           ip_address: ipAddress,
           event_type: eventType,
+          event_label: eventLabel,
+          event_value: eventValue,
+          event_data: eventData,
           path,
           locale,
           user_agent: userAgent,

@@ -3,6 +3,14 @@ export const revalidate = 0;
 
 import { createClient } from "@supabase/supabase-js";
 
+type EventDataValue =
+  | string
+  | number
+  | boolean
+  | null
+  | EventDataValue[]
+  | { [key: string]: EventDataValue };
+
 type VisitorSessionRow = {
   id: number;
   visitor_id: string;
@@ -24,6 +32,9 @@ type VisitorEventRow = {
   visitor_id: string;
   ip_address: string | null;
   event_type: string | null;
+  event_label: string | null;
+  event_value: string | null;
+  event_data: EventDataValue | null;
   path: string | null;
   locale: string | null;
   user_agent: string | null;
@@ -107,8 +118,11 @@ function getEventTypeLabel(type: string | null | undefined) {
     platform_select: "Platform Seçti",
     category_select: "Kategori Seçti",
     service_select: "Hizmet Seçti",
+    quantity_entered: "Miktar Girdi",
+    target_entered: "Hedef Girdi",
     add_to_cart: "Sepete Ekledi",
     checkout_open: "Ödeme Ekranı Açtı",
+    payment_method_select: "Ödeme Yöntemi Seçti",
     order_created: "Sipariş Oluşturdu",
   };
 
@@ -146,6 +160,27 @@ function getDurationText(firstSeenAt: string | null, lastSeenAt: string | null) 
 
 function uniqueCount(values: Array<string | null>) {
   return new Set(values.filter(Boolean)).size;
+}
+
+function getEventSummary(event: VisitorEventRow) {
+  const label = event.event_label || "";
+  const value = event.event_value || "";
+
+  if (label && value) return `${label} / ${value}`;
+  if (label) return label;
+  if (value) return value;
+
+  return "-";
+}
+
+function formatEventData(data: EventDataValue | null) {
+  if (!data) return "-";
+
+  try {
+    return JSON.stringify(data, null, 2);
+  } catch {
+    return "-";
+  }
 }
 
 function ErrorScreen({ message }: { message: string }) {
@@ -211,6 +246,9 @@ export default async function VisitorDetailPage({
       visitor_id,
       ip_address,
       event_type,
+      event_label,
+      event_value,
+      event_data,
       path,
       locale,
       user_agent,
@@ -331,71 +369,75 @@ export default async function VisitorDetailPage({
             <span className="text-sm text-white/45">{events.length} hareket</span>
           </div>
 
-          <div className="mt-5 overflow-x-auto">
-            <table className="w-full min-w-[1150px] border-separate border-spacing-y-2 text-left text-sm">
-              <thead className="text-xs uppercase tracking-wide text-white/40">
-                <tr>
-                  <th className="px-3 py-2">Saat</th>
-                  <th className="px-3 py-2">Hareket</th>
-                  <th className="px-3 py-2">Sayfa</th>
-                  <th className="px-3 py-2">IP</th>
-                  <th className="px-3 py-2">Dil</th>
-                  <th className="px-3 py-2">Cihaz</th>
-                  <th className="px-3 py-2">Tarayıcı</th>
-                  <th className="px-3 py-2">Sistem</th>
-                  <th className="px-3 py-2">Ekran</th>
-                  <th className="px-3 py-2">Kaynak</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {events.map((event) => (
-                  <tr key={event.id} className="bg-black/20">
-                    <td className="rounded-l-2xl px-3 py-3 text-white/60">
-                      {formatDate(event.created_at)}
-                    </td>
-
-                    <td className="px-3 py-3">
+          <div className="mt-5 space-y-3">
+            {events.map((event) => (
+              <div
+                key={event.id}
+                className="rounded-3xl border border-white/10 bg-black/20 p-4"
+              >
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="rounded-full border border-sky-400/20 bg-sky-400/10 px-3 py-1 text-xs font-bold text-sky-300">
                         {getEventTypeLabel(event.event_type)}
                       </span>
-                    </td>
 
-                    <td className="px-3 py-3 text-white/70">{event.path || "-"}</td>
+                      <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-white/50">
+                        {formatDate(event.created_at)}
+                      </span>
+                    </div>
 
-                    <td className="px-3 py-3 text-white/70">
-                      {event.ip_address || "-"}
-                    </td>
+                    <p className="mt-3 break-words text-base font-bold text-white">
+                      {getEventSummary(event)}
+                    </p>
 
-                    <td className="px-3 py-3 text-white/70">
-                      {(event.locale || "-").toUpperCase()}
-                    </td>
+                    <div className="mt-3 grid gap-2 text-xs text-white/60 md:grid-cols-2 xl:grid-cols-4">
+                      <MiniLine label="Sayfa" value={event.path || "-"} />
+                      <MiniLine label="IP" value={event.ip_address || "-"} />
+                      <MiniLine label="Dil" value={(event.locale || "-").toUpperCase()} />
+                      <MiniLine
+                        label="Ekran"
+                        value={
+                          event.screen_width && event.screen_height
+                            ? `${event.screen_width}x${event.screen_height}`
+                            : "-"
+                        }
+                      />
+                      <MiniLine
+                        label="Cihaz"
+                        value={`${getDeviceType(event.user_agent)} / ${getBrowser(
+                          event.user_agent
+                        )} / ${getOS(event.user_agent)}`}
+                      />
+                      <MiniLine
+                        label="Kaynak"
+                        value={getReferrerLabel(event.referrer)}
+                      />
+                      <MiniLine
+                        label="Saat Dilimi"
+                        value={event.timezone || "-"}
+                      />
+                      <MiniLine
+                        label="Tarayıcı Dili"
+                        value={event.browser_language || "-"}
+                      />
+                    </div>
+                  </div>
+                </div>
 
-                    <td className="px-3 py-3 text-white/70">
-                      {getDeviceType(event.user_agent)}
-                    </td>
+                {event.event_data ? (
+                  <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-white/35">
+                      Ek Hareket Verisi
+                    </p>
 
-                    <td className="px-3 py-3 text-white/70">
-                      {getBrowser(event.user_agent)}
-                    </td>
-
-                    <td className="px-3 py-3 text-white/70">
-                      {getOS(event.user_agent)}
-                    </td>
-
-                    <td className="px-3 py-3 text-white/70">
-                      {event.screen_width && event.screen_height
-                        ? `${event.screen_width}x${event.screen_height}`
-                        : "-"}
-                    </td>
-
-                    <td className="rounded-r-2xl px-3 py-3 text-white/70">
-                      {getReferrerLabel(event.referrer)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    <pre className="max-h-[260px] overflow-auto whitespace-pre-wrap break-words text-xs leading-5 text-white/65">
+                      {formatEventData(event.event_data)}
+                    </pre>
+                  </div>
+                ) : null}
+              </div>
+            ))}
 
             {events.length === 0 ? (
               <div className="rounded-2xl border border-white/10 bg-black/20 p-5 text-white/45">
@@ -414,6 +456,15 @@ function MiniInfo({ label, value }: { label: string; value: string | number }) {
     <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
       <p className="mb-1 text-xs uppercase tracking-wide text-white/35">{label}</p>
       <p className="break-words text-white/85">{value}</p>
+    </div>
+  );
+}
+
+function MiniLine({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+      <p className="text-[11px] uppercase tracking-wide text-white/35">{label}</p>
+      <p className="mt-1 break-words text-white/80">{value}</p>
     </div>
   );
 }

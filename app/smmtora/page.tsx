@@ -6,6 +6,7 @@ import type { OrderServiceItem } from "@/lib/services";
 import { getDictionary, type Locale } from "@/lib/i18n";
 import { getAllPlatforms } from "@/lib/platforms";
 import ServiceTermsModal from "../components/service-terms-modal";
+import { trackVisitorAction } from "../components/visitor-tracker";
 
 import * as SiIcons from "react-icons/si";
 
@@ -346,26 +347,26 @@ function localizeCommonServiceText(value: string, locale: Locale) {
   if (!value || locale === "tr") return value;
 
   const enMap: Record<string, string> = {
-    "Takipçi": "Followers",
-    "Beğeni": "Likes",
-    "Yorum": "Comments",
-    "İzlenme": "Views",
-    "Kaydetme": "Saves",
-    "Paylaşım": "Shares",
-    "Abone": "Subscribers",
-    "Üye": "Members",
-    "Reaksiyon": "Reactions",
-    "Kalite": "Quality",
-    "Garantisiz": "No Guarantee",
-    "Garantili": "Guaranteed",
-    "Gün": "Day",
-    "Günlük": "Daily",
-    "Günde": "Daily",
-    "Hızlı": "Fast",
-    "Yavaş": "Slow",
-    "Türk": "Turkish",
-    "Rus": "Russian",
-    "Yabancı": "Global",
+    Takipçi: "Followers",
+    Beğeni: "Likes",
+    Yorum: "Comments",
+    İzlenme: "Views",
+    Kaydetme: "Saves",
+    Paylaşım: "Shares",
+    Abone: "Subscribers",
+    Üye: "Members",
+    Reaksiyon: "Reactions",
+    Kalite: "Quality",
+    Garantisiz: "No Guarantee",
+    Garantili: "Guaranteed",
+    Gün: "Day",
+    Günlük: "Daily",
+    Günde: "Daily",
+    Hızlı: "Fast",
+    Yavaş: "Slow",
+    Türk: "Turkish",
+    Rus: "Russian",
+    Yabancı: "Global",
     "Temel başlangıç seviyesidir.": "This is a basic entry-level service.",
     "Düşük bütçeyle görünürlük kazanmak isteyen kullanıcılar için hazırlanmıştır.":
       "It is prepared for users who want to gain visibility with a low budget.",
@@ -379,33 +380,33 @@ function localizeCommonServiceText(value: string, locale: Locale) {
     "Sipariş devam ederken kullanıcı adı değiştirilmemelidir.":
       "The username should not be changed while the order is in progress.",
     "Garanti süresi": "Guarantee period",
-    "gündür": "days",
+    gündür: "days",
     "Garantili hizmettir.": "This is a guaranteed service.",
     "Düşüş olması durumunda destek sağlanır.":
       "Support is provided in case of drops.",
   };
 
   const ruMap: Record<string, string> = {
-    "Takipçi": "Подписчики",
-    "Beğeni": "Лайки",
-    "Yorum": "Комментарии",
-    "İzlenme": "Просмотры",
-    "Kaydetme": "Сохранения",
-    "Paylaşım": "Репосты",
-    "Abone": "Подписчики",
-    "Üye": "Участники",
-    "Reaksiyon": "Реакции",
-    "Kalite": "Качество",
-    "Garantisiz": "Без гарантии",
-    "Garantili": "С гарантией",
-    "Gün": "дней",
-    "Günlük": "В день",
-    "Günde": "В день",
-    "Hızlı": "Быстро",
-    "Yavaş": "Медленно",
-    "Türk": "Турция",
-    "Rus": "Россия",
-    "Yabancı": "Глобальный",
+    Takipçi: "Подписчики",
+    Beğeni: "Лайки",
+    Yorum: "Комментарии",
+    İzlenme: "Просмотры",
+    Kaydetme: "Сохранения",
+    Paylaşım: "Репосты",
+    Abone: "Подписчики",
+    Üye: "Участники",
+    Reaksiyon: "Реакции",
+    Kalite: "Качество",
+    Garantisiz: "Без гарантии",
+    Garantili: "С гарантией",
+    Gün: "дней",
+    Günlük: "В день",
+    Günde: "В день",
+    Hızlı: "Быстро",
+    Yavaş: "Медленно",
+    Türk: "Турция",
+    Rus: "Россия",
+    Yabancı: "Глобальный",
     "Temel başlangıç seviyesidir.": "Это базовая услуга начального уровня.",
     "Düşük bütçeyle görünürlük kazanmak isteyen kullanıcılar için hazırlanmıştır.":
       "Подходит для пользователей, которые хотят получить видимость с небольшим бюджетом.",
@@ -420,7 +421,7 @@ function localizeCommonServiceText(value: string, locale: Locale) {
     "Sipariş devam ederken kullanıcı adı değiştirilmemelidir.":
       "Не меняйте username во время выполнения заказа.",
     "Garanti süresi": "Гарантийный срок",
-    "gündür": "дней",
+    gündür: "дней",
     "Garantili hizmettir.": "Это услуга с гарантией.",
     "Düşüş olması durumunda destek sağlanır.":
       "При списаниях предоставляется поддержка.",
@@ -914,6 +915,24 @@ export default function SmmToraPage() {
     const item = buildCurrentItem();
     if (!item) return;
 
+    trackVisitorAction({
+      event_type: "add_to_cart",
+      event_label: item.service_title,
+      event_value: String(item.site_code),
+      event_data: {
+        service_id: item.service_id,
+        site_code: item.site_code,
+        platform: item.platform,
+        category: item.category,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total_price: item.total_price,
+        currency: selectedCurrency,
+        target_username: item.target_username,
+        has_target_link: Boolean(item.target_link),
+      },
+    });
+
     setCartItems((prev) => [...prev, item]);
     resetItemForm();
     setCartMessage(t.successOrder);
@@ -947,6 +966,25 @@ export default function SmmToraPage() {
     const item = buildCurrentItem();
     if (!item) return;
 
+    trackVisitorAction({
+      event_type: "checkout_open",
+      event_label: item.service_title,
+      event_value: String(item.site_code),
+      event_data: {
+        mode: "single",
+        service_id: item.service_id,
+        site_code: item.site_code,
+        platform: item.platform,
+        category: item.category,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total_price: item.total_price,
+        currency: selectedCurrency,
+        target_username: item.target_username,
+        has_target_link: Boolean(item.target_link),
+      },
+    });
+
     setCheckoutItems([item]);
     setCheckoutMode("single");
     setError("");
@@ -954,6 +992,27 @@ export default function SmmToraPage() {
 
   const handleOpenCartCheckout = () => {
     if (cartItems.length === 0) return;
+
+    trackVisitorAction({
+      event_type: "checkout_open",
+      event_label: "Sepet ödeme ekranı",
+      event_value: String(cartItems.length),
+      event_data: {
+        mode: "cart",
+        item_count: cartItems.length,
+        total_price: cartTotal,
+        currency: selectedCurrency,
+        items: cartItems.map((item) => ({
+          service_id: item.service_id,
+          site_code: item.site_code,
+          service_title: item.service_title,
+          platform: item.platform,
+          category: item.category,
+          quantity: item.quantity,
+          total_price: item.total_price,
+        })),
+      },
+    });
 
     setCheckoutItems(cartItems);
     setCheckoutMode("cart");
@@ -990,6 +1049,32 @@ export default function SmmToraPage() {
       if (!res.ok) {
         throw new Error(data.error || "Sipariş oluşturulamadı.");
       }
+
+      trackVisitorAction({
+        event_type: "order_created",
+        event_label: "Sipariş oluşturuldu",
+        event_value: Array.isArray(data.orderNumbers)
+          ? data.orderNumbers.join(", ")
+          : "",
+        event_data: {
+          order_numbers: data.orderNumbers || [],
+          checkout_mode: checkoutMode,
+          item_count: checkoutItems.length,
+          total_price: checkoutItems.reduce((sum, item) => sum + item.total_price, 0),
+          currency: selectedCurrency,
+          payment_method: paymentMethod,
+          contact_type: contactType,
+          items: checkoutItems.map((item) => ({
+            service_id: item.service_id,
+            site_code: item.site_code,
+            service_title: item.service_title,
+            platform: item.platform,
+            category: item.category,
+            quantity: item.quantity,
+            total_price: item.total_price,
+          })),
+        },
+      });
 
       setCreatedOrderNumbers(data.orderNumbers || []);
       setSuccessOpen(true);
@@ -1157,6 +1242,16 @@ export default function SmmToraPage() {
                         setSelectedServiceId(null);
                         resetServiceFilters();
                         clearStatusMessages();
+
+                        trackVisitorAction({
+                          event_type: "platform_select",
+                          event_label: platform.title,
+                          event_value: platform.slug,
+                          event_data: {
+                            platform_slug: platform.slug,
+                            platform_title: platform.title,
+                          },
+                        });
                       }}
                       className={`group relative overflow-hidden rounded-3xl border p-4 text-left transition hover:-translate-y-0.5 ${
                         active
@@ -1250,6 +1345,18 @@ export default function SmmToraPage() {
                       setSelectedServiceId(null);
                       resetServiceFilters();
                       clearStatusMessages();
+
+                      trackVisitorAction({
+                        event_type: "category_select",
+                        event_label: getCategoryLabel(category.name, selectedLocale),
+                        event_value: category.slug,
+                        event_data: {
+                          platform: selectedPlatform,
+                          category_slug: category.slug,
+                          category_name: category.name,
+                          locale: selectedLocale,
+                        },
+                      });
                     }}
                     className={`rounded-full px-4 py-2 text-xs font-bold transition sm:text-sm ${
                       active
@@ -1468,6 +1575,38 @@ export default function SmmToraPage() {
                         onClick={() => {
                           setSelectedServiceId(service.id);
                           clearStatusMessages();
+
+                          trackVisitorAction({
+                            event_type: "service_select",
+                            event_label: getLocalizedServiceTitle(
+                              service.title,
+                              selectedLocale
+                            ),
+                            event_value: String(service.siteCode),
+                            event_data: {
+                              service_id: service.id,
+                              site_code: service.siteCode,
+                              platform: service.platform,
+                              category: service.category,
+                              title: getLocalizedServiceTitle(
+                                service.title,
+                                selectedLocale
+                              ),
+                              level: service.level,
+                              guarantee: service.guarantee,
+                              guarantee_label: getLocalizedGuaranteeLabel(
+                                service.guaranteeLabel,
+                                selectedLocale
+                              ),
+                              min: service.min,
+                              max: service.max,
+                              price_per_1000: getUnitSalePrice(
+                                service,
+                                selectedCurrency
+                              ),
+                              currency: selectedCurrency,
+                            },
+                          });
                         }}
                         className={`w-full rounded-2xl border px-4 py-4 text-left transition ${
                           active
@@ -1641,7 +1780,24 @@ export default function SmmToraPage() {
               <div className="space-y-3">
                 <input
                   value={targetUsername}
-                  onChange={(e) => setTargetUsername(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setTargetUsername(value);
+
+                    if (value.trim().length >= 3 && selectedService) {
+                      trackVisitorAction({
+                        event_type: "target_entered",
+                        event_label: "Hedef kullanıcı adı girildi",
+                        event_value: value.trim(),
+                        event_data: {
+                          service_id: selectedService.id,
+                          site_code: selectedService.siteCode,
+                          platform: selectedPlatform,
+                          category: selectedCategory,
+                        },
+                      });
+                    }
+                  }}
                   placeholder={t.targetUsername}
                   className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none placeholder:text-white/30 focus:border-emerald-400"
                 />
@@ -1655,7 +1811,32 @@ export default function SmmToraPage() {
 
                 <input
                   value={quantity}
-                  onChange={(e) => setQuantity(e.target.value.replace(/\D/g, ""))}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, "");
+                    setQuantity(value);
+
+                    const numericValue = Number(value);
+
+                    if (numericValue > 0 && selectedService) {
+                      trackVisitorAction({
+                        event_type: "quantity_entered",
+                        event_label: "Miktar girildi",
+                        event_value: String(numericValue),
+                        event_data: {
+                          service_id: selectedService.id,
+                          site_code: selectedService.siteCode,
+                          platform: selectedPlatform,
+                          category: selectedCategory,
+                          quantity: numericValue,
+                          min: selectedService.min,
+                          max: selectedService.max,
+                          valid:
+                            numericValue >= selectedService.min &&
+                            numericValue <= selectedService.max,
+                        },
+                      });
+                    }
+                  }}
                   placeholder={t.quantity}
                   className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none placeholder:text-white/30 focus:border-emerald-400"
                 />
@@ -1887,7 +2068,24 @@ export default function SmmToraPage() {
               <div className="mt-4 grid gap-3 md:grid-cols-2">
                 <button
                   type="button"
-                  onClick={() => setPaymentMethod("turkey_bank")}
+                  onClick={() => {
+                    setPaymentMethod("turkey_bank");
+
+                    trackVisitorAction({
+                      event_type: "payment_method_select",
+                      event_label: "Türkiye Banka Havalesi / EFT",
+                      event_value: "turkey_bank",
+                      event_data: {
+                        checkout_mode: checkoutMode,
+                        item_count: checkoutItems.length,
+                        total_price: checkoutItems.reduce(
+                          (sum, item) => sum + item.total_price,
+                          0
+                        ),
+                        currency: selectedCurrency,
+                      },
+                    });
+                  }}
                   className={`rounded-2xl border p-4 text-left transition ${
                     paymentMethod === "turkey_bank"
                       ? "border-emerald-400 bg-emerald-400/10"
@@ -1902,7 +2100,24 @@ export default function SmmToraPage() {
 
                 <button
                   type="button"
-                  onClick={() => setPaymentMethod("support")}
+                  onClick={() => {
+                    setPaymentMethod("support");
+
+                    trackVisitorAction({
+                      event_type: "payment_method_select",
+                      event_label: "Destek ile ödeme",
+                      event_value: "support",
+                      event_data: {
+                        checkout_mode: checkoutMode,
+                        item_count: checkoutItems.length,
+                        total_price: checkoutItems.reduce(
+                          (sum, item) => sum + item.total_price,
+                          0
+                        ),
+                        currency: selectedCurrency,
+                      },
+                    });
+                  }}
                   className={`rounded-2xl border p-4 text-left transition ${
                     paymentMethod === "support"
                       ? "border-sky-400 bg-sky-400/10"
@@ -1943,9 +2158,7 @@ export default function SmmToraPage() {
               {paymentMethod === "support" && (
                 <div className="mt-4 rounded-2xl border border-sky-400/20 bg-sky-400/10 p-4 text-sm leading-6 text-sky-50">
                   <p className="font-bold text-white">{t.otherPaymentMethods}</p>
-                  <p className="mt-2 text-white/70">
-                    {t.otherPaymentInfoText}
-                  </p>
+                  <p className="mt-2 text-white/70">{t.otherPaymentInfoText}</p>
                 </div>
               )}
             </div>
@@ -2008,9 +2221,7 @@ export default function SmmToraPage() {
             </div>
 
             <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-              <p className="text-sm font-bold text-white">
-                {t.paymentStepTitle}
-              </p>
+              <p className="text-sm font-bold text-white">{t.paymentStepTitle}</p>
 
               <p className="mt-1 text-sm leading-6 text-white/60">
                 {t.paymentStepDesc}
