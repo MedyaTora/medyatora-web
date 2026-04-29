@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { RowDataPacket } from "mysql2";
 import { getCurrentUser } from "@/lib/auth/current-user";
@@ -37,12 +38,14 @@ type AnalysisRow = RowDataPacket & {
 };
 
 const statusLabels: Record<string, string> = {
-  pending_payment: "Ödeme Bekliyor",
-  pending: "Beklemede",
-  processing: "İşlemde",
+  pending_payment: "Ödeme Onaylanıyor",
+  pending: "Sipariş Alındı",
+  processing: "İşleme Alındı",
+  in_progress: "Devam Ediyor",
   completed: "Tamamlandı",
   cancelled: "İptal Edildi",
   refunded: "İade Edildi",
+  partial_refunded: "Kısmi İade Edildi",
   failed: "Başarısız",
 };
 
@@ -50,9 +53,11 @@ const statusClasses: Record<string, string> = {
   pending_payment: "border-amber-400/25 bg-amber-400/10 text-amber-200",
   pending: "border-sky-400/25 bg-sky-400/10 text-sky-200",
   processing: "border-violet-400/25 bg-violet-400/10 text-violet-200",
+  in_progress: "border-sky-400/25 bg-sky-400/10 text-sky-200",
   completed: "border-emerald-400/25 bg-emerald-400/10 text-emerald-200",
   cancelled: "border-rose-400/25 bg-rose-400/10 text-rose-200",
   refunded: "border-cyan-400/25 bg-cyan-400/10 text-cyan-200",
+  partial_refunded: "border-violet-400/25 bg-violet-400/10 text-violet-200",
   failed: "border-rose-400/25 bg-rose-400/10 text-rose-200",
 };
 
@@ -160,7 +165,9 @@ export default async function AccountPage() {
     (order) => order.status === "completed"
   ).length;
   const activeOrders = orders.filter((order) =>
-    ["pending_payment", "pending", "processing"].includes(order.status)
+    ["pending_payment", "pending", "processing", "in_progress"].includes(
+      order.status
+    )
   ).length;
 
   const totalAnalysisRequests = analysisRequests.length;
@@ -178,7 +185,7 @@ export default async function AccountPage() {
 
       <div className="mx-auto max-w-6xl space-y-5">
         <header className="flex flex-col gap-4 rounded-[30px] border border-white/10 bg-[#111827]/90 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.32)] ring-1 ring-white/[0.025] backdrop-blur-xl md:flex-row md:items-center md:justify-between">
-          <a href="/" className="inline-flex items-center gap-3">
+          <Link href="/" className="inline-flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-400 font-black text-black">
               MT
             </div>
@@ -189,21 +196,21 @@ export default async function AccountPage() {
               </div>
               <div className="text-xs text-white/45">Kullanıcı hesabı</div>
             </div>
-          </a>
+          </Link>
 
           <nav className="flex flex-wrap items-center gap-3 text-sm font-semibold text-white/70">
-            <a href="/" className="transition hover:text-white">
+            <Link href="/" className="transition hover:text-white">
               Ana Sayfa
-            </a>
-            <a href="/smmtora" className="transition hover:text-white">
+            </Link>
+            <Link href="/smmtora" className="transition hover:text-white">
               SMMTora
-            </a>
-            <a href="/#analysis" className="transition hover:text-white">
+            </Link>
+            <Link href="/#analysis" className="transition hover:text-white">
               Analiz
-            </a>
-            <a href="/paketler" className="transition hover:text-white">
+            </Link>
+            <Link href="/paketler" className="transition hover:text-white">
               Paketler
-            </a>
+            </Link>
           </nav>
         </header>
 
@@ -228,19 +235,19 @@ export default async function AccountPage() {
                 </p>
 
                 <div className="mt-6 flex flex-wrap gap-3">
-                  <a
+                  <Link
                     href="/smmtora"
                     className="rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-black text-black transition hover:-translate-y-0.5 hover:bg-emerald-300"
                   >
                     Yeni Sipariş Oluştur
-                  </a>
+                  </Link>
 
-                  <a
+                  <Link
                     href="/#analysis"
                     className="rounded-2xl border border-white/10 bg-white/[0.05] px-5 py-3 text-sm font-bold text-white/80 transition hover:-translate-y-0.5 hover:bg-white/[0.1] hover:text-white"
                   >
                     Analiz Talebi Bırak
-                  </a>
+                  </Link>
                 </div>
               </div>
 
@@ -253,7 +260,7 @@ export default async function AccountPage() {
                     {Number(user.balance_usd || 0).toFixed(2)} USD
                   </p>
                   <p className="mt-2 text-sm leading-6 text-white/55">
-                    Bakiye ile ödeme sistemi sonraki aşamada aktif edilecek.
+                    Bakiye ile USD siparişlerinde ödeme yapabilirsin.
                   </p>
                 </div>
 
@@ -265,7 +272,7 @@ export default async function AccountPage() {
                     {user.free_analysis_used ? "Kullanıldı" : "Aktif"}
                   </p>
                   <p className="mt-2 text-sm leading-6 text-white/55">
-                    Ücretsiz analiz hesabına bağlanacak.
+                    Ücretsiz analiz hesabına bağlı şekilde takip edilir.
                   </p>
                 </div>
 
@@ -309,9 +316,10 @@ export default async function AccountPage() {
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-[28px] border border-white/10 bg-[#111827]/90 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.24)]">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/40">
-              Toplam sipariş
+              Son sipariş
             </p>
             <p className="mt-3 text-3xl font-black text-white">{totalOrders}</p>
+            <p className="mt-2 text-sm text-white/45">Bu alanda son 20 görünür.</p>
           </div>
 
           <div className="rounded-[28px] border border-white/10 bg-[#111827]/90 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.24)]">
@@ -367,12 +375,12 @@ export default async function AccountPage() {
               <p className="mt-2 text-sm leading-6 text-white/55">
                 Giriş yapmış halde analiz talebi bıraktığında burada görünecek.
               </p>
-              <a
+              <Link
                 href="/#analysis"
                 className="mt-5 inline-flex rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-black text-black transition hover:-translate-y-0.5 hover:bg-emerald-300"
               >
                 Analiz Talebi Bırak
-              </a>
+              </Link>
             </div>
           ) : (
             <div className="grid gap-3">
@@ -432,7 +440,7 @@ export default async function AccountPage() {
         </section>
 
         <section className="rounded-[34px] border border-white/10 bg-[#111827]/90 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.32)] ring-1 ring-white/[0.025] backdrop-blur-xl md:p-6">
-          <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+          <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.22em] text-white/40">
                 Sipariş geçmişi
@@ -440,11 +448,18 @@ export default async function AccountPage() {
               <h2 className="mt-2 text-2xl font-black text-white">
                 Son siparişlerin
               </h2>
+              <p className="mt-2 text-sm text-white/45">
+                Bu alanda son 20 sipariş görünür. Eski siparişlerini tüm
+                siparişler sayfasından görebilirsin.
+              </p>
             </div>
 
-            <p className="text-sm text-white/45">
-              Son 20 sipariş listelenir.
-            </p>
+            <Link
+              href="/hesabim/siparisler"
+              className="rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-bold text-white transition hover:bg-white/[0.1]"
+            >
+              Tüm Siparişleri Gör
+            </Link>
           </div>
 
           {orders.length === 0 ? (
@@ -455,28 +470,29 @@ export default async function AccountPage() {
               <p className="mt-2 text-sm leading-6 text-white/55">
                 Giriş yapmış halde sipariş oluşturduğunda burada görünecek.
               </p>
-              <a
+              <Link
                 href="/smmtora"
                 className="mt-5 inline-flex rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-black text-black transition hover:-translate-y-0.5 hover:bg-emerald-300"
               >
                 İlk Siparişi Oluştur
-              </a>
+              </Link>
             </div>
           ) : (
             <div className="overflow-hidden rounded-3xl border border-white/10">
-              <div className="hidden grid-cols-[1.1fr_1.5fr_0.7fr_0.8fr_0.9fr] gap-4 border-b border-white/10 bg-white/[0.035] px-4 py-3 text-xs font-bold uppercase tracking-wide text-white/40 lg:grid">
+              <div className="hidden grid-cols-[1.1fr_1.5fr_0.75fr_0.85fr_0.9fr_0.55fr] gap-4 border-b border-white/10 bg-white/[0.035] px-4 py-3 text-xs font-bold uppercase tracking-wide text-white/40 lg:grid">
                 <div>Sipariş</div>
                 <div>Hizmet</div>
                 <div>Tutar</div>
                 <div>Durum</div>
                 <div>Tarih</div>
+                <div>Detay</div>
               </div>
 
               <div className="divide-y divide-white/10">
                 {orders.map((order) => (
                   <div
                     key={order.id}
-                    className="grid gap-4 px-4 py-4 transition hover:bg-white/[0.035] lg:grid-cols-[1.1fr_1.5fr_0.7fr_0.8fr_0.9fr] lg:items-center"
+                    className="grid gap-4 px-4 py-4 transition hover:bg-white/[0.035] lg:grid-cols-[1.1fr_1.5fr_0.75fr_0.85fr_0.9fr_0.55fr] lg:items-center"
                   >
                     <div>
                       <p className="text-xs text-white/40">Sipariş No</p>
@@ -493,7 +509,8 @@ export default async function AccountPage() {
                         {order.service_title}
                       </p>
                       <p className="mt-1 text-xs text-white/45">
-                        {order.platform} / {order.category} · {order.quantity}
+                        {order.platform} / {order.category} ·{" "}
+                        {Number(order.quantity).toLocaleString("tr-TR")}
                       </p>
                     </div>
 
@@ -517,6 +534,15 @@ export default async function AccountPage() {
                       <p className="text-sm text-white/60">
                         {formatDate(order.created_at)}
                       </p>
+                    </div>
+
+                    <div>
+                      <Link
+                        href={`/hesabim/siparisler/${order.id}`}
+                        className="inline-flex rounded-2xl bg-emerald-400 px-4 py-2 text-center text-xs font-black text-black transition hover:bg-emerald-300"
+                      >
+                        Detay
+                      </Link>
                     </div>
                   </div>
                 ))}
