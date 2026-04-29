@@ -1,6 +1,7 @@
 import https from "https";
 import { NextResponse } from "next/server";
 import { getMysqlPool, hasMysqlConfig } from "@/lib/mysql";
+import { getCurrentUser } from "@/lib/auth/current-user";
 
 type ContactType = "Telegram" | "WhatsApp" | "Instagram" | "E-posta";
 
@@ -212,7 +213,16 @@ export async function POST(req: Request) {
       );
     }
 
-    const packagePrice = isFreeAnalysisCoupon(couponCode) ? 0 : 5;
+    const currentUser = await getCurrentUser();
+
+    const couponMakesFree = isFreeAnalysisCoupon(couponCode);
+    const memberFreeAnalysisAvailable =
+      Boolean(currentUser) && !currentUser?.free_analysis_used;
+    
+    const isFreeAnalysis = couponMakesFree || memberFreeAnalysisAvailable;
+    const packagePrice = isFreeAnalysis ? 0 : 5;
+    const shouldMarkMemberFreeAnalysisUsed =
+      Boolean(currentUser) && memberFreeAnalysisAvailable;
 
     if (!hasMysqlConfig()) {
       console.warn("[MedyaTora] Analiz başvurusu alınamadı: MySQL env eksik.");
@@ -273,29 +283,47 @@ export async function POST(req: Request) {
 
       const [analysisResult] = await connection.execute(
         `
-        INSERT INTO analysis_requests (
-          customer_id,
-          coupon_code,
-          package_type,
-          package_price,
-          currency,
-          status
-        ) VALUES (?, ?, ?, ?, ?, ?)
+INSERT INTO analysis_requests (
+  user_id,
+  customer_id,
+  coupon_code,
+  package_type,
+  package_price,
+  currency,
+  status,
+  is_free_analysis,
+  analysis_price_usd
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
+          currentUser?.id || null,
           customerId,
           couponCode || null,
           "analysis",
           packagePrice,
           "USD",
           "pending",
+          isFreeAnalysis ? 1 : 0,
+          packagePrice,
         ]
       );
 
       analysisRequestId =
-        (analysisResult as { insertId?: number }).insertId || null;
-
-      await connection.commit();
+      (analysisResult as { insertId?: number }).insertId || null;
+    
+    if (shouldMarkMemberFreeAnalysisUsed && currentUser?.id) {
+      await connection.execute(
+        `
+        UPDATE users
+        SET free_analysis_used = 1
+        WHERE id = ?
+        LIMIT 1
+        `,
+        [currentUser.id]
+      );
+    }
+    
+    await connection.commit();
     } catch (dbError) {
       await connection.rollback();
 
@@ -316,8 +344,12 @@ export async function POST(req: Request) {
     const telegramMessage =
       `📥 Yeni analiz başvurusu alındı\n\n` +
       `🆔 Başvuru ID: ${analysisRequestId || "-"}\n` +
-      `👤 Müşteri ID: ${customerId || "-"}\n` +
-      `👤 Ad Soyad: ${fullName}\n` +
+`👤 Müşteri ID: ${customerId || "-"}\n` +
+ `🧑‍💻 Kullanıcı Hesabı: ${
+  currentUser ? `#${currentUser.id} | ${currentUser.email}` : "Üyeliksiz başvuru"
+}\n` +
+`🎁 Ücretsiz Analiz: ${isFreeAnalysis ? "Evet" : "Hayır"}\n` +
+`👤 Ad Soyad: ${fullName}\n` +
       `📷 Kullanıcı Adı: ${username || "-"}\n` +
       `🔗 Hesap Linki: ${accountLink || "-"}\n` +
       `🏷️ Hesap Türü: ${accountType}\n` +
