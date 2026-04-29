@@ -1,5 +1,6 @@
 import https from "https";
 import { NextResponse } from "next/server";
+import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import { getMysqlPool, hasMysqlConfig } from "@/lib/mysql";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import {
@@ -10,7 +11,7 @@ import {
 
 type CurrencyCode = "TL" | "USD" | "RUB";
 type ContactType = "Telegram" | "WhatsApp" | "Instagram" | "E-posta";
-type PaymentMethod = "turkey_bank" | "support";
+type PaymentMethod = "turkey_bank" | "support" | "balance";
 
 type OrderItemPayload = {
   service_id: number;
@@ -40,6 +41,39 @@ type OrderRequestPayload = {
   items: OrderItemPayload[];
 };
 
+type OrderRowForInsert = {
+  user_id: number | null;
+  batch_code: string;
+  order_number: string;
+  full_name: string;
+  phone_number: string;
+  contact_type: ContactType;
+  contact_value: string;
+  platform: string;
+  category: string;
+  service_id: number;
+  site_code: number;
+  service_title: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  unit_cost_price: number;
+  total_cost_price: number;
+  guarantee_label: string;
+  speed: string;
+  currency: CurrencyCode;
+  payment_method: PaymentMethod;
+  target_username: string;
+  target_link: string | null;
+  order_note: string | null;
+  status: string;
+};
+
+type BalanceUserRow = RowDataPacket & {
+  id: number;
+  balance_usd: string | number;
+};
+
 const ALLOWED_CURRENCIES: CurrencyCode[] = ["TL", "USD", "RUB"];
 
 const ALLOWED_CONTACT_TYPES: ContactType[] = [
@@ -49,10 +83,15 @@ const ALLOWED_CONTACT_TYPES: ContactType[] = [
   "E-posta",
 ];
 
-const ALLOWED_PAYMENT_METHODS: PaymentMethod[] = ["turkey_bank", "support"];
+const ALLOWED_PAYMENT_METHODS: PaymentMethod[] = [
+  "turkey_bank",
+  "support",
+  "balance",
+];
 
 function getPaymentMethodLabel(method: PaymentMethod) {
   if (method === "turkey_bank") return "Türkiye Banka Havalesi / EFT";
+  if (method === "balance") return "MedyaTora Bakiyesi";
   return "Destek ile İletişime Geçilecek";
 }
 
@@ -80,10 +119,6 @@ function createOrderNumber() {
 
 function isPositiveNumber(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) && value > 0;
-}
-
-function isNonEmptyString(value: unknown) {
-  return typeof value === "string" && value.trim().length > 0;
 }
 
 function normalizeString(value: unknown) {
@@ -377,6 +412,17 @@ export async function POST(req: Request) {
       );
     }
 
+    if (paymentMethod === "balance" && currency !== "USD") {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Bakiye ile ödeme şu an sadece USD para biriminde kullanılabilir. Lütfen para birimini USD seçin.",
+        },
+        { status: 400 }
+      );
+    }
+
     if (!items.length) {
       return NextResponse.json(
         { success: false, error: "En az bir hizmet seçmelisiniz." },
@@ -407,9 +453,18 @@ export async function POST(req: Request) {
     const currentUser = await getCurrentUser();
     const userId = currentUser?.id || null;
 
-    const batchCode = createBatchCode();
+    if (paymentMethod === "balance" && !currentUser) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Bakiye ile ödeme yapmak için giriş yapmalısın.",
+        },
+        { status: 401 }
+      );
+    }
 
-    const rows = [];
+    const batchCode = createBatchCode();
+    const rows: OrderRowForInsert[] = [];
 
     for (const item of items as OrderItemPayload[]) {
       const quantity = Number(item.quantity);
@@ -475,14 +530,91 @@ export async function POST(req: Request) {
       });
     }
 
+    const totalSaleForBalance = roundMoney(
+      rows.reduce((sum, item) => sum + Number(item.total_price || 0), 0)
+    );
+
     const pool = getMysqlPool();
     const connection = await pool.getConnection();
 
     try {
       await connection.beginTransaction();
 
-      for (const row of rows) {
+      let balanceBeforeUsd = 0;
+      let balanceAfterUsd = 0;
+      let firstInsertedOrderId: number | null = null;
+
+      if (paymentMethod === "balance") {
+        if (!currentUser) {
+          await connection.rollback();
+
+          return NextResponse.json(
+            {
+              success: false,
+              error: "Bakiye ile ödeme yapmak için giriş yapmalısın.",
+            },
+            { status: 401 }
+          );
+        }
+
+        const balanceUserId = currentUser.id;
+
+        const [userRows] = await connection.query<BalanceUserRow[]>(
+          `
+          SELECT id, balance_usd
+          FROM users
+          WHERE id = ?
+          LIMIT 1
+          FOR UPDATE
+          `,
+          [balanceUserId]
+        );
+
+        const userRow = userRows[0];
+
+        if (!userRow) {
+          await connection.rollback();
+
+          return NextResponse.json(
+            {
+              success: false,
+              error: "Kullanıcı hesabı bulunamadı.",
+            },
+            { status: 401 }
+          );
+        }
+
+        balanceBeforeUsd = Number(userRow.balance_usd || 0);
+
+        if (balanceBeforeUsd < totalSaleForBalance) {
+          await connection.rollback();
+
+          return NextResponse.json(
+            {
+              success: false,
+              error: `Bakiyen yetersiz. Mevcut bakiye: ${balanceBeforeUsd.toFixed(
+                2
+              )} USD, sipariş tutarı: ${totalSaleForBalance.toFixed(2)} USD.`,
+            },
+            { status: 400 }
+          );
+        }
+
+        balanceAfterUsd = roundMoney(balanceBeforeUsd - totalSaleForBalance);
+
         await connection.execute(
+          `
+          UPDATE users
+          SET balance_usd = ?
+          WHERE id = ?
+          LIMIT 1
+          `,
+          [balanceAfterUsd, balanceUserId]
+        );
+      }
+
+      for (const row of rows) {
+        const [insertResult] = await connection.execute<ResultSetHeader>(
           `
           INSERT INTO order_requests (
             user_id,
@@ -512,11 +644,11 @@ export async function POST(req: Request) {
             status
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `,
-            [
-              row.user_id,
-              row.batch_code,
-              row.order_number,
-              row.full_name,
+          [
+            row.user_id,
+            row.batch_code,
+            row.order_number,
+            row.full_name,
             row.phone_number,
             row.contact_type,
             row.contact_value,
@@ -538,6 +670,50 @@ export async function POST(req: Request) {
             row.target_link,
             row.order_note,
             row.status,
+          ]
+        );
+
+        const insertedId = Number(insertResult.insertId || 0);
+
+        if (!firstInsertedOrderId && insertedId) {
+          firstInsertedOrderId = insertedId;
+        }
+      }
+
+      if (paymentMethod === "balance") {
+        if (!currentUser) {
+          await connection.rollback();
+
+          return NextResponse.json(
+            {
+              success: false,
+              error: "Bakiye ile ödeme yapmak için giriş yapmalısın.",
+            },
+            { status: 401 }
+          );
+        }
+
+        await connection.execute(
+          `
+          INSERT INTO balance_transactions (
+            user_id,
+            transaction_type,
+            amount_usd,
+            balance_before_usd,
+            balance_after_usd,
+            description,
+            related_order_id
+          )
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+          `,
+          [
+            currentUser.id,
+            "order_payment",
+            -totalSaleForBalance,
+            balanceBeforeUsd,
+            balanceAfterUsd,
+            `MedyaTora siparis odemesi - ${batchCode}`,
+            firstInsertedOrderId,
           ]
         );
       }
@@ -629,7 +805,9 @@ export async function POST(req: Request) {
         message:
           paymentMethod === "turkey_bank"
             ? "Siparişiniz alındı. Ödeme kontrolünden sonra işleme alınacaktır."
-            : "Siparişiniz alındı. Ekibimiz sizinle iletişime geçecektir.",
+            : paymentMethod === "balance"
+              ? "Siparişiniz bakiyenizden ödenerek alındı."
+              : "Siparişiniz alındı. Ekibimiz sizinle iletişime geçecektir.",
         batchCode,
         orderNumbers: rows.map((row) => row.order_number),
         telegramWarning: telegramResult.warning,

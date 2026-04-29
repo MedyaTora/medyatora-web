@@ -21,7 +21,7 @@ import {
 type CurrencyCode = "TL" | "USD" | "RUB";
 type CheckoutMode = "single" | "cart" | null;
 type ContactType = "Telegram" | "WhatsApp" | "Instagram" | "E-posta" | "";
-type PaymentMethod = "turkey_bank" | "support" | "";
+type PaymentMethod = "turkey_bank" | "support" | "balance" | "";
 type QualityFilter = "all" | "Core" | "Plus" | "Prime";
 type GuaranteeFilter = "all" | "guaranteed" | "no-guarantee";
 type RegionFilter = "all" | "TR" | "RU" | "Global";
@@ -554,6 +554,42 @@ export default function SmmToraPage() {
   const [contactType, setContactType] = useState<ContactType>("");
   const [contactValue, setContactValue] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("");
+
+  useEffect(() => {
+    async function loadAuthUser() {
+      try {
+        const res = await fetch("/api/auth/me", {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+        });
+  
+        const data = await res.json();
+  
+        if (data.ok && data.user) {
+          setAuthUser({
+            id: data.user.id,
+            email: data.user.email,
+            full_name: data.user.full_name,
+            balance_usd: Number(data.user.balance_usd || 0),
+          });
+        } else {
+          setAuthUser(null);
+        }
+      } catch {
+        setAuthUser(null);
+      }
+    }
+  
+    loadAuthUser();
+  }, []);
+
+  const [authUser, setAuthUser] = useState<{
+    id: number;
+    email: string;
+    full_name: string | null;
+    balance_usd: number;
+  } | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [cartMessage, setCartMessage] = useState("");
@@ -2119,7 +2155,7 @@ export default function SmmToraPage() {
                 {t.paymentMethodDesc}
               </p>
 
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <div className="mt-4 grid gap-3 md:grid-cols-3">
                 <button
                   type="button"
                   onClick={() => {
@@ -2151,6 +2187,48 @@ export default function SmmToraPage() {
                     {t.turkeyBankTransferDesc}
                   </p>
                 </button>
+
+                <button
+  type="button"
+  onClick={() => {
+    setPaymentMethod("balance");
+
+    trackVisitorAction({
+      event_type: "payment_method_select",
+      event_label: "MedyaTora Bakiyesi",
+      event_value: "balance",
+      event_data: {
+        checkout_mode: checkoutMode,
+        item_count: checkoutItems.length,
+        total_price: checkoutItems.reduce(
+          (sum, item) => sum + item.total_price,
+          0
+        ),
+        currency: selectedCurrency,
+        balance_usd: authUser?.balance_usd || 0,
+      },
+    });
+  }}
+  disabled={!authUser || selectedCurrency !== "USD"}
+  className={`rounded-2xl border p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-50 ${
+    paymentMethod === "balance"
+      ? "border-emerald-400 bg-emerald-400/10 shadow-[0_12px_34px_rgba(52,211,153,0.12)]"
+      : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
+  }`}
+>
+  <p className="text-sm font-bold text-white">MedyaTora Bakiyesi</p>
+  <p className="mt-1 text-xs leading-5 text-white/55">
+    {authUser
+      ? `Mevcut bakiye: ${Number(authUser.balance_usd || 0).toFixed(2)} USD`
+      : "Bakiye ile ödeme için giriş yapmalısın."}
+  </p>
+
+  {selectedCurrency !== "USD" && (
+    <p className="mt-2 text-xs leading-5 text-amber-200">
+      Bakiye ile ödeme için para birimini USD seç.
+    </p>
+  )}
+</button>
 
                 <button
                   type="button"
@@ -2215,6 +2293,17 @@ export default function SmmToraPage() {
                   <p className="mt-2 text-white/70">{t.otherPaymentInfoText}</p>
                 </div>
               )}
+
+{paymentMethod === "balance" && (
+  <div className="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm leading-6 text-emerald-50">
+    <p className="font-bold text-white">Bakiye ile ödeme</p>
+    <p className="mt-2 text-white/70">
+      Sipariş onaylandığında toplam tutar MedyaTora bakiyenden düşülür.
+      Bakiye ile ödeme şu an sadece USD para biriminde kullanılabilir.
+    </p>
+  </div>
+)}
+
             </div>
 
             <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.055] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
