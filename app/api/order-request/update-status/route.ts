@@ -89,6 +89,7 @@ function getStatusTelegramTitle(status: OrderStatus) {
   if (status === "completed") return "✅ Sipariş tamamlandı";
   if (status === "cancelled") return "❌ Sipariş iptal edildi";
   if (status === "refunded") return "↩️ Sipariş iade edildi";
+  if (status === "partial_refunded") return "↩️ Sipariş kısmi iade edildi";
   return "⚠️ Sipariş başarısız olarak işaretlendi";
 }
 
@@ -239,6 +240,14 @@ function buildStatusTelegramMessage({
       `↩️ Durum: ${getStatusLabel(nextStatus)}\n` +
       `💳 İade Tutarı: ${formatMoney(order.total_price, order.currency)}\n` +
       `📝 İade Notu: ${completionNote || "-"}`
+    );
+  }
+
+  if (nextStatus === "partial_refunded") {
+    return (
+      base +
+      `↩️ Durum: ${getStatusLabel(nextStatus)}\n` +
+      `📝 Kısmi İade Notu: ${completionNote || "-"}`
     );
   }
 
