@@ -1,6 +1,7 @@
 import https from "https";
 import { NextResponse } from "next/server";
 import { getMysqlPool, hasMysqlConfig } from "@/lib/mysql";
+import { getCurrentUser } from "@/lib/auth/current-user";
 import {
   mapDbServiceToOrderItem,
   type DbServiceRow,
@@ -403,6 +404,9 @@ export async function POST(req: Request) {
       );
     }
 
+    const currentUser = await getCurrentUser();
+    const userId = currentUser?.id || null;
+
     const batchCode = createBatchCode();
 
     const rows = [];
@@ -443,6 +447,7 @@ export async function POST(req: Request) {
       const totalCostPrice = roundMoney((quantity / 1000) * unitCostPrice);
 
       rows.push({
+        user_id: userId,
         batch_code: batchCode,
         order_number: createOrderNumber(),
         full_name: fullName,
@@ -480,6 +485,7 @@ export async function POST(req: Request) {
         await connection.execute(
           `
           INSERT INTO order_requests (
+            user_id,
             batch_code,
             order_number,
             full_name,
@@ -504,12 +510,13 @@ export async function POST(req: Request) {
             target_link,
             order_note,
             status
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `,
-          [
-            row.batch_code,
-            row.order_number,
-            row.full_name,
+            [
+              row.user_id,
+              row.batch_code,
+              row.order_number,
+              row.full_name,
             row.phone_number,
             row.contact_type,
             row.contact_value,
@@ -594,6 +601,9 @@ export async function POST(req: Request) {
       `🛒 Yeni sipariş alındı\n\n` +
       `🧾 Batch Kodu: ${batchCode}\n` +
       `👤 Ad Soyad: ${fullName}\n` +
+      `🆔 Kullanıcı Hesabı: ${
+        currentUser ? `#${currentUser.id} | ${currentUser.email}` : "Üyeliksiz sipariş"
+      }\n` +
       `📞 Telefon: ${phoneNumber}\n` +
       `📩 İletişim Türü: ${contactType}\n` +
       `📨 İletişim Bilgisi: ${contactValue}\n` +
