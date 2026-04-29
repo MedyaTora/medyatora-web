@@ -9,6 +9,7 @@ const ALLOWED_ORDER_STATUSES = [
   "completed",
   "cancelled",
   "refunded",
+  "partial_refunded",
   "failed",
 ] as const;
 
@@ -69,11 +70,12 @@ function formatMoney(value: number | null | undefined, currency?: string | null)
 function getStatusLabel(status: OrderStatus) {
   const map: Record<OrderStatus, string> = {
     pending_payment: "Ödeme Bekliyor",
-    pending: "Bekliyor",
-    processing: "İşlemde",
+    pending: "Beklemede",
+    processing: "İşleniyor",
     completed: "Tamamlandı",
     cancelled: "İptal Edildi",
     refunded: "İade Edildi",
+    partial_refunded: "Kısmi İade Edildi",
     failed: "Başarısız",
   };
 

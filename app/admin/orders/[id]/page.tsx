@@ -3,9 +3,11 @@ export const revalidate = 0;
 
 import { getMysqlPool } from "@/lib/mysql";
 import OrderStatusCardActions from "@/app/components/order-status-card-actions";
+import AdminBalanceRefundCard from "@/app/components/admin-balance-refund-card";
 
 type OrderDetailRow = {
   id: number;
+  user_id: number | null;
   created_at: string;
   updated_at: string | null;
   batch_code: string | null;
@@ -54,7 +56,9 @@ function formatMoney(value: number | null | undefined, currency?: string | null)
 
 function calculateProfit(order: OrderDetailRow) {
   const sale = typeof order.total_price === "number" ? order.total_price : 0;
-  const cost = typeof order.total_cost_price === "number" ? order.total_cost_price : 0;
+  const cost =
+    typeof order.total_cost_price === "number" ? order.total_cost_price : 0;
+
   return sale - cost;
 }
 
@@ -66,6 +70,7 @@ function getOrderStatusLabel(status: string | null | undefined) {
     completed: "Tamamlandı",
     cancelled: "İptal Edildi",
     refunded: "İade Edildi",
+    partial_refunded: "Kısmi İade Edildi",
     failed: "Başarısız",
   };
 
@@ -80,6 +85,7 @@ function getOrderStatusBadgeClass(status: string | null | undefined) {
     completed: "border-emerald-400/20 bg-emerald-400/10 text-emerald-300",
     cancelled: "border-rose-400/20 bg-rose-400/10 text-rose-300",
     refunded: "border-violet-400/20 bg-violet-400/10 text-violet-300",
+    partial_refunded: "border-violet-400/20 bg-violet-400/10 text-violet-300",
     failed: "border-red-400/20 bg-red-400/10 text-red-300",
   };
 
@@ -90,6 +96,7 @@ function getPaymentMethodLabel(method: string | null | undefined) {
   const map: Record<string, string> = {
     turkey_bank: "Türkiye Banka Havalesi / EFT",
     support: "Destek ile İletişime Geçilecek",
+    balance: "MedyaTora Bakiyesi",
   };
 
   return map[method || ""] || method || "-";
@@ -125,7 +132,9 @@ function InfoCard({
       <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-white/40">
         {title}
       </p>
-      <p className="break-words text-sm font-semibold text-white/90">{value || "-"}</p>
+      <p className="break-words text-sm font-semibold text-white/90">
+        {value || "-"}
+      </p>
     </div>
   );
 }
@@ -176,6 +185,7 @@ export default async function OrderDetailPage({
       `
       SELECT
         id,
+        user_id,
         created_at,
         updated_at,
         batch_code,
@@ -220,6 +230,7 @@ export default async function OrderDetailPage({
 
     order = {
       id: Number(row.id),
+      user_id: row.user_id === null ? null : Number(row.user_id),
       created_at: toDateValue(row.created_at),
       updated_at: row.updated_at ? toDateValue(row.updated_at) : null,
       batch_code: row.batch_code,
@@ -236,8 +247,10 @@ export default async function OrderDetailPage({
       quantity: row.quantity === null ? null : Number(row.quantity),
       unit_price: row.unit_price === null ? null : Number(row.unit_price),
       total_price: row.total_price === null ? null : Number(row.total_price),
-      unit_cost_price: row.unit_cost_price === null ? null : Number(row.unit_cost_price),
-      total_cost_price: row.total_cost_price === null ? null : Number(row.total_cost_price),
+      unit_cost_price:
+        row.unit_cost_price === null ? null : Number(row.unit_cost_price),
+      total_cost_price:
+        row.total_cost_price === null ? null : Number(row.total_cost_price),
       guarantee_label: row.guarantee_label,
       speed: row.speed,
       currency: row.currency,
@@ -253,10 +266,43 @@ export default async function OrderDetailPage({
   } catch (error) {
     return (
       <ErrorScreen
-        message={error instanceof Error ? error.message : "MySQL sipariş detayı okunamadı."}
+        message={
+          error instanceof Error
+            ? error.message
+            : "MySQL sipariş detayı okunamadı."
+        }
       />
     );
   }
+
+  let alreadyRefunded = 0;
+
+  try {
+    const [refundRows] = await pool.query(
+      `
+      SELECT COALESCE(SUM(amount_usd), 0) AS refunded_total
+      FROM balance_transactions
+      WHERE related_order_id = ?
+        AND transaction_type IN ('order_refund', 'order_partial_refund')
+      `,
+      [order.id]
+    );
+
+    const refundRow = (refundRows as any[])[0];
+    alreadyRefunded = Number(refundRow?.refunded_total || 0);
+  } catch {
+    alreadyRefunded = 0;
+  }
+
+  const orderTotalForRefund =
+    typeof order.total_price === "number" ? order.total_price : 0;
+
+  const remainingRefundable = Math.max(
+    0,
+    Math.round(
+      (orderTotalForRefund - alreadyRefunded + Number.EPSILON) * 100
+    ) / 100
+  );
 
   const profit = calculateProfit(order);
   const profitRate =
@@ -276,7 +322,9 @@ export default async function OrderDetailPage({
           </a>
 
           <a
-            href={`/admin?orderStatus=${encodeURIComponent(order.status || "all")}`}
+            href={`/admin?orderStatus=${encodeURIComponent(
+              order.status || "all"
+            )}`}
             className="inline-flex items-center rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/[0.08]"
           >
             Aynı Durumdaki Siparişler
@@ -341,8 +389,16 @@ export default async function OrderDetailPage({
               <h2 className="text-xl font-bold">Sipariş Bilgileri</h2>
 
               <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <InfoCard title="Panel Servis ID" value={order.service_id ?? "-"} highlight />
-                <InfoCard title="Müşteri Ürün Kodu" value={order.site_code ?? "-"} highlight />
+                <InfoCard
+                  title="Panel Servis ID"
+                  value={order.service_id ?? "-"}
+                  highlight
+                />
+                <InfoCard
+                  title="Müşteri Ürün Kodu"
+                  value={order.site_code ?? "-"}
+                  highlight
+                />
                 <InfoCard title="Platform" value={order.platform || "-"} />
                 <InfoCard title="Kategori" value={order.category || "-"} />
               </div>
@@ -356,7 +412,10 @@ export default async function OrderDetailPage({
                 <InfoCard title="Miktar" value={order.quantity ?? "-"} />
                 <InfoCard title="Garanti" value={order.guarantee_label || "-"} />
                 <InfoCard title="Hız" value={order.speed || "-"} />
-                <InfoCard title="Durum" value={getOrderStatusLabel(order.status)} />
+                <InfoCard
+                  title="Durum"
+                  value={getOrderStatusLabel(order.status)}
+                />
               </div>
             </section>
 
@@ -368,9 +427,14 @@ export default async function OrderDetailPage({
                 <InfoCard title="Telefon" value={order.phone_number || "-"} />
                 <InfoCard
                   title="İletişim"
-                  value={`${order.contact_type || "-"} / ${order.contact_value || "-"}`}
+                  value={`${order.contact_type || "-"} / ${
+                    order.contact_value || "-"
+                  }`}
                 />
-                <InfoCard title="Hedef Kullanıcı" value={order.target_username || "-"} />
+                <InfoCard
+                  title="Hedef Kullanıcı"
+                  value={order.target_username || "-"}
+                />
               </div>
             </section>
 
@@ -380,11 +444,15 @@ export default async function OrderDetailPage({
               <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
                 <InfoCard
                   title="Birim Alış"
-                  value={`${order.unit_cost_price ?? 0} ${order.currency || ""} / 1000`}
+                  value={`${order.unit_cost_price ?? 0} ${
+                    order.currency || ""
+                  } / 1000`}
                 />
                 <InfoCard
                   title="Birim Satış"
-                  value={`${order.unit_price ?? 0} ${order.currency || ""} / 1000`}
+                  value={`${order.unit_price ?? 0} ${
+                    order.currency || ""
+                  } / 1000`}
                 />
                 <InfoCard
                   title="Toplam Alış"
@@ -406,7 +474,10 @@ export default async function OrderDetailPage({
               <h2 className="text-xl font-bold">İşlem Sonucu</h2>
 
               <div className="mt-5 grid gap-4 md:grid-cols-3">
-                <InfoCard title="Başlangıç Sayısı" value={order.start_count ?? "-"} />
+                <InfoCard
+                  title="Başlangıç Sayısı"
+                  value={order.start_count ?? "-"}
+                />
                 <InfoCard title="Bitiş Sayısı" value={order.end_count ?? "-"} />
                 <InfoCard
                   title="Fark"
@@ -426,12 +497,27 @@ export default async function OrderDetailPage({
 
               <div className="mt-5 grid gap-4 md:grid-cols-2">
                 <TextCard title="Sipariş Notu" value={order.order_note} />
-                <TextCard title="Admin / İşlem Notu" value={order.completion_note} />
+                <TextCard
+                  title="Admin / İşlem Notu"
+                  value={order.completion_note}
+                />
               </div>
             </section>
           </div>
 
           <aside className="space-y-6">
+            <AdminBalanceRefundCard
+              orderId={order.id}
+              orderNumber={order.order_number}
+              userId={order.user_id}
+              paymentMethod={order.payment_method}
+              currency={order.currency}
+              totalPrice={order.total_price}
+              alreadyRefunded={alreadyRefunded}
+              remainingRefundable={remainingRefundable}
+              status={order.status}
+            />
+
             <OrderStatusCardActions
               id={order.id}
               initialStatus={order.status || "pending"}
