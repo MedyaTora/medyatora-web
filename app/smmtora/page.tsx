@@ -6,6 +6,7 @@ import type { OrderServiceItem } from "@/lib/services";
 import { getDictionary, type Locale } from "@/lib/i18n";
 import { getAllPlatforms } from "@/lib/platforms";
 import ServiceTermsModal from "../components/service-terms-modal";
+import UserMenu from "../components/auth/UserMenu";
 import { trackVisitorAction } from "../components/visitor-tracker";
 
 import * as SiIcons from "react-icons/si";
@@ -1108,8 +1109,39 @@ export default function SmmToraPage() {
       </div>
       <ServiceTermsModal />
 
-      <div className="mx-auto max-w-7xl space-y-5">
-        <section className="relative overflow-hidden rounded-[34px] border border-white/10 bg-[#121826]/90 p-5 shadow-[0_24px_100px_rgba(0,0,0,0.42)] ring-1 ring-white/[0.03] backdrop-blur-xl sm:p-6">
+<div className="mx-auto max-w-7xl space-y-5">
+  <header className="flex flex-col gap-4 rounded-[28px] border border-white/10 bg-[#121826]/90 p-4 shadow-[0_18px_70px_rgba(0,0,0,0.28)] ring-1 ring-white/[0.025] backdrop-blur-xl md:flex-row md:items-center md:justify-between">
+    <a href="/" className="inline-flex items-center gap-3">
+      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-400 font-black text-black">
+        MT
+      </div>
+
+      <div>
+        <div className="text-lg font-black tracking-tight text-white">
+          MedyaTora
+        </div>
+        <div className="text-xs text-white/45">
+          SMMTora sosyal medya paneli
+        </div>
+      </div>
+    </a>
+
+    <nav className="flex flex-wrap items-center gap-3 text-sm font-semibold text-white/70">
+      <a href="/" className="transition hover:text-white">
+        Ana Sayfa
+      </a>
+      <a href="/#analysis" className="transition hover:text-white">
+        Analiz
+      </a>
+      <a href="/paketler" className="transition hover:text-white">
+        Paketler
+      </a>
+    </nav>
+
+    <UserMenu />
+  </header>
+
+  <section className="relative overflow-hidden rounded-[34px] border border-white/10 bg-[#121826]/90 p-5 shadow-[0_24px_100px_rgba(0,0,0,0.42)] ring-1 ring-white/[0.03] backdrop-blur-xl sm:p-6">
           <div className="pointer-events-none absolute -right-32 -top-32 h-72 w-72 rounded-full bg-emerald-400/10 blur-3xl" />
           <div className="pointer-events-none absolute -left-24 bottom-0 h-64 w-64 rounded-full bg-sky-400/10 blur-3xl" />
 
