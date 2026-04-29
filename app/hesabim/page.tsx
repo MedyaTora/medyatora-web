@@ -538,7 +538,7 @@ export default async function AccountPage() {
 
                     <div>
                       <Link
-                        href={`/hesabim/siparisler/${order.id}`}
+                        href={`/hesabim/siparisler/${order.order_number}`}
                         className="inline-flex rounded-2xl bg-emerald-400 px-4 py-2 text-center text-xs font-black text-black transition hover:bg-emerald-300"
                       >
                         Detay

@@ -168,7 +168,7 @@ export default async function OrdersPage({
                   </div>
 
                   <Link
-                    href={`/hesabim/siparisler/${order.id}`}
+                    href={`/hesabim/siparisler/${order.order_number}`}
                     className="rounded-2xl bg-emerald-400 px-5 py-3 text-center text-sm font-black text-black transition hover:bg-emerald-300"
                   >
                     Detay

@@ -58,6 +58,46 @@ function createSupportMessage(orderNumber: string) {
   return `Merhaba, MedyaTora siparişim hakkında destek almak istiyorum. Sipariş No: ${orderNumber}`;
 }
 
+function getDeliverySpeedText(status: string, speed: string | null | undefined) {
+  if (status === "pending_payment") {
+    return "Ödeme onayı bekleniyor";
+  }
+
+  if (status === "pending") {
+    return speed && speed.trim() ? speed : "Sipariş sıraya alındı";
+  }
+
+  if (status === "processing") {
+    return speed && speed.trim() ? speed : "Gönderim hazırlanıyor";
+  }
+
+  if (status === "in_progress") {
+    return speed && speed.trim() ? speed : "Gönderim devam ediyor";
+  }
+
+  if (status === "completed") {
+    return speed && speed.trim() ? speed : "Gönderim tamamlandı";
+  }
+
+  if (status === "refunded") {
+    return "Sipariş tutarı iade edildi";
+  }
+
+  if (status === "partial_refunded") {
+    return "Kısmi iade yapıldı";
+  }
+
+  if (status === "cancelled") {
+    return "Sipariş iptal edildi";
+  }
+
+  if (status === "failed") {
+    return "İşlem başarısız oldu";
+  }
+
+  return speed && speed.trim() ? speed : "-";
+}
+
 export default async function OrderDetailPage({
   params,
 }: {
@@ -70,9 +110,9 @@ export default async function OrderDetailPage({
   }
 
   const resolvedParams = await params;
-  const orderId = Number(resolvedParams.id);
+  const orderNumber = decodeURIComponent(resolvedParams.id || "").trim();
 
-  if (!Number.isFinite(orderId) || orderId < 1) {
+  if (!orderNumber) {
     notFound();
   }
 
@@ -104,11 +144,11 @@ export default async function OrderDetailPage({
       status,
       created_at
     FROM order_requests
-    WHERE id = ?
+    WHERE order_number = ?
       AND user_id = ?
     LIMIT 1
     `,
-    [orderId, user.id]
+    [orderNumber, user.id]
   );
 
   const order = rows[0];
@@ -120,7 +160,7 @@ export default async function OrderDetailPage({
   const supportMessage = createSupportMessage(order.order_number);
   const encodedSupportMessage = encodeURIComponent(supportMessage);
 
-  const telegramUrl = `https://t.me/medyatora_support`;
+  const telegramUrl = "https://t.me/medyatora";
   const whatsappUrl = `https://wa.me/?text=${encodedSupportMessage}`;
 
   return (
@@ -128,13 +168,17 @@ export default async function OrderDetailPage({
       <div className="mx-auto max-w-6xl">
         <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.24em] text-white/35">
-              Sipariş Detayı
+            <p className="text-xs font-bold uppercase tracking-[0.24em] text-emerald-300">
+              Sipariş Merkezi
             </p>
             <h1 className="mt-2 text-3xl font-black md:text-4xl">
-              {order.order_number}
+              Sipariş Detayı
             </h1>
             <p className="mt-2 text-sm text-white/55">
+              Sipariş No:{" "}
+              <span className="font-bold text-white">{order.order_number}</span>
+            </p>
+            <p className="mt-1 text-sm text-white/45">
               {formatOrderDate(order.created_at)}
             </p>
           </div>
@@ -157,9 +201,11 @@ export default async function OrderDetailPage({
               >
                 {getOrderStatusLabel(order.status)}
               </span>
+
               <h2 className="mt-4 text-2xl font-black text-white">
                 {order.service_title}
               </h2>
+
               <p className="mt-2 max-w-3xl text-sm leading-6 text-white/60">
                 {getOrderStatusDescription(order.status)}
               </p>
@@ -178,18 +224,29 @@ export default async function OrderDetailPage({
           <InfoCard label="Platform" value={order.platform} />
           <InfoCard label="Kategori" value={order.category} />
           <InfoCard label="Ürün Kodu" value={order.site_code} />
-          <InfoCard label="Miktar" value={Number(order.quantity).toLocaleString("tr-TR")} />
+          <InfoCard
+            label="Miktar"
+            value={Number(order.quantity).toLocaleString("tr-TR")}
+          />
           <InfoCard
             label="Birim Fiyat"
-            value={`${Number(order.unit_price || 0).toFixed(2)} ${order.currency} / 1000`}
+            value={`${Number(order.unit_price || 0).toFixed(2)} ${
+              order.currency
+            } / 1000`}
           />
           <InfoCard
             label="Toplam Fiyat"
             value={formatOrderMoney(order.total_price, order.currency)}
           />
           <InfoCard label="Garanti" value={order.guarantee_label || "-"} />
-          <InfoCard label="Hız" value={order.speed || "-"} />
-          <InfoCard label="Ödeme Yöntemi" value={getPaymentMethodLabel(order.payment_method)} />
+          <InfoCard
+            label="Gönderim Hızı"
+            value={getDeliverySpeedText(order.status, order.speed)}
+          />
+          <InfoCard
+            label="Ödeme Yöntemi"
+            value={getPaymentMethodLabel(order.payment_method)}
+          />
         </section>
 
         <section className="mt-5 rounded-[32px] border border-white/10 bg-[#111827]/80 p-5 md:p-6">
@@ -197,6 +254,7 @@ export default async function OrderDetailPage({
 
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <InfoCard label="Hedef Kullanıcı" value={order.target_username || "-"} />
+
             <InfoCard
               label="Hedef Link"
               value={
@@ -228,6 +286,7 @@ export default async function OrderDetailPage({
 
         <section className="mt-5 rounded-[32px] border border-sky-400/20 bg-sky-400/10 p-5 md:p-6">
           <h2 className="text-xl font-black text-white">Desteğe Ulaş</h2>
+
           <p className="mt-2 text-sm leading-6 text-white/65">
             Bu siparişle ilgili destek almak istersen aşağıdaki butonlardan bize ulaşabilirsin.
           </p>
