@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { FaShieldHalved, FaUserCheck, FaXmark } from "react-icons/fa6";
 
 type PublicUser = {
@@ -39,6 +40,11 @@ export default function AuthModal({
   const [passwordAgain, setPasswordAgain] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [mounted, setMounted] = useState(false);
+
+useEffect(() => {
+  setMounted(true);
+}, []);
 
   const isRegister = mode === "register";
 
@@ -67,7 +73,7 @@ export default function AuthModal({
     };
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!mounted || !open) return null;
 
   async function handleSubmit() {
     setError("");
@@ -141,8 +147,8 @@ export default function AuthModal({
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-[99999] flex min-h-screen items-center justify-center overflow-y-auto bg-[#030712]/85 px-4 py-8 backdrop-blur-xl">
+  return createPortal(
+    <div className="fixed inset-0 z-[2147483647] flex min-h-screen items-center justify-center overflow-y-auto bg-[#030712]/90 px-4 py-8 backdrop-blur-2xl">
       <button
         type="button"
         aria-label="Kapat"
@@ -354,6 +360,7 @@ export default function AuthModal({
           </section>
         </div>
       </div>
-    </div>
+      </div>,
+    document.body
   );
 }
