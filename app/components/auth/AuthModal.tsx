@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { FaShieldHalved, FaUserCheck, FaXmark } from "react-icons/fa6";
 
 type PublicUser = {
   id: number;
@@ -39,9 +40,34 @@ export default function AuthModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  if (!open) return null;
-
   const isRegister = mode === "register";
+
+  useEffect(() => {
+    if (open) {
+      setMode(initialMode);
+      setError("");
+    }
+  }, [open, initialMode]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [open, onClose]);
+
+  if (!open) return null;
 
   async function handleSubmit() {
     setError("");
@@ -116,127 +142,216 @@ export default function AuthModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-[32px] border border-white/10 bg-[#111827] p-5 text-white shadow-[0_28px_120px_rgba(0,0,0,0.58)] ring-1 ring-white/[0.035]">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.22em] text-emerald-300">
-              MedyaTora Hesap
-            </p>
+    <div className="fixed inset-0 z-[99999] flex min-h-screen items-center justify-center overflow-y-auto bg-[#030712]/85 px-4 py-8 backdrop-blur-xl">
+      <button
+        type="button"
+        aria-label="Kapat"
+        onClick={onClose}
+        className="absolute inset-0 h-full w-full cursor-default"
+      />
 
-            <h2 className="mt-2 text-2xl font-bold">
-              {isRegister ? "Üye Ol" : "Giriş Yap"}
-            </h2>
+      <div className="relative z-10 w-full max-w-[920px] overflow-hidden rounded-[34px] border border-white/10 bg-[#0b1120] text-white shadow-[0_30px_140px_rgba(0,0,0,0.72)]">
+        <div className="pointer-events-none absolute -left-28 -top-28 h-72 w-72 rounded-full bg-emerald-400/10 blur-3xl" />
+        <div className="pointer-events-none absolute -right-28 -bottom-28 h-72 w-72 rounded-full bg-sky-400/10 blur-3xl" />
 
-            <p className="mt-2 text-sm leading-6 text-white/60">
-              {isRegister
-                ? "Hesabını oluştur, ücretsiz analiz hakkı kazan. Telefon doğrulama sonrası başlangıç bakiyesi aktif edilecek."
-                : "Hesabına giriş yap, bakiye ve analiz haklarını görüntüle."}
-            </p>
-          </div>
+        <div className="relative grid lg:grid-cols-[0.9fr_1.1fr]">
+          <aside className="hidden border-r border-white/10 bg-white/[0.025] p-8 lg:block">
+            <a href="/" className="inline-flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-400 text-base font-black text-black">
+                MT
+              </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/70 transition hover:bg-white/10"
-          >
-            Kapat
-          </button>
-        </div>
+              <div>
+                <div className="text-lg font-black tracking-tight">
+                  MedyaTora
+                </div>
+                <div className="text-xs text-white/45">
+                  Sosyal medya destek sistemi
+                </div>
+              </div>
+            </a>
 
-        <div className="mt-5 flex rounded-2xl border border-white/10 bg-black/20 p-1">
-          <button
-            type="button"
-            onClick={() => {
-              setMode("login");
-              setError("");
-            }}
-            className={`flex-1 rounded-xl px-4 py-2 text-sm font-bold transition ${
-              mode === "login"
-                ? "bg-emerald-400 text-black"
-                : "text-white/65 hover:bg-white/5 hover:text-white"
-            }`}
-          >
-            Giriş Yap
-          </button>
+            <div className="mt-10">
+              <p className="text-xs font-bold uppercase tracking-[0.24em] text-emerald-300">
+                Hesap avantajları
+              </p>
 
-          <button
-            type="button"
-            onClick={() => {
-              setMode("register");
-              setError("");
-            }}
-            className={`flex-1 rounded-xl px-4 py-2 text-sm font-bold transition ${
-              mode === "register"
-                ? "bg-emerald-400 text-black"
-                : "text-white/65 hover:bg-white/5 hover:text-white"
-            }`}
-          >
-            Üye Ol
-          </button>
-        </div>
+              <h2 className="mt-4 text-3xl font-black leading-tight tracking-tight">
+                Analiz, bakiye ve siparişlerini tek yerden yönet.
+              </h2>
 
-        <div className="mt-5 space-y-3">
-          {isRegister && (
-            <input
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder="Ad Soyad"
-              className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 transition focus:border-emerald-400 focus:bg-white/[0.075]"
-            />
-          )}
-
-          <input
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="E-posta"
-            type="email"
-            autoComplete="email"
-            className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 transition focus:border-emerald-400 focus:bg-white/[0.075]"
-          />
-
-          <input
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Şifre"
-            type="password"
-            autoComplete={isRegister ? "new-password" : "current-password"}
-            className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 transition focus:border-emerald-400 focus:bg-white/[0.075]"
-          />
-
-          {isRegister && (
-            <input
-              value={passwordAgain}
-              onChange={(e) => setPasswordAgain(e.target.value)}
-              placeholder="Şifre Tekrar"
-              type="password"
-              autoComplete="new-password"
-              className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 transition focus:border-emerald-400 focus:bg-white/[0.075]"
-            />
-          )}
-
-          {error && (
-            <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
-              {error}
+              <p className="mt-4 text-sm leading-7 text-white/60">
+                MedyaTora hesabı ile analiz hakkını, bakiye durumunu ve sipariş
+                geçmişini daha düzenli takip edebilirsin.
+              </p>
             </div>
-          )}
 
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={loading}
-            className="w-full rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-5 py-3 text-sm font-black text-black shadow-[0_16px_38px_rgba(52,211,153,0.18)] transition hover:-translate-y-0.5 hover:from-emerald-300 hover:to-emerald-400 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
-          >
-            {loading
-              ? "İşleniyor..."
-              : isRegister
-                ? "Üye Ol ve Ücretsiz Analiz Hakkı Kazan"
-                : "Giriş Yap"}
-          </button>
+            <div className="mt-8 space-y-3">
+              <div className="rounded-3xl border border-white/10 bg-black/20 p-5">
+                <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl border border-emerald-400/20 bg-emerald-400/10 text-emerald-300">
+                  <FaUserCheck />
+                </div>
+                <p className="text-sm font-bold">Ücretsiz analiz hakkı</p>
+                <p className="mt-2 text-sm leading-6 text-white/55">
+                  Üyelik sistemiyle analiz talepleri hesabına bağlanacak.
+                </p>
+              </div>
 
-          <p className="text-center text-xs leading-5 text-white/45">
-            Şifreler güvenli şekilde saklanır. MedyaTora hesabınla analiz, bakiye ve sipariş geçmişi özellikleri aktif olur.
-          </p>
+              <div className="rounded-3xl border border-white/10 bg-black/20 p-5">
+                <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl border border-sky-400/20 bg-sky-400/10 text-sky-300">
+                  <FaShieldHalved />
+                </div>
+                <p className="text-sm font-bold">Güvenli oturum</p>
+                <p className="mt-2 text-sm leading-6 text-white/55">
+                  Oturum bilgileri tarayıcıda güvenli cookie ile tutulur.
+                </p>
+              </div>
+            </div>
+          </aside>
+
+          <section className="p-5 sm:p-7 md:p-8">
+            <div className="mb-6 flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.24em] text-white/40">
+                  MedyaTora hesap
+                </p>
+
+                <h2 className="mt-2 text-3xl font-black tracking-tight">
+                  {isRegister ? "Üye ol" : "Giriş yap"}
+                </h2>
+
+                <p className="mt-2 max-w-md text-sm leading-6 text-white/55">
+                  {isRegister
+                    ? "Hesabını oluştur, ücretsiz analiz ve kullanıcı paneli özelliklerinden yararlan."
+                    : "Hesabına giriş yap, bakiye ve sipariş işlemlerine devam et."}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white/60 transition hover:bg-white/[0.08] hover:text-white"
+              >
+                <FaXmark />
+              </button>
+            </div>
+
+            <div className="mb-6 grid grid-cols-2 rounded-2xl border border-white/10 bg-black/20 p-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setMode("login");
+                  setError("");
+                }}
+                className={`rounded-xl px-4 py-3 text-sm font-black transition ${
+                  mode === "login"
+                    ? "bg-white text-black shadow-sm"
+                    : "text-white/55 hover:bg-white/[0.05] hover:text-white"
+                }`}
+              >
+                Giriş Yap
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setMode("register");
+                  setError("");
+                }}
+                className={`rounded-xl px-4 py-3 text-sm font-black transition ${
+                  mode === "register"
+                    ? "bg-white text-black shadow-sm"
+                    : "text-white/55 hover:bg-white/[0.05] hover:text-white"
+                }`}
+              >
+                Üye Ol
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {isRegister && (
+                <div>
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-white/40">
+                    Ad Soyad
+                  </label>
+                  <input
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Adını ve soyadını yaz"
+                    className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3.5 text-white outline-none placeholder:text-white/28 transition focus:border-emerald-300/70 focus:bg-white/[0.08]"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-white/40">
+                  E-posta
+                </label>
+                <input
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="ornek@mail.com"
+                  type="email"
+                  autoComplete="email"
+                  className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3.5 text-white outline-none placeholder:text-white/28 transition focus:border-emerald-300/70 focus:bg-white/[0.08]"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-white/40">
+                  Şifre
+                </label>
+                <input
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="En az 8 karakter"
+                  type="password"
+                  autoComplete={isRegister ? "new-password" : "current-password"}
+                  className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3.5 text-white outline-none placeholder:text-white/28 transition focus:border-emerald-300/70 focus:bg-white/[0.08]"
+                />
+              </div>
+
+              {isRegister && (
+                <div>
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-white/40">
+                    Şifre Tekrar
+                  </label>
+                  <input
+                    value={passwordAgain}
+                    onChange={(e) => setPasswordAgain(e.target.value)}
+                    placeholder="Şifreni tekrar yaz"
+                    type="password"
+                    autoComplete="new-password"
+                    className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3.5 text-white outline-none placeholder:text-white/28 transition focus:border-emerald-300/70 focus:bg-white/[0.08]"
+                  />
+                </div>
+              )}
+
+              {error && (
+                <div className="rounded-2xl border border-rose-400/25 bg-rose-400/10 px-4 py-3 text-sm leading-6 text-rose-200">
+                  {error}
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={loading}
+                className="mt-2 w-full rounded-2xl bg-white px-5 py-4 text-sm font-black text-black transition hover:-translate-y-0.5 hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+              >
+                {loading
+                  ? "İşleniyor..."
+                  : isRegister
+                    ? "Hesap Oluştur"
+                    : "Giriş Yap"}
+              </button>
+
+              <p className="text-center text-xs leading-5 text-white/38">
+                MedyaTora hesabın; analiz, bakiye ve sipariş işlemlerini daha
+                düzenli yönetmek için kullanılır.
+              </p>
+            </div>
+          </section>
         </div>
       </div>
     </div>
