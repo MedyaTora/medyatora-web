@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import type { RowDataPacket } from "mysql2";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { getMysqlPool } from "@/lib/mysql";
+import PhoneVerificationCard from "@/app/components/auth/PhoneVerificationCard";
 
 type OrderRow = RowDataPacket & {
   id: number;
@@ -297,6 +298,13 @@ export default async function AccountPage() {
             </div>
           </div>
         </section>
+
+        <PhoneVerificationCard
+          initialPhoneNumber={user.phone_number}
+          initialPhoneVerified={user.phone_verified}
+          initialBalanceUsd={user.balance_usd}
+          initialWelcomeBonusClaimed={user.welcome_bonus_claimed}
+        />
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-[28px] border border-white/10 bg-[#111827]/90 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.24)]">
