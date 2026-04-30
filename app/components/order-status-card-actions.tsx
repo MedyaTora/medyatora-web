@@ -15,7 +15,8 @@ type Props = {
   contactValue?: string | null;
   serviceTitle?: string | null;
   targetUsername?: string | null;
-};
+  paymentMethod?: string | null;
+};;
 
 const statusOptions = [
   { value: "pending_payment", label: "Ödeme Bekliyor" },
@@ -24,6 +25,7 @@ const statusOptions = [
   { value: "completed", label: "Tamamlandı" },
   { value: "cancelled", label: "İptal Edildi" },
   { value: "refunded", label: "İade Edildi" },
+  { value: "partial_refunded", label: "Kısmi İade Edildi" },
   { value: "failed", label: "Başarısız" },
 ];
 
@@ -263,6 +265,7 @@ export default function OrderStatusCardActions({
   contactType,
   contactValue,
   serviceTitle,
+  paymentMethod,
 }: Props) {
   const [status, setStatus] = useState(initialStatus || "pending");
   const [startCount, setStartCount] = useState(
@@ -328,6 +331,48 @@ export default function OrderStatusCardActions({
       });
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Bir hata oluştu.");
+    }
+  }
+
+  async function handleApprovePayment() {
+    setMessage("");
+
+    const ok = window.confirm(
+      `${orderNumber || `#${id}`} siparişinin ödemesi onaylansın mı?`
+    );
+
+    if (!ok) return;
+
+    try {
+      const res = await fetch("/api/order-request/approve-payment", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          order_id: id,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Ödeme onaylanamadı.");
+      }
+
+      setStatus("pending");
+      setCompletionNote(
+        "Ödeme admin tarafından onaylandı. Sipariş işleme alınabilir."
+      );
+      setMessage(data.message || "Ödeme onaylandı.");
+
+      startTransition(() => {
+        router.refresh();
+      });
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : "Ödeme onaylanırken hata oluştu."
+      );
     }
   }
 
@@ -402,6 +447,17 @@ export default function OrderStatusCardActions({
       </div>
 
       <div className="mt-4 flex flex-wrap gap-3">
+      {initialStatus === "pending_payment" &&
+        (paymentMethod === "turkey_bank" || paymentMethod === "support") ? (
+          <button
+            type="button"
+            onClick={handleApprovePayment}
+            disabled={isPending}
+            className="rounded-xl bg-amber-300 px-4 py-3 text-sm font-black text-black transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Ödemeyi Onayla
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={handleSave}

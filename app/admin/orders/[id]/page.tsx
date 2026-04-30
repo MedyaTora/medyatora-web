@@ -516,31 +516,35 @@ export default async function OrderDetailPage({
           </div>
 
           <aside className="space-y-6">
-            <AdminBalanceRefundCard
-              orderId={order.id}
-              orderNumber={order.order_number}
-              userId={order.user_id}
-              paymentMethod={order.payment_method}
-              currency={displayCurrency}
-              totalPrice={order.total_price}
-              alreadyRefunded={alreadyRefunded}
-              remainingRefundable={remainingRefundable}
-              status={order.status}
-            />
+          <AdminBalanceRefundCard
+  orderId={order.id}
+  orderNumber={order.order_number}
+  userId={order.user_id}
+  paymentMethod={order.payment_method}
+  currency={displayCurrency}
+  totalPrice={order.total_price}
+  alreadyRefunded={alreadyRefunded}
+  remainingRefundable={remainingRefundable}
+  status={order.status}
+  quantity={order.quantity}
+  startCount={order.start_count}
+  endCount={order.end_count}
+/>
 
-            <OrderStatusCardActions
-              id={order.id}
-              initialStatus={order.status || "pending"}
-              initialStartCount={order.start_count}
-              initialEndCount={order.end_count}
-              initialCompletionNote={order.completion_note}
-              orderNumber={order.order_number}
-              fullName={order.full_name}
-              contactType={order.contact_type}
-              contactValue={order.contact_value}
-              serviceTitle={order.service_title}
-              targetUsername={order.target_username}
-            />
+<OrderStatusCardActions
+  id={order.id}
+  initialStatus={order.status || "pending"}
+  initialStartCount={order.start_count}
+  initialEndCount={order.end_count}
+  initialCompletionNote={order.completion_note}
+  orderNumber={order.order_number}
+  fullName={order.full_name}
+  contactType={order.contact_type}
+  contactValue={order.contact_value}
+  serviceTitle={order.service_title}
+  targetUsername={order.target_username}
+  paymentMethod={order.payment_method}
+/>
 
             <section className="rounded-[28px] border border-white/10 bg-white/[0.03] p-5 md:p-6">
               <h2 className="text-xl font-bold">Hızlı Kontrol</h2>

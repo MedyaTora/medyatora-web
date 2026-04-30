@@ -645,6 +645,9 @@ export default function SmmToraPage() {
   const [loading, setLoading] = useState(false);
   const [cartMessage, setCartMessage] = useState("");
   const [error, setError] = useState("");
+  const [paymentReviewLoading, setPaymentReviewLoading] = useState(false);
+  const [paymentReviewMessage, setPaymentReviewMessage] = useState("");
+  const [paymentReviewError, setPaymentReviewError] = useState("");
   const [createdOrderNumbers, setCreatedOrderNumbers] = useState<string[]>([]);
   const [successOpen, setSuccessOpen] = useState(false);
   const [createdPaymentInfo, setCreatedPaymentInfo] =
@@ -1047,6 +1050,8 @@ export default function SmmToraPage() {
     setCartMessage("");
     setCreatedOrderNumbers([]);
     setCreatedPaymentInfo(null);
+    setPaymentReviewMessage("");
+    setPaymentReviewError("");
     setSuccessOpen(false);
   };
 
@@ -1174,6 +1179,8 @@ export default function SmmToraPage() {
     setCartMessage("");
     setCreatedOrderNumbers([]);
     setCreatedPaymentInfo(null);
+    setPaymentReviewMessage("");
+    setPaymentReviewError("");
 
     try {
       const res = await fetch("/api/order-request", {
@@ -1229,6 +1236,7 @@ export default function SmmToraPage() {
         : [];
 
       setCreatedOrderNumbers(createdNumbers);
+
       setCreatedPaymentInfo({
         fullName: fullName.trim(),
         phoneNumber: phoneNumber.trim(),
@@ -1237,6 +1245,7 @@ export default function SmmToraPage() {
         totalAmount: checkoutTotalAmount,
         orderNumbers: createdNumbers,
       });
+
       setSuccessOpen(true);
       setCheckoutMode(null);
 
@@ -1253,1411 +1262,1494 @@ export default function SmmToraPage() {
     }
   };
 
+  const handlePaymentCompleted = async () => {
+    if (!createdPaymentInfo || !createdPaymentInfo.orderNumbers.length) {
+      setPaymentReviewError("Sipariş numarası bulunamadı.");
+      return;
+    }
+
+    setPaymentReviewLoading(true);
+    setPaymentReviewMessage("");
+    setPaymentReviewError("");
+
+    try {
+      const res = await fetch("/api/order-request/payment-review", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          order_numbers: createdPaymentInfo.orderNumbers,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Ödeme bildirimi alınamadı.");
+      }
+
+      setPaymentReviewMessage(
+        data.message || "Ödeme bildirimi alındı. Sipariş kontrol edilecek."
+      );
+    } catch (err) {
+      setPaymentReviewError(
+        err instanceof Error
+          ? err.message
+          : "Ödeme bildirimi sırasında hata oluştu."
+      );
+    } finally {
+      setPaymentReviewLoading(false);
+    }
+  };
+
   return (
     <main className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(52,211,153,0.18)_0%,transparent_30%),radial-gradient(circle_at_top_right,rgba(56,189,248,0.18)_0%,transparent_32%),radial-gradient(circle_at_50%_0%,rgba(99,102,241,0.16)_0%,transparent_38%),linear-gradient(180deg,#101a32_0%,#0b1020_42%,#070b16_100%)] px-4 py-6 text-white sm:px-6">
-      <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#1c2740_0%,#0c1326_35%,#060914_70%,#03050d_100%)]" />
+    <div className="pointer-events-none absolute inset-0 -z-10">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#1c2740_0%,#0c1326_35%,#060914_70%,#03050d_100%)]" />
 
-        <div className="absolute left-[-120px] top-[-80px] h-[320px] w-[320px] rounded-full bg-emerald-500/12 blur-3xl" />
-        <div className="absolute right-[-100px] top-[120px] h-[280px] w-[280px] rounded-full bg-sky-500/12 blur-3xl" />
-        <div className="absolute bottom-[-120px] left-[18%] h-[260px] w-[260px] rounded-full bg-cyan-400/10 blur-3xl" />
-        <div className="absolute bottom-[-100px] right-[12%] h-[300px] w-[300px] rounded-full bg-indigo-500/10 blur-3xl" />
+      <div className="absolute left-[-120px] top-[-80px] h-[320px] w-[320px] rounded-full bg-emerald-500/12 blur-3xl" />
+      <div className="absolute right-[-100px] top-[120px] h-[280px] w-[280px] rounded-full bg-sky-500/12 blur-3xl" />
+      <div className="absolute bottom-[-120px] left-[18%] h-[260px] w-[260px] rounded-full bg-cyan-400/10 blur-3xl" />
+      <div className="absolute bottom-[-100px] right-[12%] h-[300px] w-[300px] rounded-full bg-indigo-500/10 blur-3xl" />
 
-        <div className="absolute inset-0 opacity-[0.05] [background-image:linear-gradient(to_right,white_1px,transparent_1px),linear-gradient(to_bottom,white_1px,transparent_1px)] [background-size:36px_36px]" />
+      <div className="absolute inset-0 opacity-[0.05] [background-image:linear-gradient(to_right,white_1px,transparent_1px),linear-gradient(to_bottom,white_1px,transparent_1px)] [background-size:36px_36px]" />
 
-        <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.03),transparent_22%,transparent_78%,rgba(255,255,255,0.02))]" />
-      </div>
+      <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.03),transparent_22%,transparent_78%,rgba(255,255,255,0.02))]" />
+    </div>
 
-      <ServiceTermsModal />
+    <ServiceTermsModal />
 
-      <div className="mx-auto max-w-7xl space-y-5">
-        <header className="flex flex-col gap-4 rounded-[28px] border border-white/10 bg-[#121826]/90 p-4 shadow-[0_18px_70px_rgba(0,0,0,0.28)] ring-1 ring-white/[0.025] backdrop-blur-xl md:flex-row md:items-center md:justify-between">
-          <a href="/" className="inline-flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-400 font-black text-black">
-              MT
+    <div className="mx-auto max-w-7xl space-y-5">
+      <header className="flex flex-col gap-4 rounded-[28px] border border-white/10 bg-[#121826]/90 p-4 shadow-[0_18px_70px_rgba(0,0,0,0.28)] ring-1 ring-white/[0.025] backdrop-blur-xl md:flex-row md:items-center md:justify-between">
+        <a href="/" className="inline-flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-400 font-black text-black">
+            MT
+          </div>
+
+          <div>
+            <div className="text-lg font-black tracking-tight text-white">
+              MedyaTora
             </div>
-
-            <div>
-              <div className="text-lg font-black tracking-tight text-white">
-                MedyaTora
-              </div>
-              <div className="text-xs text-white/45">
-                SMMTora sosyal medya paneli
-              </div>
+            <div className="text-xs text-white/45">
+              SMMTora sosyal medya paneli
             </div>
+          </div>
+        </a>
+
+        <nav className="flex flex-wrap items-center gap-3 text-sm font-semibold text-white/70">
+          <a href="/" className="transition hover:text-white">
+            Ana Sayfa
           </a>
+          <a href="/#analysis" className="transition hover:text-white">
+            Analiz
+          </a>
+          <a href="/paketler" className="transition hover:text-white">
+            Paketler
+          </a>
+        </nav>
 
-          <nav className="flex flex-wrap items-center gap-3 text-sm font-semibold text-white/70">
-            <a href="/" className="transition hover:text-white">
-              Ana Sayfa
-            </a>
-            <a href="/#analysis" className="transition hover:text-white">
-              Analiz
-            </a>
-            <a href="/paketler" className="transition hover:text-white">
-              Paketler
-            </a>
-          </nav>
+        <UserMenu />
+      </header>
 
-          <UserMenu />
-        </header>
+      <section className="relative overflow-hidden rounded-[34px] border border-white/10 bg-[#121826]/90 p-5 shadow-[0_24px_100px_rgba(0,0,0,0.42)] ring-1 ring-white/[0.03] backdrop-blur-xl sm:p-6">
+        <div className="pointer-events-none absolute -right-32 -top-32 h-72 w-72 rounded-full bg-emerald-400/10 blur-3xl" />
+        <div className="pointer-events-none absolute -left-24 bottom-0 h-64 w-64 rounded-full bg-sky-400/10 blur-3xl" />
 
-        <section className="relative overflow-hidden rounded-[34px] border border-white/10 bg-[#121826]/90 p-5 shadow-[0_24px_100px_rgba(0,0,0,0.42)] ring-1 ring-white/[0.03] backdrop-blur-xl sm:p-6">
-          <div className="pointer-events-none absolute -right-32 -top-32 h-72 w-72 rounded-full bg-emerald-400/10 blur-3xl" />
-          <div className="pointer-events-none absolute -left-24 bottom-0 h-64 w-64 rounded-full bg-sky-400/10 blur-3xl" />
-
-          <div className="relative flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
-            <div className="min-w-0">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-xs font-semibold text-emerald-300">
-                <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                {t.smmHeroBadge}
-              </div>
-
-              <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-                {t.smmHeroTitle}
-              </h1>
-
-              <p className="mt-3 max-w-3xl text-sm leading-6 text-white/65 sm:text-base">
-                {t.smmHeroDesc}
-              </p>
-
-              <div className="mt-5 grid gap-3 text-sm text-white/70 sm:grid-cols-2 xl:grid-cols-4">
-                {[
-                  [t.smmTaxIncluded, FaFileInvoice],
-                  [t.smmOrderTracking, FaUserCheck],
-                  [t.smmSupport, FaWhatsapp],
-                  [t.smmDataUse, FaShieldHalved],
-                ].map(([title, Icon]) => {
-                  const IconComponent = Icon as IconType;
-
-                  return (
-                    <div
-                      key={title as string}
-                      className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:border-emerald-400/20 hover:bg-white/[0.075]"
-                    >
-                      <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-black/20 text-emerald-300">
-                        <IconComponent />
-                      </span>
-                      <span className="leading-5">{title as string}</span>
-                    </div>
-                  );
-                })}
-              </div>
+        <div className="relative flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
+          <div className="min-w-0">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-xs font-semibold text-emerald-300">
+              <span className="h-2 w-2 rounded-full bg-emerald-400" />
+              {t.smmHeroBadge}
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 xl:min-w-[430px]">
-              <div className="rounded-3xl border border-white/10 bg-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
-                <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-white/45">
-                  {t.language}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {localeOptions.map((locale) => {
-                    const active = selectedLocale === locale;
+            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              {t.smmHeroTitle}
+            </h1>
 
-                    return (
-                      <button
-                        key={locale}
-                        type="button"
-                        onClick={() => setSelectedLocale(locale)}
-                        className={`rounded-full border px-4 py-2 text-xs font-bold transition sm:text-sm ${
-                          active
-                            ? "border-emerald-300 bg-emerald-400 text-black shadow-[0_10px_28px_rgba(52,211,153,0.18)]"
-                            : "border-white/10 bg-white/10 text-white/80 hover:border-white/20 hover:bg-white/15"
-                        }`}
-                      >
-                        {locale.toUpperCase()}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-white/65 sm:text-base">
+              {t.smmHeroDesc}
+            </p>
 
-              <div className="rounded-3xl border border-white/10 bg-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
-                <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-white/45">
-                  {t.currency}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {currencyOptions.map((currency) => {
-                    const active = selectedCurrency === currency;
+            <div className="mt-5 grid gap-3 text-sm text-white/70 sm:grid-cols-2 xl:grid-cols-4">
+              {[
+                [t.smmTaxIncluded, FaFileInvoice],
+                [t.smmOrderTracking, FaUserCheck],
+                [t.smmSupport, FaWhatsapp],
+                [t.smmDataUse, FaShieldHalved],
+              ].map(([title, Icon]) => {
+                const IconComponent = Icon as IconType;
 
-                    return (
-                      <button
-                        key={currency}
-                        type="button"
-                        onClick={() => {
-                          setSelectedCurrency(currency);
-                          clearStatusMessages();
-                        }}
-                        className={`rounded-full border px-4 py-2 text-xs font-bold transition sm:text-sm ${
-                          active
-                            ? "border-emerald-300 bg-emerald-400 text-black shadow-[0_10px_28px_rgba(52,211,153,0.18)]"
-                            : "border-white/10 bg-white/10 text-white/80 hover:border-white/20 hover:bg-white/15"
-                        }`}
-                      >
-                        {currency}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+                return (
+                  <div
+                    key={title as string}
+                    className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:border-emerald-400/20 hover:bg-white/[0.075]"
+                  >
+                    <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-black/20 text-emerald-300">
+                      <IconComponent />
+                    </span>
+                    <span className="leading-5">{title as string}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
-        </section>
 
-        <OrderBeforeNotice t={t} />
-
-        <section className="rounded-[34px] border border-white/10 bg-[#121826]/90 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.34)] ring-1 ring-white/[0.025] backdrop-blur-xl sm:p-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/45">
-                {t.platformSelection}
+          <div className="grid gap-4 md:grid-cols-2 xl:min-w-[430px]">
+            <div className="rounded-3xl border border-white/10 bg-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
+              <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-white/45">
+                {t.language}
               </p>
-              <p className="mt-1 text-sm text-white/55">
-                {t.platformSelectionDesc}
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={goToCart}
-              className="rounded-2xl border border-sky-400/20 bg-sky-400/10 px-4 py-2 text-sm font-bold text-sky-300 transition hover:-translate-y-0.5 hover:bg-sky-400/15"
-            >
-              {t.goToCart}
-            </button>
-          </div>
-
-          {servicesLoading ? (
-            <div className="mt-4 rounded-2xl border border-dashed border-white/15 bg-white/5 px-4 py-6 text-sm text-white/50">
-              {t.platformLoading}
-            </div>
-          ) : availablePlatforms.length === 0 ? (
-            <div className="mt-4 rounded-2xl border border-dashed border-white/15 bg-white/5 px-4 py-6 text-sm text-white/50">
-              {t.noActivePlatform}
-            </div>
-          ) : (
-            <>
-              <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-                {visiblePlatforms.map((platform) => {
-                  const active = selectedPlatform === platform.slug;
+              <div className="flex flex-wrap gap-2">
+                {localeOptions.map((locale) => {
+                  const active = selectedLocale === locale;
 
                   return (
                     <button
-                      key={platform.slug}
+                      key={locale}
                       type="button"
-                      onClick={() => {
-                        setSelectedPlatform(platform.slug);
-                        setSelectedServiceId(null);
-                        resetServiceFilters();
-                        clearStatusMessages();
-
-                        trackVisitorAction({
-                          event_type: "platform_select",
-                          event_label: platform.title,
-                          event_value: platform.slug,
-                          event_data: {
-                            platform_slug: platform.slug,
-                            platform_title: platform.title,
-                          },
-                        });
-                      }}
-                      className={`group relative overflow-hidden rounded-3xl border p-4 text-left transition duration-200 hover:-translate-y-1 ${
+                      onClick={() => setSelectedLocale(locale)}
+                      className={`rounded-full border px-4 py-2 text-xs font-bold transition sm:text-sm ${
                         active
-                          ? "border-emerald-400/80 bg-emerald-400/12 shadow-[0_18px_50px_rgba(52,211,153,0.12),0_0_0_1px_rgba(52,211,153,0.16)]"
-                          : "border-white/10 bg-white/[0.045] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] hover:border-white/20 hover:bg-white/[0.08] hover:shadow-[0_16px_45px_rgba(0,0,0,0.22)]"
+                          ? "border-emerald-300 bg-emerald-400 text-black shadow-[0_10px_28px_rgba(52,211,153,0.18)]"
+                          : "border-white/10 bg-white/10 text-white/80 hover:border-white/20 hover:bg-white/15"
                       }`}
                     >
-                      <div
-                        className={`pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full ${
-                          platform.brandGlow || "bg-white/10"
-                        } blur-3xl transition group-hover:scale-125`}
-                      />
-
-                      <div className="relative">
-                        <div
-                          className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border ${
-                            active
-                              ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-300"
-                              : "border-white/10 bg-black/25 text-white"
-                          }`}
-                        >
-                          <PlatformIcon
-                            slug={platform.slug}
-                            title={platform.shortTitle || platform.title}
-                          />
-                        </div>
-
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="truncate text-sm font-bold text-white sm:text-base">
-                              {platform.title}
-                            </div>
-                            <div className="mt-1 text-xs text-white/45">
-                              {t.singleServices}
-                            </div>
-                          </div>
-
-                          {active && (
-                            <span className="rounded-full bg-emerald-400 px-2.5 py-1 text-[10px] font-bold text-black">
-                              {t.selected}
-                            </span>
-                          )}
-                        </div>
-                      </div>
+                      {locale.toUpperCase()}
                     </button>
                   );
                 })}
               </div>
-
-              {availablePlatforms.length > 10 && (
-                <div className="mt-5 flex justify-center">
-                  <button
-                    type="button"
-                    onClick={() => setShowAllPlatforms((prev) => !prev)}
-                    className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold text-white/75 transition hover:-translate-y-0.5 hover:bg-white/10 hover:text-white"
-                  >
-                    {showAllPlatforms
-                      ? t.showLessPlatforms
-                      : `${t.showMorePlatforms} (${hiddenPlatformCount} ${t.moreCount})`}
-                  </button>
-                </div>
-              )}
-            </>
-          )}
-        </section>
-
-        <section className="rounded-[34px] border border-white/10 bg-[#121826]/90 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.34)] ring-1 ring-white/[0.025] backdrop-blur-xl sm:p-6">
-          <p className="mb-4 text-xs font-bold uppercase tracking-[0.2em] text-white/45">
-            {t.categorySelection}
-          </p>
-
-          {servicesLoading ? (
-            <div className="rounded-2xl border border-dashed border-white/15 bg-white/5 px-4 py-6 text-sm text-white/50">
-              {t.servicesLoading}
             </div>
-          ) : categories.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-white/15 bg-white/5 px-4 py-6 text-sm text-white/50">
-              {t.noActiveServiceForPlatform}
+
+            <div className="rounded-3xl border border-white/10 bg-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
+              <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-white/45">
+                {t.currency}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {currencyOptions.map((currency) => {
+                  const active = selectedCurrency === currency;
+
+                  return (
+                    <button
+                      key={currency}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCurrency(currency);
+                        clearStatusMessages();
+                      }}
+                      className={`rounded-full border px-4 py-2 text-xs font-bold transition sm:text-sm ${
+                        active
+                          ? "border-emerald-300 bg-emerald-400 text-black shadow-[0_10px_28px_rgba(52,211,153,0.18)]"
+                          : "border-white/10 bg-white/10 text-white/80 hover:border-white/20 hover:bg-white/15"
+                      }`}
+                    >
+                      {currency}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {categories.map((category) => {
-                const active = selectedCategory === category.slug;
+          </div>
+        </div>
+      </section>
+
+      <OrderBeforeNotice t={t} />
+
+      <section className="rounded-[34px] border border-white/10 bg-[#121826]/90 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.34)] ring-1 ring-white/[0.025] backdrop-blur-xl sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/45">
+              {t.platformSelection}
+            </p>
+            <p className="mt-1 text-sm text-white/55">
+              {t.platformSelectionDesc}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={goToCart}
+            className="rounded-2xl border border-sky-400/20 bg-sky-400/10 px-4 py-2 text-sm font-bold text-sky-300 transition hover:-translate-y-0.5 hover:bg-sky-400/15"
+          >
+            {t.goToCart}
+          </button>
+        </div>
+
+        {servicesLoading ? (
+          <div className="mt-4 rounded-2xl border border-dashed border-white/15 bg-white/5 px-4 py-6 text-sm text-white/50">
+            {t.platformLoading}
+          </div>
+        ) : availablePlatforms.length === 0 ? (
+          <div className="mt-4 rounded-2xl border border-dashed border-white/15 bg-white/5 px-4 py-6 text-sm text-white/50">
+            {t.noActivePlatform}
+          </div>
+        ) : (
+          <>
+            <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+              {visiblePlatforms.map((platform) => {
+                const active = selectedPlatform === platform.slug;
 
                 return (
                   <button
-                    key={category.slug}
+                    key={platform.slug}
                     type="button"
                     onClick={() => {
-                      setSelectedCategory(category.slug);
+                      setSelectedPlatform(platform.slug);
                       setSelectedServiceId(null);
                       resetServiceFilters();
                       clearStatusMessages();
 
                       trackVisitorAction({
-                        event_type: "category_select",
-                        event_label: getCategoryLabel(category.name, selectedLocale),
-                        event_value: category.slug,
+                        event_type: "platform_select",
+                        event_label: platform.title,
+                        event_value: platform.slug,
                         event_data: {
-                          platform: selectedPlatform,
-                          category_slug: category.slug,
-                          category_name: category.name,
-                          locale: selectedLocale,
+                          platform_slug: platform.slug,
+                          platform_title: platform.title,
                         },
                       });
                     }}
-                    className={`rounded-full border px-4 py-2 text-xs font-bold transition sm:text-sm ${
+                    className={`group relative overflow-hidden rounded-3xl border p-4 text-left transition duration-200 hover:-translate-y-1 ${
                       active
-                        ? "border-emerald-300 bg-emerald-400 text-black shadow-[0_10px_28px_rgba(52,211,153,0.18)]"
-                        : "border-white/10 bg-white/10 text-white/80 hover:border-white/20 hover:bg-white/15"
+                        ? "border-emerald-400/80 bg-emerald-400/12 shadow-[0_18px_50px_rgba(52,211,153,0.12),0_0_0_1px_rgba(52,211,153,0.16)]"
+                        : "border-white/10 bg-white/[0.045] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] hover:border-white/20 hover:bg-white/[0.08] hover:shadow-[0_16px_45px_rgba(0,0,0,0.22)]"
                     }`}
                   >
-                    {getCategoryLabel(category.name, selectedLocale)}
+                    <div
+                      className={`pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full ${
+                        platform.brandGlow || "bg-white/10"
+                      } blur-3xl transition group-hover:scale-125`}
+                    />
+
+                    <div className="relative">
+                      <div
+                        className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border ${
+                          active
+                            ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-300"
+                            : "border-white/10 bg-black/25 text-white"
+                        }`}
+                      >
+                        <PlatformIcon
+                          slug={platform.slug}
+                          title={platform.shortTitle || platform.title}
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-bold text-white sm:text-base">
+                            {platform.title}
+                          </div>
+                          <div className="mt-1 text-xs text-white/45">
+                            {t.singleServices}
+                          </div>
+                        </div>
+
+                        {active && (
+                          <span className="rounded-full bg-emerald-400 px-2.5 py-1 text-[10px] font-bold text-black">
+                            {t.selected}
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </button>
                 );
               })}
             </div>
-          )}
-        </section>
 
-        <section className="grid gap-5 xl:grid-cols-[1.12fr_0.88fr]">
-          <div className="space-y-5">
-            <div className="rounded-[34px] border border-white/10 bg-[#121826]/90 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.34)] ring-1 ring-white/[0.025] backdrop-blur-xl sm:p-6">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/45">
-                    {t.serviceListTitle}
-                  </p>
-                  <p className="mt-1 text-sm text-white/50">
-                    {t.serviceListDesc}
-                  </p>
-                </div>
-
-                {filteredServices.length > 0 && (
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => scrollProducts("up")}
-                      className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-white/80 transition hover:-translate-y-0.5 hover:bg-white/10 sm:text-sm"
-                    >
-                      {t.up}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => scrollProducts("down")}
-                      className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-white/80 transition hover:-translate-y-0.5 hover:bg-white/10 sm:text-sm"
-                    >
-                      {t.down}
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            {availablePlatforms.length > 10 && (
+              <div className="mt-5 flex justify-center">
                 <button
                   type="button"
-                  onClick={() => setShowServiceFilters((prev) => !prev)}
-                  className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm font-bold text-white/80 transition hover:-translate-y-0.5 hover:bg-white/[0.1] hover:text-white"
+                  onClick={() => setShowAllPlatforms((prev) => !prev)}
+                  className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold text-white/75 transition hover:-translate-y-0.5 hover:bg-white/10 hover:text-white"
                 >
-                  <span>{t.filter}</span>
+                  {showAllPlatforms
+                    ? t.showLessPlatforms
+                    : `${t.showMorePlatforms} (${hiddenPlatformCount} ${t.moreCount})`}
                 </button>
-
-                <p className="text-xs text-white/45">
-                  {filteredServices.length} {t.servicesShown}
-                </p>
               </div>
+            )}
+          </>
+        )}
+      </section>
 
-              <div className="mb-4">
-                <input
-                  value={serviceSearch}
-                  onChange={(e) => setServiceSearch(e.target.value)}
-                  placeholder={t.searchPlaceholder}
-                  className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-sm text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
-                />
+      <section className="rounded-[34px] border border-white/10 bg-[#121826]/90 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.34)] ring-1 ring-white/[0.025] backdrop-blur-xl sm:p-6">
+        <p className="mb-4 text-xs font-bold uppercase tracking-[0.2em] text-white/45">
+          {t.categorySelection}
+        </p>
 
-                {serviceSearch.trim() ? (
-                  <p className="mt-2 text-xs text-white/45">
-                    “{serviceSearch.trim()}” — {filteredServices.length}{" "}
-                    {t.searchResultText}
-                  </p>
-                ) : null}
-              </div>
+        {servicesLoading ? (
+          <div className="rounded-2xl border border-dashed border-white/15 bg-white/5 px-4 py-6 text-sm text-white/50">
+            {t.servicesLoading}
+          </div>
+        ) : categories.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-white/15 bg-white/5 px-4 py-6 text-sm text-white/50">
+            {t.noActiveServiceForPlatform}
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {categories.map((category) => {
+              const active = selectedCategory === category.slug;
 
-              {showServiceFilters && (
-                <div className="mb-4 rounded-3xl border border-white/10 bg-black/20 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
-                  <div className="grid gap-3 md:grid-cols-4">
-                    <div>
-                      <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-white/40">
-                        {t.quality}
-                      </label>
-                      <select
-                        value={qualityFilter}
-                        onChange={(event) =>
-                          setQualityFilter(event.target.value as QualityFilter)
-                        }
-                        className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-sm text-white outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
-                      >
-                        <option value="all" className="bg-[#111827]">
-                          {t.all}
-                        </option>
-                        <option value="Core" className="bg-[#111827]">
-                          {t.coreQuality}
-                        </option>
-                        <option value="Plus" className="bg-[#111827]">
-                          {t.plusQuality}
-                        </option>
-                        <option value="Prime" className="bg-[#111827]">
-                          {t.primeQuality}
-                        </option>
-                      </select>
-                    </div>
+              return (
+                <button
+                  key={category.slug}
+                  type="button"
+                  onClick={() => {
+                    setSelectedCategory(category.slug);
+                    setSelectedServiceId(null);
+                    resetServiceFilters();
+                    clearStatusMessages();
 
-                    <div>
-                      <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-white/40">
-                        {t.guarantee}
-                      </label>
-                      <select
-                        value={guaranteeFilter}
-                        onChange={(event) =>
-                          setGuaranteeFilter(event.target.value as GuaranteeFilter)
-                        }
-                        className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-sm text-white outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
-                      >
-                        <option value="all" className="bg-[#111827]">
-                          {t.all}
-                        </option>
-                        <option value="guaranteed" className="bg-[#111827]">
-                          {t.guaranteed}
-                        </option>
-                        <option value="no-guarantee" className="bg-[#111827]">
-                          {t.noGuarantee}
-                        </option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-white/40">
-                        {t.region}
-                      </label>
-                      <select
-                        value={regionFilter}
-                        onChange={(event) =>
-                          setRegionFilter(event.target.value as RegionFilter)
-                        }
-                        className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-sm text-white outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
-                      >
-                        <option value="all" className="bg-[#111827]">
-                          {t.all}
-                        </option>
-                        <option value="TR" className="bg-[#111827]">
-                          TR
-                        </option>
-                        <option value="RU" className="bg-[#111827]">
-                          RU
-                        </option>
-                        <option value="Global" className="bg-[#111827]">
-                          Global
-                        </option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-white/40">
-                        {t.sort}
-                      </label>
-                      <select
-                        value={priceSort}
-                        onChange={(event) =>
-                          setPriceSort(event.target.value as PriceSort)
-                        }
-                        className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-sm text-white outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
-                      >
-                        <option value="smart" className="bg-[#111827]">
-                          {t.recommendedSort}
-                        </option>
-                        <option value="price-asc" className="bg-[#111827]">
-                          {t.priceAsc}
-                        </option>
-                        <option value="price-desc" className="bg-[#111827]">
-                          {t.priceDesc}
-                        </option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 flex justify-end">
-                    <button
-                      type="button"
-                      onClick={resetServiceFilters}
-                      className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-bold text-white/70 transition hover:-translate-y-0.5 hover:bg-white/[0.08] hover:text-white"
-                    >
-                      {t.clearFilters}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {servicesLoading ? (
-                <div className="rounded-2xl border border-dashed border-white/15 bg-white/5 px-4 py-6 text-sm text-white/50">
-                  {t.productsLoading}
-                </div>
-              ) : filteredServices.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-white/15 bg-white/5 px-4 py-6 text-sm text-white/50">
-                  {t.noProductsFound}
-                </div>
-              ) : (
-                <div
-                  ref={productsScrollRef}
-                  className="max-h-[520px] space-y-2 overflow-y-auto pr-1 sm:max-h-[620px]"
-                  style={{ scrollbarWidth: "thin" }}
+                    trackVisitorAction({
+                      event_type: "category_select",
+                      event_label: getCategoryLabel(category.name, selectedLocale),
+                      event_value: category.slug,
+                      event_data: {
+                        platform: selectedPlatform,
+                        category_slug: category.slug,
+                        category_name: category.name,
+                        locale: selectedLocale,
+                      },
+                    });
+                  }}
+                  className={`rounded-full border px-4 py-2 text-xs font-bold transition sm:text-sm ${
+                    active
+                      ? "border-emerald-300 bg-emerald-400 text-black shadow-[0_10px_28px_rgba(52,211,153,0.18)]"
+                      : "border-white/10 bg-white/10 text-white/80 hover:border-white/20 hover:bg-white/15"
+                  }`}
                 >
-                  {filteredServices.map((service) => {
-                    const active = selectedService?.id === service.id;
-                    const unitPrice = getUnitSalePrice(service, selectedCurrency);
-
-                    return (
-                      <button
-                        key={service.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedServiceId(service.id);
-                          clearStatusMessages();
-
-                          trackVisitorAction({
-                            event_type: "service_select",
-                            event_label: getLocalizedServiceTitle(
-                              service.title,
-                              selectedLocale
-                            ),
-                            event_value: String(service.siteCode),
-                            event_data: {
-                              service_id: service.id,
-                              site_code: service.siteCode,
-                              platform: service.platform,
-                              category: service.category,
-                              title: getLocalizedServiceTitle(
-                                service.title,
-                                selectedLocale
-                              ),
-                              level: service.level,
-                              guarantee: service.guarantee,
-                              guarantee_label: getLocalizedGuaranteeLabel(
-                                service.guaranteeLabel,
-                                selectedLocale
-                              ),
-                              min: service.min,
-                              max: service.max,
-                              price_per_1000: getUnitSalePrice(
-                                service,
-                                selectedCurrency
-                              ),
-                              currency: selectedCurrency,
-                            },
-                          });
-                        }}
-                        className={`group relative w-full overflow-hidden rounded-3xl border px-4 py-4 text-left transition duration-200 hover:-translate-y-0.5 ${
-                          active
-                            ? "border-emerald-400/80 bg-gradient-to-br from-emerald-500/18 to-white/[0.055] shadow-[0_18px_55px_rgba(52,211,153,0.12),0_0_0_1px_rgba(52,211,153,0.14)]"
-                            : "border-white/10 bg-white/[0.045] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] hover:border-white/20 hover:bg-white/[0.075] hover:shadow-[0_16px_45px_rgba(0,0,0,0.22)]"
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="min-w-0 flex-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <p className="line-clamp-2 text-sm font-bold text-white sm:text-base">
-                                {getLocalizedServiceTitle(
-                                  service.title,
-                                  selectedLocale
-                                )}
-                              </p>
-
-                              {active && (
-                                <span className="rounded-full bg-emerald-400 px-2.5 py-1 text-[10px] font-bold text-black sm:text-[11px]">
-                                  {t.selected}
-                                </span>
-                              )}
-
-                              <span
-                                className={`rounded-full px-2.5 py-1 text-[10px] font-bold sm:text-[11px] ${
-                                  service.guarantee
-                                    ? "bg-emerald-500/15 text-emerald-300"
-                                    : "bg-rose-500/15 text-rose-300"
-                                }`}
-                              >
-                                {getLocalizedGuaranteeLabel(
-                                  service.guaranteeLabel,
-                                  selectedLocale
-                                )}
-                              </span>
-
-                              <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-bold text-white/70 sm:text-[11px]">
-                                {localizeCommonServiceText(
-                                  service.level,
-                                  selectedLocale
-                                )}
-                              </span>
-                            </div>
-
-                            <div className="mt-3 grid gap-1 text-xs text-white/55 sm:text-sm">
-                              <p>
-                                {t.serviceNo}: {service.siteCode}
-                              </p>
-                              <p>
-                                {t.minMax}: {service.min} · Max: {service.max}
-                              </p>
-                              <p>
-                                {t.speed}:{" "}
-                                {getLocalizedSpeed(service.speed, selectedLocale)}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="shrink-0 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-right shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
-                            <p className="text-[11px] text-white/45 sm:text-xs">
-                              {t.per1000}
-                            </p>
-                            <p className="mt-1 text-base font-bold text-emerald-300 sm:text-lg">
-                              {formatPrice(unitPrice, selectedCurrency)}
-                            </p>
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            <div className="rounded-[34px] border border-white/10 bg-[#121826]/90 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.34)] ring-1 ring-white/[0.025] backdrop-blur-xl sm:p-6">
-              <div className="mb-4 flex flex-wrap gap-2">
-                {[
-                  ["service", t.serviceInfo],
-                  ["before", t.beforeOrder],
-                  ["notes", t.importantNotes],
-                ].map(([key, label]) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setInfoTab(key as "service" | "before" | "notes")}
-                    className={`rounded-xl border px-4 py-2 text-sm font-bold transition ${
-                      infoTab === key
-                        ? "border-emerald-300 bg-emerald-400 text-black shadow-[0_10px_28px_rgba(52,211,153,0.18)]"
-                        : "border-white/10 bg-white/5 text-white/75 hover:bg-white/10"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-
-              {infoTab === "service" && (
-                <div className="space-y-3 text-sm leading-7 text-white/70">
-                  <p>{t.serviceInfoP1}</p>
-                  <p>{t.serviceInfoP2}</p>
-                  <p>{t.serviceInfoP3}</p>
-                </div>
-              )}
-
-              {infoTab === "before" && (
-                <div className="space-y-3 text-sm leading-7 text-white/70">
-                  <p>{t.beforeOrderP1}</p>
-                  <p>{t.beforeOrderP2}</p>
-                </div>
-              )}
-
-              {infoTab === "notes" && (
-                <div className="space-y-3 text-sm leading-7 text-white/70">
-                  <p>{t.note1}</p>
-                  <p>{t.note2}</p>
-                  <p>{t.note3}</p>
-                  <p>{t.note4}</p>
-                </div>
-              )}
-            </div>
+                  {getCategoryLabel(category.name, selectedLocale)}
+                </button>
+              );
+            })}
           </div>
+        )}
+      </section>
 
-          <div className="space-y-5">
-            <div className="rounded-[34px] border border-white/10 bg-[#121826]/90 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.34)] ring-1 ring-white/[0.025] backdrop-blur-xl sm:p-6">
-              <p className="mb-4 text-xs font-bold uppercase tracking-[0.2em] text-white/45">
-                {t.orderInfo}
-              </p>
-
-              {selectedService ? (
-                <div className="mb-4 space-y-3">
-                  <div className="rounded-2xl border border-emerald-400/15 bg-gradient-to-br from-emerald-400/10 to-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-bold text-white">
-                        {getLocalizedServiceTitle(
-                          selectedService.title,
-                          selectedLocale
-                        )}
-                      </p>
-
-                      <span
-                        className={`rounded-full px-2.5 py-1 text-[10px] font-bold sm:text-[11px] ${
-                          selectedService.guarantee
-                            ? "bg-emerald-500/15 text-emerald-300"
-                            : "bg-rose-500/15 text-rose-300"
-                        }`}
-                      >
-                        {getLocalizedGuaranteeLabel(
-                          selectedService.guaranteeLabel,
-                          selectedLocale
-                        )}
-                      </span>
-
-                      <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-bold text-white/70 sm:text-[11px]">
-                        {localizeCommonServiceText(
-                          selectedService.level,
-                          selectedLocale
-                        )}
-                      </span>
-                    </div>
-
-                    <p className="mt-3 text-sm text-white/60">
-                      {t.minMax} {selectedService.min} · Max{" "}
-                      {selectedService.max}
-                    </p>
-
-                    <p className="mt-1 text-sm text-white/60">
-                      {t.speed}:{" "}
-                      {getLocalizedSpeed(selectedService.speed, selectedLocale)}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.055] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
-                    <p className="text-sm font-bold text-white/85">
-                      {t.productDescription}
-                    </p>
-                    <p className="mt-2 whitespace-pre-line text-sm leading-6 text-white/60">
-                      {getLocalizedServiceDescription(
-                        selectedService.description,
-                        selectedLocale
-                      )}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="mb-4 rounded-2xl border border-white/10 bg-white/[0.055] p-4 text-sm text-white/50">
-                  {t.selectProductFirst}
-                </div>
-              )}
-
-              <div className="space-y-3">
-                <input
-                  value={targetUsername}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setTargetUsername(value);
-
-                    if (value.trim().length >= 3 && selectedService) {
-                      trackVisitorAction({
-                        event_type: "target_entered",
-                        event_label: "Hedef kullanıcı adı girildi",
-                        event_value: value.trim(),
-                        event_data: {
-                          service_id: selectedService.id,
-                          site_code: selectedService.siteCode,
-                          platform: selectedPlatform,
-                          category: selectedCategory,
-                        },
-                      });
-                    }
-                  }}
-                  placeholder={t.targetUsername}
-                  className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
-                />
-
-                <input
-                  value={targetLink}
-                  onChange={(e) => setTargetLink(e.target.value)}
-                  placeholder={t.targetLink}
-                  className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
-                />
-
-                <input
-                  value={quantity}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, "");
-                    setQuantity(value);
-
-                    const numericValue = Number(value);
-
-                    if (numericValue > 0 && selectedService) {
-                      trackVisitorAction({
-                        event_type: "quantity_entered",
-                        event_label: "Miktar girildi",
-                        event_value: String(numericValue),
-                        event_data: {
-                          service_id: selectedService.id,
-                          site_code: selectedService.siteCode,
-                          platform: selectedPlatform,
-                          category: selectedCategory,
-                          quantity: numericValue,
-                          min: selectedService.min,
-                          max: selectedService.max,
-                          valid:
-                            numericValue >= selectedService.min &&
-                            numericValue <= selectedService.max,
-                        },
-                      });
-                    }
-                  }}
-                  placeholder={t.quantity}
-                  className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
-                />
-
-                {selectedService && (
-                  <p className="text-xs leading-5 text-white/45">
-                    {t.minQuantityText
-                      .replace("{min}", String(selectedService.min))
-                      .replace("{max}", String(selectedService.max))}
-                  </p>
-                )}
-
-                <input
-                  value={orderNote}
-                  onChange={(e) => setOrderNote(e.target.value)}
-                  placeholder={t.orderNote}
-                  className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
-                />
-
-                <div className="rounded-2xl border border-emerald-400/20 bg-gradient-to-br from-emerald-400/12 to-emerald-400/[0.035] p-4 shadow-[0_14px_42px_rgba(52,211,153,0.08),inset_0_1px_0_rgba(255,255,255,0.04)]">
-                  <p className="text-sm text-white/50">{t.totalSalePrice}</p>
-                  <p className="mt-1 text-2xl font-bold text-white">
-                    {totalPrice > 0
-                      ? formatPrice(totalPrice, selectedCurrency)
-                      : "-"}
-                  </p>
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <button
-                    type="button"
-                    onClick={handleOpenSingleCheckout}
-                    disabled={!canUseCurrentForm}
-                    className="rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-4 py-3 text-sm font-black text-black shadow-[0_16px_38px_rgba(52,211,153,0.18)] transition hover:-translate-y-0.5 hover:from-emerald-300 hover:to-emerald-400 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
-                  >
-                    {t.buyNow}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleAddToCart}
-                    disabled={!canUseCurrentForm}
-                    className="rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-3 text-sm font-bold text-emerald-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:bg-emerald-400/15 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
-                  >
-                    {t.addToCart}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={goToCart}
-                    className="rounded-2xl border border-sky-400/20 bg-sky-400/10 px-4 py-3 text-sm font-bold text-sky-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:bg-sky-400/15"
-                  >
-                    {t.goToCart}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div
-              ref={cartSectionRef}
-              className="rounded-[34px] border border-white/10 bg-[#121826]/90 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.34)] ring-1 ring-white/[0.025] backdrop-blur-xl sm:p-6"
-            >
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/45">
-                  {t.cart}
-                </p>
-
-                {cartItems.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={handleOpenCartCheckout}
-                    className="rounded-xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-4 py-2 text-xs font-black text-black shadow-[0_12px_30px_rgba(52,211,153,0.16)] transition hover:-translate-y-0.5 hover:from-emerald-300 hover:to-emerald-400 sm:text-sm"
-                  >
-                    {t.bulkBuy}
-                  </button>
-                )}
-              </div>
-
-              {cartItems.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.04] p-4 text-sm text-white/45">
-                  {t.cartEmpty}
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {cartItems.map((item) => (
-                    <div
-                      key={item.cartId}
-                      className="rounded-3xl border border-white/10 bg-white/[0.055] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition hover:border-white/15 hover:bg-white/[0.075]"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-sm font-bold text-white">
-                            {item.service_title}
-                          </p>
-                          <div className="mt-2 space-y-1 text-xs text-white/55 sm:text-sm">
-                            <p>{t.serviceNo}: {item.site_code}</p>
-                            <p>{t.targetUsername}: {item.target_username}</p>
-                            <p>{t.targetLink}: {item.target_link || "-"}</p>
-                            <p>{t.quantity}: {item.quantity}</p>
-                            <p>{t.orderNote}: {item.order_note || "-"}</p>
-                            <p>
-                              {t.per1000}:{" "}
-                              {formatPrice(item.unit_price, selectedCurrency)}
-                            </p>
-                            <p>
-                              {t.totalSalePrice}:{" "}
-                              {formatPrice(item.total_price, selectedCurrency)}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleEditCartItem(item.cartId)}
-                            className="rounded-xl border border-amber-400/20 bg-amber-400/10 px-3 py-2 text-xs font-bold text-amber-300 transition hover:-translate-y-0.5 hover:bg-amber-400/15"
-                          >
-                            {t.edit}
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveCartItem(item.cartId)}
-                            className="rounded-xl border border-rose-400/20 bg-rose-400/10 px-3 py-2 text-xs font-bold text-rose-300 transition hover:-translate-y-0.5 hover:bg-rose-400/15"
-                          >
-                            {t.remove}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="mt-4 space-y-3">
-                <div className="rounded-2xl border border-emerald-400/20 bg-gradient-to-br from-emerald-400/12 to-emerald-400/[0.035] p-4 shadow-[0_14px_42px_rgba(52,211,153,0.08),inset_0_1px_0_rgba(255,255,255,0.04)]">
-                  <div className="flex items-center justify-between text-sm text-white/60">
-                    <span>{t.cartTotal}</span>
-                    <span className="text-lg font-bold text-emerald-300">
-                      {formatPrice(cartTotal, selectedCurrency)}
-                    </span>
-                  </div>
-
-                  <p className="mt-2 text-xs leading-5 text-white/45">
-                    {t.cartTotalDesc}
-                  </p>
-                </div>
-
-                {cartMessage && (
-                  <div className="rounded-2xl border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-300">
-                    {cartMessage}
-                  </div>
-                )}
-
-                {error && (
-                  <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
-                    {error}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      {checkoutMode && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
-          <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-[32px] border border-white/10 bg-[#121826]/95 p-5 shadow-[0_28px_120px_rgba(0,0,0,0.58)] ring-1 ring-white/[0.035] backdrop-blur-xl">
-            <div className="flex items-start justify-between gap-3">
+      <section className="grid gap-5 xl:grid-cols-[1.12fr_0.88fr]">
+        <div className="space-y-5">
+          <div className="rounded-[34px] border border-white/10 bg-[#121826]/90 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.34)] ring-1 ring-white/[0.025] backdrop-blur-xl sm:p-6">
+            <div className="mb-4 flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-2xl font-bold text-white">
-                  {t.checkoutTitle}
-                </h2>
-                <p className="mt-2 text-sm leading-6 text-white/60">
-                  {t.checkoutDesc}
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/45">
+                  {t.serviceListTitle}
+                </p>
+                <p className="mt-1 text-sm text-white/50">
+                  {t.serviceListDesc}
                 </p>
               </div>
 
+              {filteredServices.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => scrollProducts("up")}
+                    className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-white/80 transition hover:-translate-y-0.5 hover:bg-white/10 sm:text-sm"
+                  >
+                    {t.up}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => scrollProducts("down")}
+                    className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-white/80 transition hover:-translate-y-0.5 hover:bg-white/10 sm:text-sm"
+                  >
+                    {t.down}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <button
                 type="button"
-                onClick={() => setCheckoutMode(null)}
-                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/70 transition hover:bg-white/10"
+                onClick={() => setShowServiceFilters((prev) => !prev)}
+                className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm font-bold text-white/80 transition hover:-translate-y-0.5 hover:bg-white/[0.1] hover:text-white"
               >
-                {t.close}
+                <span>{t.filter}</span>
               </button>
-            </div>
 
-            <div className="mt-5 grid items-start gap-3 md:grid-cols-2">
-              <div>
-                <input
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder={
-                    selectedLocale === "tr"
-                      ? "Ödeme Yapacak Kişinin Adı Soyadı"
-                      : t.fullName
-                  }
-                  className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
-                />
-
-                <p className="mt-2 text-xs leading-5 text-amber-100/80">
-                  Dekonttaki gönderen adı soyadı ile aynı olmalıdır.
-                </p>
-              </div>
-
-              <div>
-              <input
-              value={phoneNumber}
-               onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))}
-              placeholder={t.phoneNumber}
-              inputMode="numeric"
-              className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
-              />
-               </div>
-
-              <select
-                value={contactType}
-                onChange={(e) => setContactType(e.target.value as ContactType)}
-                className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
-              >
-                <option value="" className="bg-[#121826]">
-                  {t.contactTypeSelect}
-                </option>
-                {contactTypes.map((item) => (
-                  <option key={item} value={item} className="bg-[#121826]">
-                    {getContactTypeLabel(item, selectedLocale)}
-                  </option>
-                ))}
-              </select>
-
-              <input
-                value={contactValue}
-                onChange={(e) => setContactValue(e.target.value)}
-                placeholder={t.contactValue}
-                className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
-              />
-            </div>
-
-            <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm leading-6 text-amber-100">
-              <p>{t.contactWarning1}</p>
-              <p className="mt-1">{t.contactWarning2}</p>
-            </div>
-
-            <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.055] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
-              <p className="text-sm font-bold text-white">{t.paymentMethod}</p>
-              <p className="mt-1 text-sm leading-6 text-white/60">
-                {t.paymentMethodDesc}
+              <p className="text-xs text-white/45">
+                {filteredServices.length} {t.servicesShown}
               </p>
+            </div>
 
-              <div className="mt-4 grid gap-3 md:grid-cols-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPaymentMethod("turkey_bank");
+            <div className="mb-4">
+              <input
+                value={serviceSearch}
+                onChange={(e) => setServiceSearch(e.target.value)}
+                placeholder={t.searchPlaceholder}
+                className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-sm text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
+              />
 
-                    trackVisitorAction({
-                      event_type: "payment_method_select",
-                      event_label: "Türkiye Banka Havalesi / EFT",
-                      event_value: "turkey_bank",
-                      event_data: {
-                        checkout_mode: checkoutMode,
-                        item_count: checkoutItems.length,
-                        total_price: checkoutItems.reduce(
-                          (sum, item) => sum + item.total_price,
-                          0
-                        ),
-                        currency: selectedCurrency,
-                      },
-                    });
-                  }}
-                  className={`rounded-2xl border p-4 text-left transition ${
-                    paymentMethod === "turkey_bank"
-                      ? "border-emerald-400 bg-emerald-400/10 shadow-[0_12px_34px_rgba(52,211,153,0.12)]"
-                      : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
-                  }`}
-                >
-                  <p className="text-sm font-bold text-white">
-                    {t.turkeyBankTransfer}
-                  </p>
-                  <p className="mt-1 text-xs leading-5 text-white/55">
-                    {t.turkeyBankTransferDesc}
-                  </p>
-                </button>
+              {serviceSearch.trim() ? (
+                <p className="mt-2 text-xs text-white/45">
+                  “{serviceSearch.trim()}” — {filteredServices.length}{" "}
+                  {t.searchResultText}
+                </p>
+              ) : null}
+            </div>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPaymentMethod("balance");
+            {showServiceFilters && (
+              <div className="mb-4 rounded-3xl border border-white/10 bg-black/20 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
+                <div className="grid gap-3 md:grid-cols-4">
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-white/40">
+                      {t.quality}
+                    </label>
+                    <select
+                      value={qualityFilter}
+                      onChange={(event) =>
+                        setQualityFilter(event.target.value as QualityFilter)
+                      }
+                      className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-sm text-white outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
+                    >
+                      <option value="all" className="bg-[#111827]">
+                        {t.all}
+                      </option>
+                      <option value="Core" className="bg-[#111827]">
+                        {t.coreQuality}
+                      </option>
+                      <option value="Plus" className="bg-[#111827]">
+                        {t.plusQuality}
+                      </option>
+                      <option value="Prime" className="bg-[#111827]">
+                        {t.primeQuality}
+                      </option>
+                    </select>
+                  </div>
 
-                    trackVisitorAction({
-                      event_type: "payment_method_select",
-                      event_label: "MedyaTora Bakiyesi",
-                      event_value: "balance",
-                      event_data: {
-                        checkout_mode: checkoutMode,
-                        item_count: checkoutItems.length,
-                        total_price: checkoutItems.reduce(
-                          (sum, item) => sum + item.total_price,
-                          0
-                        ),
-                        currency: selectedCurrency,
-                        balance_usd: authUser?.balance_usd || 0,
-                      },
-                    });
-                  }}
-                  disabled={!authUser || selectedCurrency !== "USD"}
-                  className={`rounded-2xl border p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-50 ${
-                    paymentMethod === "balance"
-                      ? "border-emerald-400 bg-emerald-400/10 shadow-[0_12px_34px_rgba(52,211,153,0.12)]"
-                      : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
-                  }`}
-                >
-                  <p className="text-sm font-bold text-white">
-                    MedyaTora Bakiyesi
-                  </p>
-                  <p className="mt-1 text-xs leading-5 text-white/55">
-                    {authUser
-                      ? `Mevcut bakiye: ${Number(
-                          authUser.balance_usd || 0
-                        ).toFixed(2)} USD`
-                      : "Bakiye ile ödeme için giriş yapmalısın."}
-                  </p>
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-white/40">
+                      {t.guarantee}
+                    </label>
+                    <select
+                      value={guaranteeFilter}
+                      onChange={(event) =>
+                        setGuaranteeFilter(event.target.value as GuaranteeFilter)
+                      }
+                      className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-sm text-white outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
+                    >
+                      <option value="all" className="bg-[#111827]">
+                        {t.all}
+                      </option>
+                      <option value="guaranteed" className="bg-[#111827]">
+                        {t.guaranteed}
+                      </option>
+                      <option value="no-guarantee" className="bg-[#111827]">
+                        {t.noGuarantee}
+                      </option>
+                    </select>
+                  </div>
 
-                  {selectedCurrency !== "USD" && (
-                    <p className="mt-2 text-xs leading-5 text-amber-200">
-                      Bakiye ile ödeme için para birimini USD seç.
-                    </p>
-                  )}
-                </button>
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-white/40">
+                      {t.region}
+                    </label>
+                    <select
+                      value={regionFilter}
+                      onChange={(event) =>
+                        setRegionFilter(event.target.value as RegionFilter)
+                      }
+                      className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-sm text-white outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
+                    >
+                      <option value="all" className="bg-[#111827]">
+                        {t.all}
+                      </option>
+                      <option value="TR" className="bg-[#111827]">
+                        TR
+                      </option>
+                      <option value="RU" className="bg-[#111827]">
+                        RU
+                      </option>
+                      <option value="Global" className="bg-[#111827]">
+                        Global
+                      </option>
+                    </select>
+                  </div>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPaymentMethod("support");
-
-                    trackVisitorAction({
-                      event_type: "payment_method_select",
-                      event_label: "Destek ile ödeme",
-                      event_value: "support",
-                      event_data: {
-                        checkout_mode: checkoutMode,
-                        item_count: checkoutItems.length,
-                        total_price: checkoutItems.reduce(
-                          (sum, item) => sum + item.total_price,
-                          0
-                        ),
-                        currency: selectedCurrency,
-                      },
-                    });
-                  }}
-                  className={`rounded-2xl border p-4 text-left transition ${
-                    paymentMethod === "support"
-                      ? "border-sky-400 bg-sky-400/10 shadow-[0_12px_34px_rgba(56,189,248,0.12)]"
-                      : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
-                  }`}
-                >
-                  <p className="text-sm font-bold text-white">
-                    {t.otherPaymentMethods}
-                  </p>
-                  <p className="mt-1 text-xs leading-5 text-white/55">
-                    {t.otherPaymentMethodsDesc}
-                  </p>
-                </button>
-              </div>
-
-              {paymentMethod === "turkey_bank" && (
-                <div className="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm leading-6 text-emerald-50">
-                  <p className="font-bold text-white">{t.turkeyBankInfo}</p>
-
-                  <div className="mt-3 space-y-2">
-                    <p>
-                      <span className="font-bold text-white">
-                        {t.receiverName}:
-                      </span>{" "}
-                      {TURKEY_BANK_ACCOUNT_NAME}
-                    </p>
-                    <p>
-                      <span className="font-bold text-white">{t.iban}:</span>{" "}
-                      {TURKEY_BANK_IBAN}
-                    </p>
-                    <p>
-                      <span className="font-bold text-white">
-                        {t.paymentDescription}:
-                      </span>{" "}
-                      {t.digitalServiceOrderNo}
-                    </p>
-                    <p className="text-white/70">{t.receiptInfo}</p>
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-white/40">
+                      {t.sort}
+                    </label>
+                    <select
+                      value={priceSort}
+                      onChange={(event) =>
+                        setPriceSort(event.target.value as PriceSort)
+                      }
+                      className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-sm text-white outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
+                    >
+                      <option value="smart" className="bg-[#111827]">
+                        {t.recommendedSort}
+                      </option>
+                      <option value="price-asc" className="bg-[#111827]">
+                        {t.priceAsc}
+                      </option>
+                      <option value="price-desc" className="bg-[#111827]">
+                        {t.priceDesc}
+                      </option>
+                    </select>
                   </div>
                 </div>
-              )}
 
-              {paymentMethod === "support" && (
-                <div className="mt-4 rounded-2xl border border-sky-400/20 bg-sky-400/10 p-4 text-sm leading-6 text-sky-50">
-                  <p className="font-bold text-white">
-                    {t.otherPaymentMethods}
-                  </p>
-                  <p className="mt-2 text-white/70">
-                    {t.otherPaymentInfoText}
-                  </p>
+                <div className="mt-4 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={resetServiceFilters}
+                    className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-bold text-white/70 transition hover:-translate-y-0.5 hover:bg-white/[0.08] hover:text-white"
+                  >
+                    {t.clearFilters}
+                  </button>
                 </div>
-              )}
-
-              {paymentMethod === "balance" && (
-                <div className="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm leading-6 text-emerald-50">
-                  <p className="font-bold text-white">Bakiye ile ödeme</p>
-                  <p className="mt-2 text-white/70">
-                    Sipariş onaylandığında toplam tutar MedyaTora bakiyenden
-                    düşülür. Bakiye ile ödeme şu an sadece USD para biriminde
-                    kullanılabilir.
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm leading-6 text-amber-50">
-              <p className="font-bold text-white">Ödeme Güvenliği</p>
-
-              <p className="mt-2 text-white/75">
-                Ödeme yapacak kişinin adı soyadı, dekonttaki gönderen adı
-                soyadı ile aynı olmalıdır. Eşleşmeyen ödemeler onaylanmaz.
-              </p>
-
-              <p className="mt-2 text-white/75">
-                Kişisel bilgileriniz yalnızca ödeme doğrulama amacıyla
-                kullanılır ve üçüncü kişilerle paylaşılmaz.
-              </p>
-
-              <p className="mt-4 font-bold text-white">İade Koşulları</p>
-
-              <p className="mt-2 text-white/75">
-                İşlem başlamadan önce iade talep edebilirsiniz. İşlem
-                başladıktan sonra iptal/iade yapılamaz.
-              </p>
-
-              <p className="mt-2 text-white/75">
-                İşlem bizden kaynaklı bir sebeple tamamen veya kısmen
-                tamamlanamazsa, tamamlanamayan kısma ait tutar siparişinizin
-                ödeme yöntemi ve hesap durumuna göre iade edilir veya
-                hesabınıza bakiye olarak yansıtılır.
-              </p>
-
-              <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-black/20 p-3">
-                <input
-                  type="checkbox"
-                  checked={paymentTermsAccepted}
-                  onChange={(event) =>
-                    setPaymentTermsAccepted(event.target.checked)
-                  }
-                  className="mt-1 h-4 w-4 accent-emerald-400"
-                />
-
-                <span className="text-sm font-semibold text-white">
-                  Okudum, ödeme güvenliği ve iade koşullarını kabul ediyorum.
-                </span>
-              </label>
-            </div>
-
-            <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.055] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
-              <div className="flex items-center justify-between text-sm text-white/60">
-                <span>{t.servicesToConfirm}</span>
-                <span>{checkoutItems.length}</span>
-              </div>
-              <div className="mt-2 flex items-center justify-between text-base font-bold text-white">
-                <span>{t.totalSalePrice}</span>
-                <span>
-                  {formatPrice(
-                    checkoutItems.reduce((sum, item) => sum + item.total_price, 0),
-                    selectedCurrency
-                  )}
-                </span>
-              </div>
-            </div>
-
-            {error && (
-              <div className="mt-4 rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
-                {error}
               </div>
             )}
 
-            <div className="mt-5 flex justify-end">
-              <button
-                type="button"
-                onClick={submitItems}
-                disabled={!isCheckoutValid || loading}
-                className="rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-5 py-3 text-sm font-black text-black shadow-[0_16px_38px_rgba(52,211,153,0.18)] transition hover:-translate-y-0.5 hover:from-emerald-300 hover:to-emerald-400 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+            {servicesLoading ? (
+              <div className="rounded-2xl border border-dashed border-white/15 bg-white/5 px-4 py-6 text-sm text-white/50">
+                {t.productsLoading}
+              </div>
+            ) : filteredServices.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-white/15 bg-white/5 px-4 py-6 text-sm text-white/50">
+                {t.noProductsFound}
+              </div>
+            ) : (
+              <div
+                ref={productsScrollRef}
+                className="max-h-[520px] space-y-2 overflow-y-auto pr-1 sm:max-h-[620px]"
+                style={{ scrollbarWidth: "thin" }}
               >
-                {loading ? t.sending : t.confirmPurchase}
-              </button>
-            </div>
+                {filteredServices.map((service) => {
+                  const active = selectedService?.id === service.id;
+                  const unitPrice = getUnitSalePrice(service, selectedCurrency);
+
+                  return (
+                    <button
+                      key={service.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedServiceId(service.id);
+                        clearStatusMessages();
+
+                        trackVisitorAction({
+                          event_type: "service_select",
+                          event_label: getLocalizedServiceTitle(
+                            service.title,
+                            selectedLocale
+                          ),
+                          event_value: String(service.siteCode),
+                          event_data: {
+                            service_id: service.id,
+                            site_code: service.siteCode,
+                            platform: service.platform,
+                            category: service.category,
+                            title: getLocalizedServiceTitle(
+                              service.title,
+                              selectedLocale
+                            ),
+                            level: service.level,
+                            guarantee: service.guarantee,
+                            guarantee_label: getLocalizedGuaranteeLabel(
+                              service.guaranteeLabel,
+                              selectedLocale
+                            ),
+                            min: service.min,
+                            max: service.max,
+                            price_per_1000: getUnitSalePrice(
+                              service,
+                              selectedCurrency
+                            ),
+                            currency: selectedCurrency,
+                          },
+                        });
+                      }}
+                      className={`group relative w-full overflow-hidden rounded-3xl border px-4 py-4 text-left transition duration-200 hover:-translate-y-0.5 ${
+                        active
+                          ? "border-emerald-400/80 bg-gradient-to-br from-emerald-500/18 to-white/[0.055] shadow-[0_18px_55px_rgba(52,211,153,0.12),0_0_0_1px_rgba(52,211,153,0.14)]"
+                          : "border-white/10 bg-white/[0.045] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] hover:border-white/20 hover:bg-white/[0.075] hover:shadow-[0_16px_45px_rgba(0,0,0,0.22)]"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="line-clamp-2 text-sm font-bold text-white sm:text-base">
+                              {getLocalizedServiceTitle(
+                                service.title,
+                                selectedLocale
+                              )}
+                            </p>
+
+                            {active && (
+                              <span className="rounded-full bg-emerald-400 px-2.5 py-1 text-[10px] font-bold text-black sm:text-[11px]">
+                                {t.selected}
+                              </span>
+                            )}
+
+                            <span
+                              className={`rounded-full px-2.5 py-1 text-[10px] font-bold sm:text-[11px] ${
+                                service.guarantee
+                                  ? "bg-emerald-500/15 text-emerald-300"
+                                  : "bg-rose-500/15 text-rose-300"
+                              }`}
+                            >
+                              {getLocalizedGuaranteeLabel(
+                                service.guaranteeLabel,
+                                selectedLocale
+                              )}
+                            </span>
+
+                            <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-bold text-white/70 sm:text-[11px]">
+                              {localizeCommonServiceText(
+                                service.level,
+                                selectedLocale
+                              )}
+                            </span>
+                          </div>
+
+                          <div className="mt-3 grid gap-1 text-xs text-white/55 sm:text-sm">
+                            <p>
+                              {t.serviceNo}: {service.siteCode}
+                            </p>
+                            <p>
+                              {t.minMax}: {service.min} · Max: {service.max}
+                            </p>
+                            <p>
+                              {t.speed}:{" "}
+                              {getLocalizedSpeed(service.speed, selectedLocale)}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="shrink-0 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-right shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                          <p className="text-[11px] text-white/45 sm:text-xs">
+                            {t.per1000}
+                          </p>
+                          <p className="mt-1 text-base font-bold text-emerald-300 sm:text-lg">
+                            {formatPrice(unitPrice, selectedCurrency)}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        </div>
-      )}
 
-      {successOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-2xl rounded-[32px] border border-white/10 bg-[#121826]/95 p-5 shadow-[0_28px_120px_rgba(0,0,0,0.58)] ring-1 ring-white/[0.035] backdrop-blur-xl">
-            <h2 className="text-2xl font-bold text-white">
-              {t.orderConfirmedTitle}
-            </h2>
-
-            <p className="mt-2 text-sm leading-6 text-white/60">
-              {t.orderConfirmedDesc}
-            </p>
-
-            <div className="mt-5 space-y-3">
-              {createdOrderNumbers.map((number) => (
-                <div
-                  key={number}
-                  className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]"
+          <div className="rounded-[34px] border border-white/10 bg-[#121826]/90 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.34)] ring-1 ring-white/[0.025] backdrop-blur-xl sm:p-6">
+            <div className="mb-4 flex flex-wrap gap-2">
+              {[
+                ["service", t.serviceInfo],
+                ["before", t.beforeOrder],
+                ["notes", t.importantNotes],
+              ].map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() =>
+                    setInfoTab(key as "service" | "before" | "notes")
+                  }
+                  className={`rounded-xl border px-4 py-2 text-sm font-bold transition ${
+                    infoTab === key
+                      ? "border-emerald-300 bg-emerald-400 text-black shadow-[0_10px_28px_rgba(52,211,153,0.18)]"
+                      : "border-white/10 bg-white/5 text-white/75 hover:bg-white/10"
+                  }`}
                 >
-                  <p className="text-sm text-emerald-200">
-                    {t.yourOrderNumber}
-                  </p>
-                  <p className="mt-1 text-lg font-bold text-white">{number}</p>
-                </div>
+                  {label}
+                </button>
               ))}
             </div>
 
-            <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.055] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
-              <p className="text-sm font-bold text-white">
-                {t.paymentStepTitle}
-              </p>
+            {infoTab === "service" && (
+              <div className="space-y-3 text-sm leading-7 text-white/70">
+                <p>{t.serviceInfoP1}</p>
+                <p>{t.serviceInfoP2}</p>
+                <p>{t.serviceInfoP3}</p>
+              </div>
+            )}
 
-              {createdPaymentInfo && (
-                <div className="mt-3 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm leading-6 text-emerald-50">
-                  <p>
-                    <span className="font-bold text-white">
-                      Gönderen Ad Soyad:
-                    </span>{" "}
-                    {createdPaymentInfo.fullName}
+            {infoTab === "before" && (
+              <div className="space-y-3 text-sm leading-7 text-white/70">
+                <p>{t.beforeOrderP1}</p>
+                <p>{t.beforeOrderP2}</p>
+              </div>
+            )}
+
+            {infoTab === "notes" && (
+              <div className="space-y-3 text-sm leading-7 text-white/70">
+                <p>{t.note1}</p>
+                <p>{t.note2}</p>
+                <p>{t.note3}</p>
+                <p>{t.note4}</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-5">
+          <div className="rounded-[34px] border border-white/10 bg-[#121826]/90 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.34)] ring-1 ring-white/[0.025] backdrop-blur-xl sm:p-6">
+            <p className="mb-4 text-xs font-bold uppercase tracking-[0.2em] text-white/45">
+              {t.orderInfo}
+            </p>
+
+            {selectedService ? (
+              <div className="mb-4 space-y-3">
+                <div className="rounded-2xl border border-emerald-400/15 bg-gradient-to-br from-emerald-400/10 to-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-bold text-white">
+                      {getLocalizedServiceTitle(
+                        selectedService.title,
+                        selectedLocale
+                      )}
+                    </p>
+
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-[10px] font-bold sm:text-[11px] ${
+                        selectedService.guarantee
+                          ? "bg-emerald-500/15 text-emerald-300"
+                          : "bg-rose-500/15 text-rose-300"
+                      }`}
+                    >
+                      {getLocalizedGuaranteeLabel(
+                        selectedService.guaranteeLabel,
+                        selectedLocale
+                      )}
+                    </span>
+
+                    <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-bold text-white/70 sm:text-[11px]">
+                      {localizeCommonServiceText(
+                        selectedService.level,
+                        selectedLocale
+                      )}
+                    </span>
+                  </div>
+
+                  <p className="mt-3 text-sm text-white/60">
+                    {t.minMax} {selectedService.min} · Max{" "}
+                    {selectedService.max}
                   </p>
 
-                  <p>
-                    <span className="font-bold text-white">Ödenecek Tutar:</span>{" "}
-                    {formatPrice(
-                      createdPaymentInfo.totalAmount,
-                      createdPaymentInfo.currency
-                    )}
+                  <p className="mt-1 text-sm text-white/60">
+                    {t.speed}:{" "}
+                    {getLocalizedSpeed(selectedService.speed, selectedLocale)}
                   </p>
+                </div>
 
-                  <p>
-                    <span className="font-bold text-white">Ödeme Yöntemi:</span>{" "}
-                    {getPaymentMethodSupportLabel(
-                      createdPaymentInfo.paymentMethod,
+                <div className="rounded-2xl border border-white/10 bg-white/[0.055] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
+                  <p className="text-sm font-bold text-white/85">
+                    {t.productDescription}
+                  </p>
+                  <p className="mt-2 whitespace-pre-line text-sm leading-6 text-white/60">
+                    {getLocalizedServiceDescription(
+                      selectedService.description,
                       selectedLocale
                     )}
                   </p>
                 </div>
+              </div>
+            ) : (
+              <div className="mb-4 rounded-2xl border border-white/10 bg-white/[0.055] p-4 text-sm text-white/50">
+                {t.selectProductFirst}
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <input
+                value={targetUsername}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setTargetUsername(value);
+
+                  if (value.trim().length >= 3 && selectedService) {
+                    trackVisitorAction({
+                      event_type: "target_entered",
+                      event_label: "Hedef kullanıcı adı girildi",
+                      event_value: value.trim(),
+                      event_data: {
+                        service_id: selectedService.id,
+                        site_code: selectedService.siteCode,
+                        platform: selectedPlatform,
+                        category: selectedCategory,
+                      },
+                    });
+                  }
+                }}
+                placeholder={t.targetUsername}
+                className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
+              />
+
+              <input
+                value={targetLink}
+                onChange={(e) => setTargetLink(e.target.value)}
+                placeholder={t.targetLink}
+                className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
+              />
+
+              <input
+                value={quantity}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, "");
+                  setQuantity(value);
+
+                  const numericValue = Number(value);
+
+                  if (numericValue > 0 && selectedService) {
+                    trackVisitorAction({
+                      event_type: "quantity_entered",
+                      event_label: "Miktar girildi",
+                      event_value: String(numericValue),
+                      event_data: {
+                        service_id: selectedService.id,
+                        site_code: selectedService.siteCode,
+                        platform: selectedPlatform,
+                        category: selectedCategory,
+                        quantity: numericValue,
+                        min: selectedService.min,
+                        max: selectedService.max,
+                        valid:
+                          numericValue >= selectedService.min &&
+                          numericValue <= selectedService.max,
+                      },
+                    });
+                  }
+                }}
+                placeholder={t.quantity}
+                className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
+              />
+
+              {selectedService && (
+                <p className="text-xs leading-5 text-white/45">
+                  {t.minQuantityText
+                    .replace("{min}", String(selectedService.min))
+                    .replace("{max}", String(selectedService.max))}
+                </p>
               )}
 
-              <p className="mt-3 text-sm leading-6 text-white/60">
-                {t.paymentStepDesc}
-              </p>
+              <input
+                value={orderNote}
+                onChange={(e) => setOrderNote(e.target.value)}
+                placeholder={t.orderNote}
+                className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
+              />
 
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <a
-                  href={
-                    createdPaymentInfo
-                      ? buildTelegramLink(createdPaymentInfo, selectedLocale)
-                      : "#"
-                  }
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-2xl bg-sky-500 px-5 py-3 text-center text-sm font-bold text-black shadow-[0_16px_38px_rgba(56,189,248,0.16)] transition hover:-translate-y-0.5 hover:bg-sky-400"
-                >
-                  {t.telegramPaymentInfo}
-                </a>
+              <div className="rounded-2xl border border-emerald-400/20 bg-gradient-to-br from-emerald-400/12 to-emerald-400/[0.035] p-4 shadow-[0_14px_42px_rgba(52,211,153,0.08),inset_0_1px_0_rgba(255,255,255,0.04)]">
+                <p className="text-sm text-white/50">{t.totalSalePrice}</p>
+                <p className="mt-1 text-2xl font-bold text-white">
+                  {totalPrice > 0
+                    ? formatPrice(totalPrice, selectedCurrency)
+                    : "-"}
+                </p>
+              </div>
 
-                <a
-                  href={
-                    createdPaymentInfo
-                      ? buildWhatsappLink(createdPaymentInfo, selectedLocale)
-                      : "#"
-                  }
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-5 py-3 text-center text-sm font-black text-black shadow-[0_16px_38px_rgba(52,211,153,0.18)] transition hover:-translate-y-0.5 hover:from-emerald-300 hover:to-emerald-400"
+              <div className="grid gap-3 sm:grid-cols-3">
+                <button
+                  type="button"
+                  onClick={handleOpenSingleCheckout}
+                  disabled={!canUseCurrentForm}
+                  className="rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-4 py-3 text-sm font-black text-black shadow-[0_16px_38px_rgba(52,211,153,0.18)] transition hover:-translate-y-0.5 hover:from-emerald-300 hover:to-emerald-400 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
                 >
-                  {t.whatsappPaymentInfo}
-                </a>
+                  {t.buyNow}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleAddToCart}
+                  disabled={!canUseCurrentForm}
+                  className="rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-3 text-sm font-bold text-emerald-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:bg-emerald-400/15 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+                >
+                  {t.addToCart}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={goToCart}
+                  className="rounded-2xl border border-sky-400/20 bg-sky-400/10 px-4 py-3 text-sm font-bold text-sky-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:bg-sky-400/15"
+                >
+                  {t.goToCart}
+                </button>
               </div>
             </div>
+          </div>
 
-            <div className="mt-5 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setSuccessOpen(false)}
-                className="rounded-2xl bg-white px-5 py-3 text-sm font-bold text-black transition hover:-translate-y-0.5 hover:bg-white/90"
-              >
-                {t.ok}
-              </button>
+          <div
+            ref={cartSectionRef}
+            className="rounded-[34px] border border-white/10 bg-[#121826]/90 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.34)] ring-1 ring-white/[0.025] backdrop-blur-xl sm:p-6"
+          >
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/45">
+                {t.cart}
+              </p>
+
+              {cartItems.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleOpenCartCheckout}
+                  className="rounded-xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-4 py-2 text-xs font-black text-black shadow-[0_12px_30px_rgba(52,211,153,0.16)] transition hover:-translate-y-0.5 hover:from-emerald-300 hover:to-emerald-400 sm:text-sm"
+                >
+                  {t.bulkBuy}
+                </button>
+              )}
+            </div>
+
+            {cartItems.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.04] p-4 text-sm text-white/45">
+                {t.cartEmpty}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {cartItems.map((item) => (
+                  <div
+                    key={item.cartId}
+                    className="rounded-3xl border border-white/10 bg-white/[0.055] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition hover:border-white/15 hover:bg-white/[0.075]"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-white">
+                          {item.service_title}
+                        </p>
+                        <div className="mt-2 space-y-1 text-xs text-white/55 sm:text-sm">
+                          <p>{t.serviceNo}: {item.site_code}</p>
+                          <p>{t.targetUsername}: {item.target_username}</p>
+                          <p>{t.targetLink}: {item.target_link || "-"}</p>
+                          <p>{t.quantity}: {item.quantity}</p>
+                          <p>{t.orderNote}: {item.order_note || "-"}</p>
+                          <p>
+                            {t.per1000}:{" "}
+                            {formatPrice(item.unit_price, selectedCurrency)}
+                          </p>
+                          <p>
+                            {t.totalSalePrice}:{" "}
+                            {formatPrice(item.total_price, selectedCurrency)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleEditCartItem(item.cartId)}
+                          className="rounded-xl border border-amber-400/20 bg-amber-400/10 px-3 py-2 text-xs font-bold text-amber-300 transition hover:-translate-y-0.5 hover:bg-amber-400/15"
+                        >
+                          {t.edit}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveCartItem(item.cartId)}
+                          className="rounded-xl border border-rose-400/20 bg-rose-400/10 px-3 py-2 text-xs font-bold text-rose-300 transition hover:-translate-y-0.5 hover:bg-rose-400/15"
+                        >
+                          {t.remove}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="mt-4 space-y-3">
+              <div className="rounded-2xl border border-emerald-400/20 bg-gradient-to-br from-emerald-400/12 to-emerald-400/[0.035] p-4 shadow-[0_14px_42px_rgba(52,211,153,0.08),inset_0_1px_0_rgba(255,255,255,0.04)]">
+                <div className="flex items-center justify-between text-sm text-white/60">
+                  <span>{t.cartTotal}</span>
+                  <span className="text-lg font-bold text-emerald-300">
+                    {formatPrice(cartTotal, selectedCurrency)}
+                  </span>
+                </div>
+
+                <p className="mt-2 text-xs leading-5 text-white/45">
+                  {t.cartTotalDesc}
+                </p>
+              </div>
+
+              {cartMessage && (
+                <div className="rounded-2xl border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-300">
+                  {cartMessage}
+                </div>
+              )}
+
+              {error && (
+                <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+                  {error}
+                </div>
+              )}
             </div>
           </div>
         </div>
-      )}
-    </main>
-  );
+      </section>
+    </div>
+
+    {checkoutMode && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+        <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-[32px] border border-white/10 bg-[#121826]/95 p-5 shadow-[0_28px_120px_rgba(0,0,0,0.58)] ring-1 ring-white/[0.035] backdrop-blur-xl">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-2xl font-bold text-white">
+                {t.checkoutTitle}
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-white/60">
+                {t.checkoutDesc}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setCheckoutMode(null)}
+              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/70 transition hover:bg-white/10"
+            >
+              {t.close}
+            </button>
+          </div>
+
+          <div className="mt-5 grid items-start gap-3 md:grid-cols-2">
+            <div>
+              <input
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder={
+                  selectedLocale === "tr"
+                    ? "Ödeme Yapacak Kişinin Adı Soyadı"
+                    : t.fullName
+                }
+                className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
+              />
+
+              <p className="mt-2 text-xs leading-5 text-amber-100/80">
+                Dekonttaki gönderen adı soyadı ile aynı olmalıdır.
+              </p>
+            </div>
+
+            <div>
+              <input
+                value={phoneNumber}
+                onChange={(e) =>
+                  setPhoneNumber(e.target.value.replace(/\D/g, ""))
+                }
+                placeholder={t.phoneNumber}
+                inputMode="numeric"
+                className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
+              />
+            </div>
+
+            <select
+              value={contactType}
+              onChange={(e) => setContactType(e.target.value as ContactType)}
+              className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
+            >
+              <option value="" className="bg-[#121826]">
+                {t.contactTypeSelect}
+              </option>
+              {contactTypes.map((item) => (
+                <option key={item} value={item} className="bg-[#121826]">
+                  {getContactTypeLabel(item, selectedLocale)}
+                </option>
+              ))}
+            </select>
+
+            <input
+              value={contactValue}
+              onChange={(e) => setContactValue(e.target.value)}
+              placeholder={t.contactValue}
+              className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
+            />
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm leading-6 text-amber-100">
+            <p>{t.contactWarning1}</p>
+            <p className="mt-1">{t.contactWarning2}</p>
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.055] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
+            <p className="text-sm font-bold text-white">{t.paymentMethod}</p>
+            <p className="mt-1 text-sm leading-6 text-white/60">
+              {t.paymentMethodDesc}
+            </p>
+
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setPaymentMethod("turkey_bank");
+
+                  trackVisitorAction({
+                    event_type: "payment_method_select",
+                    event_label: "Türkiye Banka Havalesi / EFT",
+                    event_value: "turkey_bank",
+                    event_data: {
+                      checkout_mode: checkoutMode,
+                      item_count: checkoutItems.length,
+                      total_price: checkoutItems.reduce(
+                        (sum, item) => sum + item.total_price,
+                        0
+                      ),
+                      currency: selectedCurrency,
+                    },
+                  });
+                }}
+                className={`rounded-2xl border p-4 text-left transition ${
+                  paymentMethod === "turkey_bank"
+                    ? "border-emerald-400 bg-emerald-400/10 shadow-[0_12px_34px_rgba(52,211,153,0.12)]"
+                    : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
+                }`}
+              >
+                <p className="text-sm font-bold text-white">
+                  {t.turkeyBankTransfer}
+                </p>
+                <p className="mt-1 text-xs leading-5 text-white/55">
+                  {t.turkeyBankTransferDesc}
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setPaymentMethod("balance");
+
+                  trackVisitorAction({
+                    event_type: "payment_method_select",
+                    event_label: "MedyaTora Bakiyesi",
+                    event_value: "balance",
+                    event_data: {
+                      checkout_mode: checkoutMode,
+                      item_count: checkoutItems.length,
+                      total_price: checkoutItems.reduce(
+                        (sum, item) => sum + item.total_price,
+                        0
+                      ),
+                      currency: selectedCurrency,
+                      balance_usd: authUser?.balance_usd || 0,
+                    },
+                  });
+                }}
+                disabled={!authUser || selectedCurrency !== "USD"}
+                className={`rounded-2xl border p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                  paymentMethod === "balance"
+                    ? "border-emerald-400 bg-emerald-400/10 shadow-[0_12px_34px_rgba(52,211,153,0.12)]"
+                    : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
+                }`}
+              >
+                <p className="text-sm font-bold text-white">
+                  MedyaTora Bakiyesi
+                </p>
+                <p className="mt-1 text-xs leading-5 text-white/55">
+                  {authUser
+                    ? `Mevcut bakiye: ${Number(
+                        authUser.balance_usd || 0
+                      ).toFixed(2)} USD`
+                    : "Bakiye ile ödeme için giriş yapmalısın."}
+                </p>
+
+                {selectedCurrency !== "USD" && (
+                  <p className="mt-2 text-xs leading-5 text-amber-200">
+                    Bakiye ile ödeme için para birimini USD seç.
+                  </p>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setPaymentMethod("support");
+
+                  trackVisitorAction({
+                    event_type: "payment_method_select",
+                    event_label: "Destek ile ödeme",
+                    event_value: "support",
+                    event_data: {
+                      checkout_mode: checkoutMode,
+                      item_count: checkoutItems.length,
+                      total_price: checkoutItems.reduce(
+                        (sum, item) => sum + item.total_price,
+                        0
+                      ),
+                      currency: selectedCurrency,
+                    },
+                  });
+                }}
+                className={`rounded-2xl border p-4 text-left transition ${
+                  paymentMethod === "support"
+                    ? "border-sky-400 bg-sky-400/10 shadow-[0_12px_34px_rgba(56,189,248,0.12)]"
+                    : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
+                }`}
+              >
+                <p className="text-sm font-bold text-white">
+                  {t.otherPaymentMethods}
+                </p>
+                <p className="mt-1 text-xs leading-5 text-white/55">
+                  {t.otherPaymentMethodsDesc}
+                </p>
+              </button>
+            </div>
+
+            {paymentMethod === "turkey_bank" && (
+              <div className="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm leading-6 text-emerald-50">
+                <p className="font-bold text-white">{t.turkeyBankInfo}</p>
+
+                <div className="mt-3 space-y-2">
+                  <p>
+                    <span className="font-bold text-white">
+                      {t.receiverName}:
+                    </span>{" "}
+                    {TURKEY_BANK_ACCOUNT_NAME}
+                  </p>
+                  <p>
+                    <span className="font-bold text-white">{t.iban}:</span>{" "}
+                    {TURKEY_BANK_IBAN}
+                  </p>
+                  <p>
+                    <span className="font-bold text-white">
+                      {t.paymentDescription}:
+                    </span>{" "}
+                    {t.digitalServiceOrderNo}
+                  </p>
+                  <p className="text-white/70">{t.receiptInfo}</p>
+                </div>
+              </div>
+            )}
+
+            {paymentMethod === "support" && (
+              <div className="mt-4 rounded-2xl border border-sky-400/20 bg-sky-400/10 p-4 text-sm leading-6 text-sky-50">
+                <p className="font-bold text-white">
+                  {t.otherPaymentMethods}
+                </p>
+                <p className="mt-2 text-white/70">
+                  {t.otherPaymentInfoText}
+                </p>
+              </div>
+            )}
+
+            {paymentMethod === "balance" && (
+              <div className="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm leading-6 text-emerald-50">
+                <p className="font-bold text-white">Bakiye ile ödeme</p>
+                <p className="mt-2 text-white/70">
+                  Sipariş onaylandığında toplam tutar MedyaTora bakiyenden
+                  düşülür. Bakiye ile ödeme şu an sadece USD para biriminde
+                  kullanılabilir.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm leading-6 text-amber-50">
+            <p className="font-bold text-white">Ödeme Güvenliği</p>
+
+            <p className="mt-2 text-white/75">
+              Ödeme yapacak kişinin adı soyadı, dekonttaki gönderen adı
+              soyadı ile aynı olmalıdır. Eşleşmeyen ödemeler onaylanmaz.
+            </p>
+
+            <p className="mt-2 text-white/75">
+              Kişisel bilgileriniz yalnızca ödeme doğrulama amacıyla
+              kullanılır ve üçüncü kişilerle paylaşılmaz.
+            </p>
+
+            <p className="mt-4 font-bold text-white">İade Koşulları</p>
+
+            <p className="mt-2 text-white/75">
+              İşlem başlamadan önce iade talep edebilirsiniz. İşlem
+              başladıktan sonra iptal/iade yapılamaz.
+            </p>
+
+            <p className="mt-2 text-white/75">
+              İşlem bizden kaynaklı bir sebeple tamamen veya kısmen
+              tamamlanamazsa, tamamlanamayan kısma ait tutar siparişinizin
+              ödeme yöntemi ve hesap durumuna göre iade edilir veya
+              hesabınıza bakiye olarak yansıtılır.
+            </p>
+
+            <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-black/20 p-3">
+              <input
+                type="checkbox"
+                checked={paymentTermsAccepted}
+                onChange={(event) =>
+                  setPaymentTermsAccepted(event.target.checked)
+                }
+                className="mt-1 h-4 w-4 accent-emerald-400"
+              />
+
+              <span className="text-sm font-semibold text-white">
+                Okudum, ödeme güvenliği ve iade koşullarını kabul ediyorum.
+              </span>
+            </label>
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.055] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
+            <div className="flex items-center justify-between text-sm text-white/60">
+              <span>{t.servicesToConfirm}</span>
+              <span>{checkoutItems.length}</span>
+            </div>
+            <div className="mt-2 flex items-center justify-between text-base font-bold text-white">
+              <span>{t.totalSalePrice}</span>
+              <span>
+                {formatPrice(
+                  checkoutItems.reduce((sum, item) => sum + item.total_price, 0),
+                  selectedCurrency
+                )}
+              </span>
+            </div>
+          </div>
+
+          {error && (
+            <div className="mt-4 rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+              {error}
+            </div>
+          )}
+
+          <div className="mt-5 flex justify-end">
+            <button
+              type="button"
+              onClick={submitItems}
+              disabled={!isCheckoutValid || loading}
+              className="rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-5 py-3 text-sm font-black text-black shadow-[0_16px_38px_rgba(52,211,153,0.18)] transition hover:-translate-y-0.5 hover:from-emerald-300 hover:to-emerald-400 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+            >
+              {loading ? t.sending : t.confirmPurchase}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {successOpen && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+        <div className="w-full max-w-2xl rounded-[32px] border border-white/10 bg-[#121826]/95 p-5 shadow-[0_28px_120px_rgba(0,0,0,0.58)] ring-1 ring-white/[0.035] backdrop-blur-xl">
+          <h2 className="text-2xl font-bold text-white">
+            {t.orderConfirmedTitle}
+          </h2>
+
+          <p className="mt-2 text-sm leading-6 text-white/60">
+            {t.orderConfirmedDesc}
+          </p>
+
+          <div className="mt-5 space-y-3">
+            {createdOrderNumbers.map((number) => (
+              <div
+                key={number}
+                className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]"
+              >
+                <p className="text-sm text-emerald-200">
+                  {t.yourOrderNumber}
+                </p>
+                <p className="mt-1 text-lg font-bold text-white">{number}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.055] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
+            <p className="text-sm font-bold text-white">
+              {t.paymentStepTitle}
+            </p>
+
+            {createdPaymentInfo && (
+              <div className="mt-3 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm leading-6 text-emerald-50">
+                <p>
+                  <span className="font-bold text-white">
+                    Gönderen Ad Soyad:
+                  </span>{" "}
+                  {createdPaymentInfo.fullName}
+                </p>
+
+                <p>
+                  <span className="font-bold text-white">Ödenecek Tutar:</span>{" "}
+                  {formatPrice(
+                    createdPaymentInfo.totalAmount,
+                    createdPaymentInfo.currency
+                  )}
+                </p>
+
+                <p>
+                  <span className="font-bold text-white">Ödeme Yöntemi:</span>{" "}
+                  {getPaymentMethodSupportLabel(
+                    createdPaymentInfo.paymentMethod,
+                    selectedLocale
+                  )}
+                </p>
+              </div>
+            )}
+
+            <p className="mt-3 text-sm leading-6 text-white/60">
+              {t.paymentStepDesc}
+            </p>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <a
+                href={
+                  createdPaymentInfo
+                    ? buildTelegramLink(createdPaymentInfo, selectedLocale)
+                    : "#"
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-2xl bg-sky-500 px-5 py-3 text-center text-sm font-bold text-black shadow-[0_16px_38px_rgba(56,189,248,0.16)] transition hover:-translate-y-0.5 hover:bg-sky-400"
+              >
+                {t.telegramPaymentInfo}
+              </a>
+
+              <a
+                href={
+                  createdPaymentInfo
+                    ? buildWhatsappLink(createdPaymentInfo, selectedLocale)
+                    : "#"
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-5 py-3 text-center text-sm font-black text-black shadow-[0_16px_38px_rgba(52,211,153,0.18)] transition hover:-translate-y-0.5 hover:from-emerald-300 hover:to-emerald-400"
+              >
+                {t.whatsappPaymentInfo}
+              </a>
+            </div>
+          </div>
+
+          {createdPaymentInfo?.paymentMethod === "turkey_bank" && (
+            <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4">
+              <p className="text-sm font-bold text-white">
+                Ödemeyi yaptıysan
+              </p>
+
+              <p className="mt-2 text-sm leading-6 text-amber-50/80">
+                Dekontu Telegram veya WhatsApp üzerinden gönderdikten sonra
+                aşağıdaki butona bas. Siparişin ödeme kontrolüne alınacak.
+              </p>
+
+              <button
+                type="button"
+                onClick={handlePaymentCompleted}
+                disabled={paymentReviewLoading || Boolean(paymentReviewMessage)}
+                className="mt-4 w-full rounded-2xl bg-amber-300 px-5 py-3 text-sm font-black text-black transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {paymentReviewLoading
+                  ? "Kontrole Alınıyor..."
+                  : paymentReviewMessage
+                    ? "Ödeme Kontrolüne Alındı"
+                    : "Ödemeyi Tamamladım"}
+              </button>
+
+              {paymentReviewMessage && (
+                <div className="mt-3 rounded-2xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">
+                  {paymentReviewMessage}
+                </div>
+              )}
+
+              {paymentReviewError && (
+                <div className="mt-3 rounded-2xl border border-rose-400/25 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">
+                  {paymentReviewError}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="mt-5 flex justify-end">
+            <button
+              type="button"
+              onClick={() => setSuccessOpen(false)}
+              className="rounded-2xl bg-white px-5 py-3 text-sm font-bold text-black transition hover:-translate-y-0.5 hover:bg-white/90"
+            >
+              {t.ok}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+  </main>
+);
 }

@@ -4,6 +4,7 @@ import { getMysqlPool } from "@/lib/mysql";
 
 const ALLOWED_ORDER_STATUSES = [
   "pending_payment",
+  "payment_review",
   "pending",
   "processing",
   "completed",
@@ -70,6 +71,7 @@ function formatMoney(value: number | null | undefined, currency?: string | null)
 function getStatusLabel(status: OrderStatus) {
   const map: Record<OrderStatus, string> = {
     pending_payment: "Ödeme Bekliyor",
+    payment_review: "Ödeme Kontrolünde",
     pending: "Beklemede",
     processing: "İşleniyor",
     completed: "Tamamlandı",
@@ -84,6 +86,7 @@ function getStatusLabel(status: OrderStatus) {
 
 function getStatusTelegramTitle(status: OrderStatus) {
   if (status === "pending_payment") return "🟠 Sipariş ödeme bekliyor";
+  if (status === "payment_review") return "🧾 Sipariş ödeme kontrolüne alındı";
   if (status === "pending") return "🕒 Sipariş beklemeye alındı";
   if (status === "processing") return "🔄 Sipariş işleme alındı";
   if (status === "completed") return "✅ Sipariş tamamlandı";
@@ -215,6 +218,15 @@ function buildStatusTelegramMessage({
     `💵 1000 Adet Satış: ${formatMoney(order.unit_price, order.currency)}\n` +
     `💰 Toplam Alış: ${formatMoney(order.total_cost_price, order.currency)}\n` +
     `🏷️ Toplam Satış: ${formatMoney(order.total_price, order.currency)}\n`;
+
+  if (nextStatus === "payment_review") {
+    return (
+      base +
+      `🧾 Durum: ${getStatusLabel(nextStatus)}\n` +
+      `📌 Açıklama: Müşteri ödeme yaptığını bildirdi. Dekont / ödeme kontrolü gerekli.\n` +
+      `📝 Not: ${completionNote || "-"}`
+    );
+  }
 
   if (nextStatus === "completed") {
     return (

@@ -13,6 +13,10 @@ type Props = {
   alreadyRefunded: number;
   remainingRefundable: number;
   status: string | null;
+
+  quantity?: number | null;
+  startCount?: number | null;
+  endCount?: number | null;
 };
 
 function normalizeCurrency(currency: string | null | undefined) {
@@ -27,8 +31,17 @@ function normalizeCurrency(currency: string | null | undefined) {
   return "TL";
 }
 
+function roundMoney(value: number) {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
 function formatMoney(value: number, currency: string | null | undefined) {
   return `${Number(value || 0).toFixed(2)} ${normalizeCurrency(currency)}`;
+}
+
+function formatNumber(value: number | null | undefined) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "-";
+  return value.toLocaleString("tr-TR");
 }
 
 function getPaymentRefundInfo(paymentMethod: string | null, currency: string) {
@@ -53,6 +66,9 @@ export default function AdminBalanceRefundCard({
   alreadyRefunded,
   remainingRefundable,
   status,
+  quantity,
+  startCount,
+  endCount,
 }: Props) {
   const router = useRouter();
   const displayCurrency = normalizeCurrency(currency);
@@ -72,7 +88,52 @@ export default function AdminBalanceRefundCard({
   const isAutomaticBalanceRefund =
     Boolean(userId) && paymentMethod === "balance" && displayCurrency === "USD";
 
-  async function submitRefund(amount: number) {
+  const deliveryInfo = useMemo(() => {
+    const orderQuantity =
+      typeof quantity === "number" && Number.isFinite(quantity) && quantity > 0
+        ? quantity
+        : 0;
+
+    const start =
+      typeof startCount === "number" && Number.isFinite(startCount)
+        ? startCount
+        : null;
+
+    const end =
+      typeof endCount === "number" && Number.isFinite(endCount)
+        ? endCount
+        : null;
+
+    if (!orderQuantity || start === null || end === null) {
+      return {
+        canCalculate: false,
+        delivered: 0,
+        missing: 0,
+        suggestedRefund: 0,
+      };
+    }
+
+    const delivered = Math.max(0, end - start);
+    const missing = Math.max(0, orderQuantity - delivered);
+
+    const orderTotal = Number(totalPrice || 0);
+    const rawSuggestedRefund =
+      orderQuantity > 0 ? (orderTotal / orderQuantity) * missing : 0;
+
+    const suggestedRefund = Math.min(
+      remainingRefundable,
+      roundMoney(rawSuggestedRefund)
+    );
+
+    return {
+      canCalculate: true,
+      delivered,
+      missing,
+      suggestedRefund,
+    };
+  }, [quantity, startCount, endCount, totalPrice, remainingRefundable]);
+
+  async function submitRefund(amount: number, autoNote?: string) {
     setMessage("");
     setError("");
 
@@ -86,7 +147,9 @@ export default function AdminBalanceRefundCard({
       return;
     }
 
-    if (amount > remainingRefundable) {
+    const safeAmount = roundMoney(amount);
+
+    if (safeAmount > remainingRefundable) {
       setError(
         `Fazla iade yapılamaz. Kalan tutar: ${formatMoney(
           remainingRefundable,
@@ -96,13 +159,15 @@ export default function AdminBalanceRefundCard({
       return;
     }
 
+    const finalNote = autoNote || refundNote;
+
     const confirmText = isAutomaticBalanceRefund
       ? `${orderNumber || `#${orderId}`} siparişi için ${formatMoney(
-          amount,
+          safeAmount,
           displayCurrency
         )} müşterinin bakiyesine iade edilsin mi?`
       : `${orderNumber || `#${orderId}`} siparişi için ${formatMoney(
-          amount,
+          safeAmount,
           displayCurrency
         )} iade edildi olarak sisteme kaydedilsin mi?`;
 
@@ -121,8 +186,8 @@ export default function AdminBalanceRefundCard({
         credentials: "include",
         body: JSON.stringify({
           order_id: orderId,
-          refund_amount: amount,
-          refund_note: refundNote,
+          refund_amount: safeAmount,
+          refund_note: finalNote,
         }),
       });
 
@@ -140,6 +205,28 @@ export default function AdminBalanceRefundCard({
     } finally {
       setLoading(false);
     }
+  }
+
+  function handleMissingRefund() {
+    if (!deliveryInfo.canCalculate) {
+      setError("Eksik teslimat iadesi için başlangıç, bitiş ve sipariş miktarı gerekli.");
+      return;
+    }
+
+    if (deliveryInfo.missing <= 0 || deliveryInfo.suggestedRefund <= 0) {
+      setError("Bu siparişte hesaplanan eksik kalan miktar yok.");
+      return;
+    }
+
+    const autoNote =
+      `Eksik teslimat iadesi. ` +
+      `Sipariş miktarı: ${quantity || 0}, ` +
+      `başlangıç: ${startCount ?? "-"}, ` +
+      `bitiş: ${endCount ?? "-"}, ` +
+      `gelen: ${deliveryInfo.delivered}, ` +
+      `eksik kalan: ${deliveryInfo.missing}.`;
+
+    submitRefund(deliveryInfo.suggestedRefund, autoNote);
   }
 
   return (
@@ -184,6 +271,47 @@ export default function AdminBalanceRefundCard({
         </div>
       </div>
 
+      <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm">
+        <p className="font-bold text-white">Eksik Teslimat Hesaplama</p>
+
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          <div>
+            <p className="text-white/45">Sipariş Miktarı</p>
+            <p className="mt-1 font-bold text-white">{formatNumber(quantity)}</p>
+          </div>
+
+          <div>
+            <p className="text-white/45">Gelen Miktar</p>
+            <p className="mt-1 font-bold text-white">
+              {deliveryInfo.canCalculate ? formatNumber(deliveryInfo.delivered) : "-"}
+            </p>
+          </div>
+
+          <div>
+            <p className="text-white/45">Eksik Kalan</p>
+            <p className="mt-1 font-bold text-amber-300">
+              {deliveryInfo.canCalculate ? formatNumber(deliveryInfo.missing) : "-"}
+            </p>
+          </div>
+
+          <div>
+            <p className="text-white/45">Hesaplanan Kısmi İade</p>
+            <p className="mt-1 font-bold text-emerald-300">
+              {deliveryInfo.canCalculate
+                ? formatMoney(deliveryInfo.suggestedRefund, displayCurrency)
+                : "-"}
+            </p>
+          </div>
+        </div>
+
+        {!deliveryInfo.canCalculate && (
+          <p className="mt-3 text-xs leading-5 text-amber-100/80">
+            Eksik teslimatı otomatik hesaplamak için siparişte başlangıç ve bitiş
+            sayısını kaydetmelisin.
+          </p>
+        )}
+      </div>
+
       {!canRefund && (
         <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm leading-6 text-amber-100">
           Bu sipariş için iade edilebilir tutar kalmamış.
@@ -220,24 +348,41 @@ export default function AdminBalanceRefundCard({
             />
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid gap-3">
             <button
               type="button"
-              disabled={loading}
-              onClick={() => submitRefund(remainingRefundable)}
-              className="rounded-2xl bg-emerald-400 px-4 py-3 text-sm font-black text-black transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={loading || !deliveryInfo.canCalculate}
+              onClick={handleMissingRefund}
+              className="rounded-2xl border border-amber-300/30 bg-amber-300/15 px-4 py-3 text-sm font-black text-amber-100 transition hover:bg-amber-300/20 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {loading ? "İşleniyor..." : "Parayı İade Et"}
+              {loading
+                ? "İşleniyor..."
+                : `Eksik Kalanı İade Et ${
+                    deliveryInfo.canCalculate
+                      ? `(${formatMoney(deliveryInfo.suggestedRefund, displayCurrency)})`
+                      : ""
+                  }`}
             </button>
 
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => submitRefund(Number(refundAmount || 0))}
-              className="rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm font-black text-white transition hover:bg-white/[0.1] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {loading ? "İşleniyor..." : "Kısmi Parayı İade Et"}
-            </button>
+            <div className="grid gap-3 md:grid-cols-2">
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => submitRefund(remainingRefundable)}
+                className="rounded-2xl bg-emerald-400 px-4 py-3 text-sm font-black text-black transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {loading ? "İşleniyor..." : "Tam Kalanı İade Et"}
+              </button>
+
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => submitRefund(Number(refundAmount || 0))}
+                className="rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm font-black text-white transition hover:bg-white/[0.1] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {loading ? "İşleniyor..." : "Manuel Kısmi İade Et"}
+              </button>
+            </div>
           </div>
 
           {!isAutomaticBalanceRefund && (
