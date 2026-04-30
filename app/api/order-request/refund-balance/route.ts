@@ -25,6 +25,18 @@ function roundMoney(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
+function normalizeCurrency(currency: string | null | undefined) {
+  const value = currency?.trim().toUpperCase();
+
+  if (value === "TRY") return "TL";
+  if (value === "₺") return "TL";
+  if (value === "TL") return "TL";
+  if (value === "USD") return "USD";
+  if (value === "RUB") return "RUB";
+
+  return "TL";
+}
+
 function normalizeRefundAmount(value: unknown) {
   const amount = Number(value);
 
@@ -45,6 +57,25 @@ function normalizeNote(value: unknown) {
   return trimmed.slice(0, 240);
 }
 
+async function ensureRefundTable(connection: any) {
+  await connection.execute(`
+    CREATE TABLE IF NOT EXISTS order_refund_transactions (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      order_id BIGINT UNSIGNED NOT NULL,
+      user_id BIGINT UNSIGNED NULL,
+      refund_type VARCHAR(40) NOT NULL,
+      payment_method VARCHAR(40) NULL,
+      amount DECIMAL(12,2) NOT NULL,
+      currency VARCHAR(10) NOT NULL,
+      note VARCHAR(255) NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      INDEX idx_order_refund_transactions_order_id (order_id),
+      INDEX idx_order_refund_transactions_currency (currency)
+    )
+  `);
+}
+
 export async function POST(request: NextRequest) {
   const pool = getMysqlPool();
   const connection = await pool.getConnection();
@@ -53,7 +84,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     const orderId = Number(body?.order_id);
-    const refundAmount = normalizeRefundAmount(body?.refund_amount_usd);
+    const refundAmount = normalizeRefundAmount(
+      body?.refund_amount ?? body?.refund_amount_usd
+    );
     const refundNote = normalizeNote(body?.refund_note);
 
     if (!Number.isInteger(orderId) || orderId <= 0) {
@@ -71,6 +104,7 @@ export async function POST(request: NextRequest) {
     }
 
     await connection.beginTransaction();
+    await ensureRefundTable(connection);
 
     const [orderRows] = await connection.query<OrderRow[]>(
       `
@@ -101,42 +135,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!order.user_id) {
-      await connection.rollback();
-
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Bu sipariş bir kullanıcı hesabına bağlı değil. Bakiyeye iade yapılamaz.",
-        },
-        { status: 400 }
-      );
-    }
-
-    if (order.payment_method !== "balance") {
-      await connection.rollback();
-
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Sadece MedyaTora bakiyesi ile ödenen siparişlerde bakiyeye iade yapılabilir.",
-        },
-        { status: 400 }
-      );
-    }
-
-    if (order.currency !== "USD") {
-      await connection.rollback();
-
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Bakiye iadesi sadece USD siparişlerde yapılabilir.",
-        },
-        { status: 400 }
-      );
-    }
-
+    const currency = normalizeCurrency(order.currency);
     const orderTotal = roundMoney(Number(order.total_price || 0));
 
     if (orderTotal <= 0) {
@@ -150,12 +149,12 @@ export async function POST(request: NextRequest) {
 
     const [refundRows] = await connection.query<RefundSumRow[]>(
       `
-      SELECT COALESCE(SUM(amount_usd), 0) AS refunded_total
-      FROM balance_transactions
-      WHERE related_order_id = ?
-        AND transaction_type IN ('order_refund', 'order_partial_refund')
+      SELECT COALESCE(SUM(amount), 0) AS refunded_total
+      FROM order_refund_transactions
+      WHERE order_id = ?
+        AND currency = ?
       `,
-      [orderId]
+      [orderId, currency]
     );
 
     const alreadyRefunded = roundMoney(Number(refundRows[0]?.refunded_total || 0));
@@ -181,75 +180,120 @@ export async function POST(request: NextRequest) {
           success: false,
           error: `Fazla iade yapılamaz. Kalan iade edilebilir tutar: ${remainingRefundable.toFixed(
             2
-          )} USD.`,
+          )} ${currency}.`,
         },
         { status: 400 }
       );
     }
 
-    const [userRows] = await connection.query<UserRow[]>(
-      `
-      SELECT id, balance_usd
-      FROM users
-      WHERE id = ?
-      LIMIT 1
-      FOR UPDATE
-      `,
-      [order.user_id]
-    );
-
-    const user = userRows[0];
-
-    if (!user) {
-      await connection.rollback();
-
-      return NextResponse.json(
-        { success: false, error: "Kullanıcı bulunamadı." },
-        { status: 404 }
-      );
-    }
-
-    const balanceBefore = roundMoney(Number(user.balance_usd || 0));
-    const balanceAfter = roundMoney(balanceBefore + refundAmount);
     const refundedAfterThis = roundMoney(alreadyRefunded + refundAmount);
-
     const isFullRefund = refundedAfterThis >= orderTotal;
     const nextStatus = isFullRefund ? "refunded" : "partial_refunded";
     const transactionType = isFullRefund ? "order_refund" : "order_partial_refund";
 
-    await connection.execute(
-      `
-      UPDATE users
-      SET balance_usd = ?
-      WHERE id = ?
-      LIMIT 1
-      `,
-      [balanceAfter, order.user_id]
-    );
+    const isAutomaticBalanceRefund =
+      order.payment_method === "balance" && currency === "USD";
+
+    let balanceBeforeUsd: number | null = null;
+    let balanceAfterUsd: number | null = null;
+
+    if (isAutomaticBalanceRefund) {
+      if (!order.user_id) {
+        await connection.rollback();
+
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "Bu sipariş bir kullanıcı hesabına bağlı değil. Bakiyeye otomatik iade yapılamaz.",
+          },
+          { status: 400 }
+        );
+      }
+
+      const [userRows] = await connection.query<UserRow[]>(
+        `
+        SELECT id, balance_usd
+        FROM users
+        WHERE id = ?
+        LIMIT 1
+        FOR UPDATE
+        `,
+        [order.user_id]
+      );
+
+      const user = userRows[0];
+
+      if (!user) {
+        await connection.rollback();
+
+        return NextResponse.json(
+          { success: false, error: "Kullanıcı bulunamadı." },
+          { status: 404 }
+        );
+      }
+
+      balanceBeforeUsd = roundMoney(Number(user.balance_usd || 0));
+      balanceAfterUsd = roundMoney(balanceBeforeUsd + refundAmount);
+
+      await connection.execute(
+        `
+        UPDATE users
+        SET balance_usd = ?
+        WHERE id = ?
+        LIMIT 1
+        `,
+        [balanceAfterUsd, order.user_id]
+      );
+
+      await connection.execute(
+        `
+        INSERT INTO balance_transactions (
+          user_id,
+          transaction_type,
+          amount_usd,
+          balance_before_usd,
+          balance_after_usd,
+          description,
+          related_order_id
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        `,
+        [
+          order.user_id,
+          transactionType,
+          refundAmount,
+          balanceBeforeUsd,
+          balanceAfterUsd,
+          refundNote
+            ? `Siparis iadesi - ${order.order_number || order.id} - ${refundNote}`
+            : `Siparis iadesi - ${order.order_number || order.id}`,
+          order.id,
+        ]
+      );
+    }
 
     await connection.execute(
       `
-      INSERT INTO balance_transactions (
+      INSERT INTO order_refund_transactions (
+        order_id,
         user_id,
-        transaction_type,
-        amount_usd,
-        balance_before_usd,
-        balance_after_usd,
-        description,
-        related_order_id
+        refund_type,
+        payment_method,
+        amount,
+        currency,
+        note
       )
       VALUES (?, ?, ?, ?, ?, ?, ?)
       `,
       [
-        order.user_id,
-        transactionType,
-        refundAmount,
-        balanceBefore,
-        balanceAfter,
-        refundNote
-          ? `Siparis iadesi - ${order.order_number || order.id} - ${refundNote}`
-          : `Siparis iadesi - ${order.order_number || order.id}`,
         order.id,
+        order.user_id,
+        isAutomaticBalanceRefund ? "balance_refund" : "manual_refund",
+        order.payment_method,
+        refundAmount,
+        currency,
+        refundNote,
       ]
     );
 
@@ -266,8 +310,8 @@ export async function POST(request: NextRequest) {
       [
         nextStatus,
         refundNote
-          ? `Bakiye iadesi yapildi: ${refundAmount.toFixed(2)} USD - ${refundNote}`
-          : `Bakiye iadesi yapildi: ${refundAmount.toFixed(2)} USD`,
+          ? `Iade kaydi: ${refundAmount.toFixed(2)} ${currency} - ${refundNote}`
+          : `Iade kaydi: ${refundAmount.toFixed(2)} ${currency}`,
         order.id,
       ]
     );
@@ -278,21 +322,27 @@ export async function POST(request: NextRequest) {
       success: true,
       orderId: order.id,
       orderNumber: order.order_number,
-      refundAmountUsd: refundAmount,
-      alreadyRefundedUsd: alreadyRefunded,
-      totalRefundedUsd: refundedAfterThis,
-      remainingRefundableUsd: roundMoney(orderTotal - refundedAfterThis),
-      balanceBeforeUsd: balanceBefore,
-      balanceAfterUsd: balanceAfter,
+      refundAmount,
+      currency,
+      alreadyRefunded,
+      totalRefunded: refundedAfterThis,
+      remainingRefundable: roundMoney(orderTotal - refundedAfterThis),
+      balanceBeforeUsd,
+      balanceAfterUsd,
       nextStatus,
-      message: isFullRefund
-        ? "Tam iade yapıldı. Tutar kullanıcının bakiyesine eklendi."
-        : "Kısmi iade yapıldı. Tutar kullanıcının bakiyesine eklendi.",
+      automaticBalanceRefund: isAutomaticBalanceRefund,
+      message: isAutomaticBalanceRefund
+        ? isFullRefund
+          ? "Tam iade yapıldı. Tutar müşterinin USD bakiyesine eklendi."
+          : "Kısmi iade yapıldı. Tutar müşterinin USD bakiyesine eklendi."
+        : isFullRefund
+          ? `Tam iade kaydı oluşturuldu. Tutar: ${refundAmount.toFixed(2)} ${currency}.`
+          : `Kısmi iade kaydı oluşturuldu. Tutar: ${refundAmount.toFixed(2)} ${currency}.`,
     });
   } catch (error) {
     await connection.rollback();
 
-    console.error("BALANCE_REFUND_ERROR", error);
+    console.error("REFUND_ERROR", error);
 
     return NextResponse.json(
       {
@@ -300,7 +350,7 @@ export async function POST(request: NextRequest) {
         error:
           error instanceof Error
             ? error.message
-            : "Bakiye iadesi yapılamadı.",
+            : "İade işlemi yapılamadı.",
       },
       { status: 500 }
     );

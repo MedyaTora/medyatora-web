@@ -49,9 +49,21 @@ function formatDate(value: string | null | undefined) {
   }
 }
 
+function normalizeCurrency(currency: string | null | undefined) {
+  const value = currency?.trim().toUpperCase();
+
+  if (value === "TRY") return "TL";
+  if (value === "₺") return "TL";
+  if (value === "TL") return "TL";
+  if (value === "USD") return "USD";
+  if (value === "RUB") return "RUB";
+
+  return "TL";
+}
+
 function formatMoney(value: number | null | undefined, currency?: string | null) {
   const safeValue = typeof value === "number" ? value : 0;
-  return `${safeValue} ${currency || ""}`.trim();
+  return `${safeValue} ${normalizeCurrency(currency)}`.trim();
 }
 
 function calculateProfit(order: OrderDetailRow) {
@@ -253,7 +265,7 @@ export default async function OrderDetailPage({
         row.total_cost_price === null ? null : Number(row.total_cost_price),
       guarantee_label: row.guarantee_label,
       speed: row.speed,
-      currency: row.currency,
+      currency: normalizeCurrency(row.currency),
       payment_method: row.payment_method,
       target_username: row.target_username,
       target_link: row.target_link,
@@ -275,17 +287,19 @@ export default async function OrderDetailPage({
     );
   }
 
+  const displayCurrency = normalizeCurrency(order.currency);
+
   let alreadyRefunded = 0;
 
   try {
     const [refundRows] = await pool.query(
       `
-      SELECT COALESCE(SUM(amount_usd), 0) AS refunded_total
-      FROM balance_transactions
-      WHERE related_order_id = ?
-        AND transaction_type IN ('order_refund', 'order_partial_refund')
+      SELECT COALESCE(SUM(amount), 0) AS refunded_total
+      FROM order_refund_transactions
+      WHERE order_id = ?
+        AND currency = ?
       `,
-      [order.id]
+      [order.id, displayCurrency]
     );
 
     const refundRow = (refundRows as any[])[0];
@@ -348,7 +362,7 @@ export default async function OrderDetailPage({
                 </span>
 
                 <span className="rounded-full border border-sky-400/20 bg-sky-400/10 px-3 py-1 text-xs text-sky-300">
-                  {order.currency || "-"}
+                  {displayCurrency}
                 </span>
 
                 <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-300">
@@ -444,27 +458,23 @@ export default async function OrderDetailPage({
               <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
                 <InfoCard
                   title="Birim Alış"
-                  value={`${order.unit_cost_price ?? 0} ${
-                    order.currency || ""
-                  } / 1000`}
+                  value={`${order.unit_cost_price ?? 0} ${displayCurrency} / 1000`}
                 />
                 <InfoCard
                   title="Birim Satış"
-                  value={`${order.unit_price ?? 0} ${
-                    order.currency || ""
-                  } / 1000`}
+                  value={`${order.unit_price ?? 0} ${displayCurrency} / 1000`}
                 />
                 <InfoCard
                   title="Toplam Alış"
-                  value={formatMoney(order.total_cost_price, order.currency)}
+                  value={formatMoney(order.total_cost_price, displayCurrency)}
                 />
                 <InfoCard
                   title="Toplam Satış"
-                  value={formatMoney(order.total_price, order.currency)}
+                  value={formatMoney(order.total_price, displayCurrency)}
                 />
                 <InfoCard
                   title="Tahmini Kâr"
-                  value={`${formatMoney(profit, order.currency)} (${profitRate}%)`}
+                  value={`${formatMoney(profit, displayCurrency)} (${profitRate}%)`}
                   highlight
                 />
               </div>
@@ -511,7 +521,7 @@ export default async function OrderDetailPage({
               orderNumber={order.order_number}
               userId={order.user_id}
               paymentMethod={order.payment_method}
-              currency={order.currency}
+              currency={displayCurrency}
               totalPrice={order.total_price}
               alreadyRefunded={alreadyRefunded}
               remainingRefundable={remainingRefundable}
