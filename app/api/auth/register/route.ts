@@ -23,6 +23,8 @@ type CreatedUserRow = RowDataPacket & {
   email_verified: number;
   phone_verified: number;
   balance_usd: string | number;
+  balance_tl: string | number;
+  balance_rub: string | number;
   free_analysis_used: number;
   welcome_bonus_claimed: number;
   is_active: number;
@@ -31,6 +33,7 @@ type CreatedUserRow = RowDataPacket & {
 
 function getClientIp(request: NextRequest) {
   const forwardedFor = request.headers.get("x-forwarded-for");
+
   if (forwardedFor) {
     return forwardedFor.split(",")[0]?.trim() || null;
   }
@@ -134,6 +137,8 @@ export async function POST(request: NextRequest) {
         email_verified,
         phone_verified,
         balance_usd,
+        balance_tl,
+        balance_rub,
         free_analysis_used,
         welcome_bonus_claimed,
         is_active,
@@ -147,6 +152,13 @@ export async function POST(request: NextRequest) {
 
     const createdUser = createdRows[0];
 
+    if (!createdUser) {
+      return NextResponse.json(
+        { ok: false, error: "Kullanıcı oluşturuldu ama okunamadı." },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({
       ok: true,
       user: getPublicUser({
@@ -158,6 +170,8 @@ export async function POST(request: NextRequest) {
         email_verified: Boolean(createdUser.email_verified),
         phone_verified: Boolean(createdUser.phone_verified),
         balance_usd: Number(createdUser.balance_usd || 0),
+        balance_tl: Number(createdUser.balance_tl || 0),
+        balance_rub: Number(createdUser.balance_rub || 0),
         free_analysis_used: Boolean(createdUser.free_analysis_used),
         welcome_bonus_claimed: Boolean(createdUser.welcome_bonus_claimed),
         is_active: Boolean(createdUser.is_active),

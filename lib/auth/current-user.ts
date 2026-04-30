@@ -12,6 +12,8 @@ export type CurrentUser = {
   email_verified: boolean;
   phone_verified: boolean;
   balance_usd: number;
+  balance_tl: number;
+  balance_rub: number;
   free_analysis_used: boolean;
   welcome_bonus_claimed: boolean;
   is_active: boolean;
@@ -27,6 +29,8 @@ type CurrentUserRow = RowDataPacket & {
   email_verified: number;
   phone_verified: number;
   balance_usd: string | number;
+  balance_tl: string | number;
+  balance_rub: string | number;
   free_analysis_used: number;
   welcome_bonus_claimed: number;
   is_active: number;
@@ -55,6 +59,8 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
       users.email_verified,
       users.phone_verified,
       users.balance_usd,
+      users.balance_tl,
+      users.balance_rub,
       users.free_analysis_used,
       users.welcome_bonus_claimed,
       users.is_active,
@@ -95,6 +101,8 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     email_verified: Boolean(user.email_verified),
     phone_verified: Boolean(user.phone_verified),
     balance_usd: Number(user.balance_usd || 0),
+    balance_tl: Number(user.balance_tl || 0),
+    balance_rub: Number(user.balance_rub || 0),
     free_analysis_used: Boolean(user.free_analysis_used),
     welcome_bonus_claimed: Boolean(user.welcome_bonus_claimed),
     is_active: Boolean(user.is_active),
@@ -116,6 +124,8 @@ export function getPublicUser(user: CurrentUser | null) {
     email_verified: user.email_verified,
     phone_verified: user.phone_verified,
     balance_usd: user.balance_usd,
+    balance_tl: user.balance_tl,
+    balance_rub: user.balance_rub,
     free_analysis_used: user.free_analysis_used,
     welcome_bonus_claimed: user.welcome_bonus_claimed,
   };

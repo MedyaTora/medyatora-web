@@ -13,6 +13,8 @@ type PublicUser = {
   email_verified: boolean;
   phone_verified: boolean;
   balance_usd: number;
+  balance_tl: number;
+  balance_rub: number;
   free_analysis_used: boolean;
   welcome_bonus_claimed: boolean;
 };
@@ -25,6 +27,15 @@ type Props = {
   onClose: () => void;
   onAuthenticated: (user: PublicUser) => void;
 };
+
+function normalizePublicUser(user: PublicUser): PublicUser {
+  return {
+    ...user,
+    balance_usd: Number(user.balance_usd || 0),
+    balance_tl: Number(user.balance_tl || 0),
+    balance_rub: Number(user.balance_rub || 0),
+  };
+}
 
 export default function AuthModal({
   open,
@@ -42,9 +53,9 @@ export default function AuthModal({
   const [error, setError] = useState("");
   const [mounted, setMounted] = useState(false);
 
-useEffect(() => {
-  setMounted(true);
-}, []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const isRegister = mode === "register";
 
@@ -132,7 +143,7 @@ useEffect(() => {
         throw new Error(data.error || "İşlem başarısız.");
       }
 
-      onAuthenticated(data.user);
+      onAuthenticated(normalizePublicUser(data.user));
       onClose();
 
       setFullName("");
@@ -360,7 +371,7 @@ useEffect(() => {
           </section>
         </div>
       </div>
-      </div>,
+    </div>,
     document.body
   );
 }

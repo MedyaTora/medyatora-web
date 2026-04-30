@@ -156,9 +156,10 @@ function MembershipBox() {
       </h2>
 
       <p className="leading-7 text-white/70">
-        MedyaTora hesabı ile analiz haklarını, bakiye durumunu ve sipariş
-        geçmişini tek yerden takip edebilirsin. Telefon doğrulama sistemi aktif
-        olduğunda doğrulayan kullanıcılara 1$ başlangıç bakiyesi tanımlanacak.
+        MedyaTora hesabı ile analiz haklarını, TL / USD / RUB bakiye durumunu ve
+        sipariş geçmişini tek yerden takip edebilirsin. Telefon doğrulama sistemi
+        aktif olduğunda doğrulayan kullanıcılara 1 USD başlangıç bakiyesi
+        tanımlanacak.
       </p>
 
       <div className="mt-5 grid gap-3 md:grid-cols-2">
@@ -171,10 +172,10 @@ function MembershipBox() {
         </div>
 
         <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-          <p className="text-sm font-bold text-white">Başlangıç bakiyesi</p>
+          <p className="text-sm font-bold text-white">Çoklu para birimi bakiyesi</p>
           <p className="mt-2 text-sm leading-6 text-white/60">
-            Telefon doğrulama sonrası aynı kullanıcı/IP/telefon için tek seferlik
-            bonus sistemi kurulacak.
+            TL, USD ve RUB bakiyeleri ayrı takip edilir. Sipariş ödemelerinde
+            seçili para birimine göre bakiye kullanılabilir.
           </p>
         </div>
       </div>

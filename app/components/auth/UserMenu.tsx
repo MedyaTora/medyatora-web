@@ -12,14 +12,26 @@ type PublicUser = {
   email_verified: boolean;
   phone_verified: boolean;
   balance_usd: number;
+  balance_tl: number;
+  balance_rub: number;
   free_analysis_used: boolean;
   welcome_bonus_claimed: boolean;
 };
 
 type AuthMode = "login" | "register";
 
-function formatBalance(value: number) {
-  return `${Number(value || 0).toFixed(2)} USD`;
+function formatBalance(value: number, currency: "USD" | "TL" | "RUB") {
+  const amount = Number(value || 0);
+
+  if (currency === "TL") {
+    return `${amount.toFixed(2)} TL`;
+  }
+
+  if (currency === "RUB") {
+    return `${amount.toFixed(2)} RUB`;
+  }
+
+  return `${amount.toFixed(2)} USD`;
 }
 
 export default function UserMenu() {
@@ -93,9 +105,14 @@ export default function UserMenu() {
 
           <div className="rounded-2xl border border-sky-400/20 bg-sky-400/10 px-4 py-2">
             <p className="text-xs text-sky-200/80">Bakiye</p>
-            <p className="text-sm font-bold text-white">
-              {formatBalance(user.balance_usd)}
-            </p>
+
+            <div className="mt-1 flex flex-wrap gap-2 text-xs font-bold text-white sm:text-sm">
+              <span>{formatBalance(user.balance_usd, "USD")}</span>
+              <span className="text-white/35">•</span>
+              <span>{formatBalance(user.balance_tl, "TL")}</span>
+              <span className="text-white/35">•</span>
+              <span>{formatBalance(user.balance_rub, "RUB")}</span>
+            </div>
           </div>
 
           <a
@@ -133,12 +150,19 @@ export default function UserMenu() {
         </div>
       )}
 
-      <AuthModal
-        open={authOpen}
-        initialMode={authMode}
-        onClose={() => setAuthOpen(false)}
-        onAuthenticated={(nextUser) => setUser(nextUser)}
-      />
+<AuthModal
+  open={authOpen}
+  initialMode={authMode}
+  onClose={() => setAuthOpen(false)}
+  onAuthenticated={(nextUser) =>
+    setUser({
+      ...nextUser,
+      balance_usd: Number(nextUser.balance_usd || 0),
+      balance_tl: Number((nextUser as PublicUser).balance_tl || 0),
+      balance_rub: Number((nextUser as PublicUser).balance_rub || 0),
+    })
+  }
+/>
     </>
   );
 }

@@ -10,6 +10,7 @@ import {
 } from "@/lib/services";
 
 type CurrencyCode = "TL" | "USD" | "RUB";
+type BalanceColumn = "balance_usd" | "balance_tl" | "balance_rub";
 type ContactType = "Telegram" | "WhatsApp" | "Instagram" | "E-posta";
 type PaymentMethod = "turkey_bank" | "support" | "balance";
 
@@ -72,6 +73,8 @@ type OrderRowForInsert = {
 type BalanceUserRow = RowDataPacket & {
   id: number;
   balance_usd: string | number;
+  balance_tl: string | number;
+  balance_rub: string | number;
 };
 
 const ALLOWED_CURRENCIES: CurrencyCode[] = ["TL", "USD", "RUB"];
@@ -93,6 +96,16 @@ function getPaymentMethodLabel(method: PaymentMethod) {
   if (method === "turkey_bank") return "Türkiye Banka Havalesi / EFT";
   if (method === "balance") return "MedyaTora Bakiyesi";
   return "Destek ile İletişime Geçilecek";
+}
+
+function getBalanceColumn(currency: CurrencyCode): BalanceColumn {
+  if (currency === "USD") return "balance_usd";
+  if (currency === "RUB") return "balance_rub";
+  return "balance_tl";
+}
+
+function formatMoney(value: number, currency: CurrencyCode) {
+  return `${value.toFixed(2)} ${currency}`;
 }
 
 function createBatchCode() {
@@ -412,17 +425,6 @@ export async function POST(req: Request) {
       );
     }
 
-    if (paymentMethod === "balance" && currency !== "USD") {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Bakiye ile ödeme şu an sadece USD para biriminde kullanılabilir. Lütfen para birimini USD seçin.",
-        },
-        { status: 400 }
-      );
-    }
-
     if (!items.length) {
       return NextResponse.json(
         { success: false, error: "En az bir hizmet seçmelisiniz." },
@@ -540,8 +542,12 @@ export async function POST(req: Request) {
     try {
       await connection.beginTransaction();
 
+      let balanceBefore = 0;
+      let balanceAfter = 0;
+
       let balanceBeforeUsd = 0;
       let balanceAfterUsd = 0;
+
       let firstInsertedOrderId: number | null = null;
 
       if (paymentMethod === "balance") {
@@ -558,10 +564,11 @@ export async function POST(req: Request) {
         }
 
         const balanceUserId = currentUser.id;
+        const balanceColumn = getBalanceColumn(currency);
 
         const [userRows] = await connection.query<BalanceUserRow[]>(
           `
-          SELECT id, balance_usd
+          SELECT id, balance_usd, balance_tl, balance_rub
           FROM users
           WHERE id = ?
           LIMIT 1
@@ -584,32 +591,36 @@ export async function POST(req: Request) {
           );
         }
 
-        balanceBeforeUsd = Number(userRow.balance_usd || 0);
+        balanceBefore = roundMoney(Number(userRow[balanceColumn] || 0));
+        balanceAfter = roundMoney(balanceBefore - totalSaleForBalance);
 
-        if (balanceBeforeUsd < totalSaleForBalance) {
+        balanceBeforeUsd = roundMoney(Number(userRow.balance_usd || 0));
+        balanceAfterUsd =
+          currency === "USD" ? balanceAfter : balanceBeforeUsd;
+
+        if (balanceBefore < totalSaleForBalance) {
           await connection.rollback();
 
           return NextResponse.json(
             {
               success: false,
-              error: `Bakiyen yetersiz. Mevcut bakiye: ${balanceBeforeUsd.toFixed(
-                2
-              )} USD, sipariş tutarı: ${totalSaleForBalance.toFixed(2)} USD.`,
+              error: `Bakiyen yetersiz. Mevcut bakiye: ${formatMoney(
+                balanceBefore,
+                currency
+              )}, sipariş tutarı: ${formatMoney(totalSaleForBalance, currency)}.`,
             },
             { status: 400 }
           );
         }
 
-        balanceAfterUsd = roundMoney(balanceBeforeUsd - totalSaleForBalance);
-
         await connection.execute(
           `
           UPDATE users
-          SET balance_usd = ?
+          SET ${balanceColumn} = ?
           WHERE id = ?
           LIMIT 1
           `,
-          [balanceAfterUsd, balanceUserId]
+          [balanceAfter, balanceUserId]
         );
       }
 
@@ -698,21 +709,29 @@ export async function POST(req: Request) {
           INSERT INTO balance_transactions (
             user_id,
             transaction_type,
+            currency,
+            amount,
+            balance_before,
+            balance_after,
             amount_usd,
             balance_before_usd,
             balance_after_usd,
             description,
             related_order_id
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `,
           [
             currentUser.id,
             "order_payment",
+            currency,
             -totalSaleForBalance,
+            balanceBefore,
+            balanceAfter,
+            currency === "USD" ? -totalSaleForBalance : 0,
             balanceBeforeUsd,
             balanceAfterUsd,
-            `MedyaTora siparis odemesi - ${batchCode}`,
+            `MedyaTora siparis odemesi - ${batchCode} - ${currency}`,
             firstInsertedOrderId,
           ]
         );
@@ -806,7 +825,7 @@ export async function POST(req: Request) {
           paymentMethod === "turkey_bank"
             ? "Siparişiniz alındı. Ödeme kontrolünden sonra işleme alınacaktır."
             : paymentMethod === "balance"
-              ? "Siparişiniz bakiyenizden ödenerek alındı."
+              ? `Siparişiniz ${currency} bakiyenizden ödenerek alındı.`
               : "Siparişiniz alındı. Ekibimiz sizinle iletişime geçecektir.",
         batchCode,
         orderNumbers: rows.map((row) => row.order_number),

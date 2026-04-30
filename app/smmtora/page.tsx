@@ -640,6 +640,8 @@ export default function SmmToraPage() {
     email: string;
     full_name: string | null;
     balance_usd: number;
+    balance_tl: number;
+    balance_rub: number;
   } | null>(null);
 
   const [loading, setLoading] = useState(false);
@@ -686,6 +688,8 @@ export default function SmmToraPage() {
             email: data.user.email,
             full_name: data.user.full_name,
             balance_usd: Number(data.user.balance_usd || 0),
+            balance_tl: Number(data.user.balance_tl || 0),
+            balance_rub: Number(data.user.balance_rub || 0),
           });
         } else {
           setAuthUser(null);
@@ -2402,50 +2406,53 @@ export default function SmmToraPage() {
               </button>
 
               <button
-                type="button"
-                onClick={() => {
-                  setPaymentMethod("balance");
+  type="button"
+  onClick={() => {
+    setPaymentMethod("balance");
 
-                  trackVisitorAction({
-                    event_type: "payment_method_select",
-                    event_label: "MedyaTora Bakiyesi",
-                    event_value: "balance",
-                    event_data: {
-                      checkout_mode: checkoutMode,
-                      item_count: checkoutItems.length,
-                      total_price: checkoutItems.reduce(
-                        (sum, item) => sum + item.total_price,
-                        0
-                      ),
-                      currency: selectedCurrency,
-                      balance_usd: authUser?.balance_usd || 0,
-                    },
-                  });
-                }}
-                disabled={!authUser || selectedCurrency !== "USD"}
-                className={`rounded-2xl border p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-50 ${
-                  paymentMethod === "balance"
-                    ? "border-emerald-400 bg-emerald-400/10 shadow-[0_12px_34px_rgba(52,211,153,0.12)]"
-                    : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
-                }`}
-              >
-                <p className="text-sm font-bold text-white">
-                  MedyaTora Bakiyesi
-                </p>
-                <p className="mt-1 text-xs leading-5 text-white/55">
-                  {authUser
-                    ? `Mevcut bakiye: ${Number(
-                        authUser.balance_usd || 0
-                      ).toFixed(2)} USD`
-                    : "Bakiye ile ödeme için giriş yapmalısın."}
-                </p>
+    trackVisitorAction({
+      event_type: "payment_method_select",
+      event_label: "MedyaTora Bakiyesi",
+      event_value: "balance",
+      event_data: {
+        checkout_mode: checkoutMode,
+        item_count: checkoutItems.length,
+        total_price: checkoutItems.reduce(
+          (sum, item) => sum + item.total_price,
+          0
+        ),
+        currency: selectedCurrency,
+        balance_usd: authUser?.balance_usd || 0,
+        balance_tl: authUser?.balance_tl || 0,
+        balance_rub: authUser?.balance_rub || 0,
+      },
+    });
+  }}
+  disabled={!authUser}
+  className={`rounded-2xl border p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-50 ${
+    paymentMethod === "balance"
+      ? "border-emerald-400 bg-emerald-400/10 shadow-[0_12px_34px_rgba(52,211,153,0.12)]"
+      : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
+  }`}
+>
+  <p className="text-sm font-bold text-white">MedyaTora Bakiyesi</p>
 
-                {selectedCurrency !== "USD" && (
-                  <p className="mt-2 text-xs leading-5 text-amber-200">
-                    Bakiye ile ödeme için para birimini USD seç.
-                  </p>
-                )}
-              </button>
+  <p className="mt-1 text-xs leading-5 text-white/55">
+    {authUser
+      ? selectedCurrency === "TL"
+        ? `Mevcut bakiye: ${Number(authUser.balance_tl || 0).toFixed(2)} TL`
+        : selectedCurrency === "RUB"
+          ? `Mevcut bakiye: ${Number(authUser.balance_rub || 0).toFixed(2)} RUB`
+          : `Mevcut bakiye: ${Number(authUser.balance_usd || 0).toFixed(2)} USD`
+      : "Bakiye ile ödeme için giriş yapmalısın."}
+  </p>
+
+  {authUser && (
+    <p className="mt-2 text-xs leading-5 text-white/45">
+      Seçili para birimine göre mevcut bakiyen gösterilir.
+    </p>
+  )}
+</button>
 
               <button
                 type="button"
@@ -2519,16 +2526,16 @@ export default function SmmToraPage() {
               </div>
             )}
 
-            {paymentMethod === "balance" && (
-              <div className="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm leading-6 text-emerald-50">
-                <p className="font-bold text-white">Bakiye ile ödeme</p>
-                <p className="mt-2 text-white/70">
-                  Sipariş onaylandığında toplam tutar MedyaTora bakiyenden
-                  düşülür. Bakiye ile ödeme şu an sadece USD para biriminde
-                  kullanılabilir.
-                </p>
-              </div>
-            )}
+{paymentMethod === "balance" && (
+  <div className="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm leading-6 text-emerald-50">
+    <p className="font-bold text-white">Bakiye ile ödeme</p>
+    <p className="mt-2 text-white/70">
+      Sipariş onaylandığında toplam tutar seçili para birimindeki
+      MedyaTora bakiyenden düşülür. TL, USD ve RUB bakiyeleri ayrı
+      ayrı takip edilir.
+    </p>
+  </div>
+)}
           </div>
 
           <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm leading-6 text-amber-50">

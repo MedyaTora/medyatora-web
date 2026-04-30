@@ -252,17 +252,39 @@ export default async function AccountPage() {
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-5">
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-200/75">
-                    Bakiye
-                  </p>
-                  <p className="mt-3 text-3xl font-black text-white">
-                    {Number(user.balance_usd || 0).toFixed(2)} USD
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-white/55">
-                    Bakiye ile USD siparişlerinde ödeme yapabilirsin.
-                  </p>
-                </div>
+              <div className="rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-5">
+  <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-200/75">
+    Bakiye
+  </p>
+
+  <div className="mt-3 space-y-2">
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+      <span className="text-sm font-bold text-white/70">USD</span>
+      <span className="text-lg font-black text-white">
+        {Number(user.balance_usd || 0).toFixed(2)} USD
+      </span>
+    </div>
+
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+      <span className="text-sm font-bold text-white/70">TL</span>
+      <span className="text-lg font-black text-white">
+        {Number(user.balance_tl || 0).toFixed(2)} TL
+      </span>
+    </div>
+
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+      <span className="text-sm font-bold text-white/70">RUB</span>
+      <span className="text-lg font-black text-white">
+        {Number(user.balance_rub || 0).toFixed(2)} RUB
+      </span>
+    </div>
+  </div>
+
+  <p className="mt-3 text-sm leading-6 text-white/55">
+    Bakiye ile TL, USD ve RUB siparişlerinde seçili para birimine göre ödeme
+    yapabilirsin.
+  </p>
+</div>
 
                 <div className="rounded-3xl border border-sky-400/20 bg-sky-400/10 p-5">
                   <p className="text-xs font-bold uppercase tracking-[0.18em] text-sky-200/75">

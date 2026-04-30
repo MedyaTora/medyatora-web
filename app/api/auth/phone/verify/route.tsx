@@ -48,6 +48,10 @@ function normalizeCode(value: unknown) {
   return String(value || "").replace(/\D/g, "").slice(0, 6);
 }
 
+function roundMoney(value: number) {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
 function isDuplicateKeyError(error: unknown) {
   return (
     typeof error === "object" &&
@@ -252,7 +256,8 @@ export async function POST(request: NextRequest) {
 
       let bonusGranted = false;
       let bonusAmountUsd = 0;
-      const balanceBefore = Number(user.balance_usd || 0);
+      const balanceBefore = roundMoney(Number(user.balance_usd || 0));
+      let balanceAfter = balanceBefore;
 
       if (!Boolean(user.welcome_bonus_claimed)) {
         const [bonusInsertResult] = await connection.execute<ResultSetHeader>(
@@ -280,8 +285,7 @@ export async function POST(request: NextRequest) {
         if (bonusInsertResult.affectedRows === 1) {
           bonusGranted = true;
           bonusAmountUsd = 1;
-
-          const balanceAfter = balanceBefore + bonusAmountUsd;
+          balanceAfter = roundMoney(balanceBefore + bonusAmountUsd);
 
           await connection.execute(
             `
@@ -300,16 +304,24 @@ export async function POST(request: NextRequest) {
             INSERT INTO balance_transactions (
               user_id,
               transaction_type,
+              currency,
+              amount,
+              balance_before,
+              balance_after,
               amount_usd,
               balance_before_usd,
               balance_after_usd,
               description
             )
-            VALUES (?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `,
             [
               currentUser.id,
-              "bonus",
+              "welcome_bonus",
+              "USD",
+              bonusAmountUsd,
+              balanceBefore,
+              balanceAfter,
               bonusAmountUsd,
               balanceBefore,
               balanceAfter,
@@ -331,7 +343,7 @@ export async function POST(request: NextRequest) {
         phoneVerified: true,
         bonusGranted,
         bonusAmountUsd,
-        balanceUsd: bonusGranted ? balanceBefore + bonusAmountUsd : balanceBefore,
+        balanceUsd: bonusGranted ? balanceAfter : balanceBefore,
       });
     } catch (dbError) {
       await connection.rollback();
