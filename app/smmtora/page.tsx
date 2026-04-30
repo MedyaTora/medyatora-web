@@ -46,6 +46,15 @@ type CartItem = {
   order_note: string;
 };
 
+type CreatedPaymentInfo = {
+  fullName: string;
+  phoneNumber: string;
+  paymentMethod: PaymentMethod;
+  currency: CurrencyCode;
+  totalAmount: number;
+  orderNumbers: string[];
+};
+
 const CATEGORY_LABELS: Record<string, string> = {
   takipci: "Takipçi",
   begeni: "Beğeni",
@@ -108,7 +117,12 @@ const CATEGORY_SORT_ORDER: Record<string, number> = {
 
 const currencyOptions: CurrencyCode[] = ["TL", "USD", "RUB"];
 const localeOptions: Locale[] = ["tr", "en", "ru"];
-const contactTypes: ContactType[] = ["Telegram", "WhatsApp", "Instagram", "E-posta"];
+const contactTypes: ContactType[] = [
+  "Telegram",
+  "WhatsApp",
+  "Instagram",
+  "E-posta",
+];
 
 const TELEGRAM_USERNAME = "medyatora";
 const WHATSAPP_NUMBER = "905530739292";
@@ -187,42 +201,101 @@ function getCategoryName(slug: string) {
   return CATEGORY_LABELS[slug] || slug.replace(/_/g, " ");
 }
 
-function getOrderSupportMessage(orderNumbers: string[], locale: Locale) {
+function getPaymentMethodSupportLabel(method: PaymentMethod, locale: Locale) {
+  if (method === "turkey_bank") {
+    if (locale === "en") return "Bank transfer / EFT";
+    if (locale === "ru") return "Банковский перевод";
+    return "Havale / EFT";
+  }
+
+  if (method === "balance") {
+    if (locale === "en") return "MedyaTora Balance";
+    if (locale === "ru") return "Баланс MedyaTora";
+    return "MedyaTora Bakiyesi";
+  }
+
+  if (locale === "en") return "Support payment";
+  if (locale === "ru") return "Оплата через поддержку";
+  return "Destek ile ödeme";
+}
+
+function getOrderSupportMessage({
+  orderNumbers,
+  locale,
+  fullName,
+  amount,
+  currency,
+  paymentMethod,
+}: {
+  orderNumbers: string[];
+  locale: Locale;
+  fullName: string;
+  amount: number;
+  currency: CurrencyCode;
+  paymentMethod: PaymentMethod;
+}) {
+  const orderText = orderNumbers.join("\n");
+  const amountText = formatPrice(amount, currency);
+  const paymentMethodText = getPaymentMethodSupportLabel(paymentMethod, locale);
+
   if (locale === "en") {
-    return `Hello, I placed an order on MedyaTora.
+    return `Hello, I am waiting for payment confirmation.
 
-My order number:
-${orderNumbers.join("\n")}
+Sender Full Name: ${fullName}
+Payment Amount: ${amountText}
+Order Number(s):
+${orderText}
+Payment Method: ${paymentMethodText}
 
-I would like to get payment and processing instructions.`;
+I am sending the receipt as an attachment.`;
   }
 
   if (locale === "ru") {
-    return `Здравствуйте, я оформил заказ на MedyaTora.
+    return `Здравствуйте, ожидаю подтверждения оплаты.
 
-Номер моего заказа:
-${orderNumbers.join("\n")}
+Имя отправителя: ${fullName}
+Сумма оплаты: ${amountText}
+Номер заказа:
+${orderText}
+Способ оплаты: ${paymentMethodText}
 
-Я хочу получить информацию об оплате и дальнейших шагах.`;
+Отправляю чек во вложении.`;
   }
 
-  return `Merhaba, MedyaTora üzerinden sipariş verdim.
+  return `Merhaba, ödeme onayı bekliyorum.
 
-Sipariş numaram:
-${orderNumbers.join("\n")}
+Gönderen Ad Soyad: ${fullName}
+Ödeme Tutarı: ${amountText}
+Sipariş Numarası:
+${orderText}
+Ödeme Yöntemi: ${paymentMethodText}
 
-Ödeme ve işlem adımlarını öğrenmek istiyorum.`;
+Dekontu ekte iletiyorum.`;
 }
 
-function buildTelegramLink(orderNumbers: string[], locale: Locale) {
+function buildTelegramLink(paymentInfo: CreatedPaymentInfo, locale: Locale) {
   return `https://t.me/${TELEGRAM_USERNAME}?text=${encodeURIComponent(
-    getOrderSupportMessage(orderNumbers, locale)
+    getOrderSupportMessage({
+      orderNumbers: paymentInfo.orderNumbers,
+      locale,
+      fullName: paymentInfo.fullName,
+      amount: paymentInfo.totalAmount,
+      currency: paymentInfo.currency,
+      paymentMethod: paymentInfo.paymentMethod,
+    })
   )}`;
 }
 
-function buildWhatsappLink(orderNumbers: string[], locale: Locale) {
+function buildWhatsappLink(paymentInfo: CreatedPaymentInfo, locale: Locale) {
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
-    getOrderSupportMessage(orderNumbers, locale)
+    getOrderSupportMessage({
+      orderNumbers: paymentInfo.orderNumbers,
+      locale,
+      fullName: paymentInfo.fullName,
+      amount: paymentInfo.totalAmount,
+      currency: paymentInfo.currency,
+      paymentMethod: paymentInfo.paymentMethod,
+    })
   )}`;
 }
 
@@ -238,14 +311,20 @@ function detectInitialLocale(): Locale {
   return "en";
 }
 
-function getUnitSalePrice(service: OrderServiceItem | null, currency: CurrencyCode) {
+function getUnitSalePrice(
+  service: OrderServiceItem | null,
+  currency: CurrencyCode
+) {
   if (!service) return 0;
   if (currency === "USD") return service.salePriceUsd;
   if (currency === "RUB") return service.salePriceRub;
   return service.salePriceTl;
 }
 
-function getUnitCostPrice(service: OrderServiceItem | null, currency: CurrencyCode) {
+function getUnitCostPrice(
+  service: OrderServiceItem | null,
+  currency: CurrencyCode
+) {
   if (!service) return 0;
   if (currency === "USD") return service.costPriceUsd;
   if (currency === "RUB") return service.costPriceRub;
@@ -554,6 +633,38 @@ export default function SmmToraPage() {
   const [contactType, setContactType] = useState<ContactType>("");
   const [contactValue, setContactValue] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("");
+  const [paymentTermsAccepted, setPaymentTermsAccepted] = useState(false);
+
+  const [authUser, setAuthUser] = useState<{
+    id: number;
+    email: string;
+    full_name: string | null;
+    balance_usd: number;
+  } | null>(null);
+
+  const [loading, setLoading] = useState(false);
+  const [cartMessage, setCartMessage] = useState("");
+  const [error, setError] = useState("");
+  const [createdOrderNumbers, setCreatedOrderNumbers] = useState<string[]>([]);
+  const [successOpen, setSuccessOpen] = useState(false);
+  const [createdPaymentInfo, setCreatedPaymentInfo] =
+    useState<CreatedPaymentInfo | null>(null);
+
+  const productsScrollRef = useRef<HTMLDivElement | null>(null);
+  const cartSectionRef = useRef<HTMLDivElement | null>(null);
+
+  const [infoTab, setInfoTab] = useState<"service" | "before" | "notes">(
+    "service"
+  );
+  const [showAllPlatforms, setShowAllPlatforms] = useState(false);
+
+  const [showServiceFilters, setShowServiceFilters] = useState(false);
+  const [serviceSearch, setServiceSearch] = useState("");
+  const [qualityFilter, setQualityFilter] = useState<QualityFilter>("all");
+  const [guaranteeFilter, setGuaranteeFilter] =
+    useState<GuaranteeFilter>("all");
+  const [regionFilter, setRegionFilter] = useState<RegionFilter>("all");
+  const [priceSort, setPriceSort] = useState<PriceSort>("price-asc");
 
   useEffect(() => {
     async function loadAuthUser() {
@@ -563,9 +674,9 @@ export default function SmmToraPage() {
           credentials: "include",
           cache: "no-store",
         });
-  
+
         const data = await res.json();
-  
+
         if (data.ok && data.user) {
           setAuthUser({
             id: data.user.id,
@@ -580,35 +691,9 @@ export default function SmmToraPage() {
         setAuthUser(null);
       }
     }
-  
+
     loadAuthUser();
   }, []);
-
-  const [authUser, setAuthUser] = useState<{
-    id: number;
-    email: string;
-    full_name: string | null;
-    balance_usd: number;
-  } | null>(null);
-
-  const [loading, setLoading] = useState(false);
-  const [cartMessage, setCartMessage] = useState("");
-  const [error, setError] = useState("");
-  const [createdOrderNumbers, setCreatedOrderNumbers] = useState<string[]>([]);
-  const [successOpen, setSuccessOpen] = useState(false);
-
-  const productsScrollRef = useRef<HTMLDivElement | null>(null);
-  const cartSectionRef = useRef<HTMLDivElement | null>(null);
-
-  const [infoTab, setInfoTab] = useState<"service" | "before" | "notes">("service");
-  const [showAllPlatforms, setShowAllPlatforms] = useState(false);
-
-  const [showServiceFilters, setShowServiceFilters] = useState(false);
-  const [serviceSearch, setServiceSearch] = useState("");
-  const [qualityFilter, setQualityFilter] = useState<QualityFilter>("all");
-  const [guaranteeFilter, setGuaranteeFilter] = useState<GuaranteeFilter>("all");
-  const [regionFilter, setRegionFilter] = useState<RegionFilter>("all");
-  const [priceSort, setPriceSort] = useState<PriceSort>("price-asc");
 
   useEffect(() => {
     setSelectedLocale(detectInitialLocale());
@@ -662,7 +747,9 @@ export default function SmmToraPage() {
 
   const availablePlatforms = useMemo(() => {
     if (servicesLoading) return platforms;
-    return platforms.filter((platform) => availablePlatformSlugs.has(platform.slug));
+    return platforms.filter((platform) =>
+      availablePlatformSlugs.has(platform.slug)
+    );
   }, [platforms, servicesLoading, availablePlatformSlugs]);
 
   const visiblePlatforms = useMemo(() => {
@@ -728,7 +815,9 @@ export default function SmmToraPage() {
       (category) => category.slug === selectedCategory
     );
 
-    const nextCategory = hasCurrentCategory ? selectedCategory : categories[0].slug;
+    const nextCategory = hasCurrentCategory
+      ? selectedCategory
+      : categories[0].slug;
 
     setSelectedCategory(nextCategory);
     setSelectedServiceId(null);
@@ -854,18 +943,26 @@ export default function SmmToraPage() {
   const totalPrice = useMemo(() => {
     if (!selectedService) return 0;
     if (!quantityNumber) return 0;
-    if (quantityNumber < selectedService.min || quantityNumber > selectedService.max) {
+    if (
+      quantityNumber < selectedService.min ||
+      quantityNumber > selectedService.max
+    ) {
       return 0;
     }
+
     return (quantityNumber / 1000) * selectedUnitPrice;
   }, [quantityNumber, selectedService, selectedUnitPrice]);
 
   const totalCostPrice = useMemo(() => {
     if (!selectedService) return 0;
     if (!quantityNumber) return 0;
-    if (quantityNumber < selectedService.min || quantityNumber > selectedService.max) {
+    if (
+      quantityNumber < selectedService.min ||
+      quantityNumber > selectedService.max
+    ) {
       return 0;
     }
+
     return (quantityNumber / 1000) * selectedUnitCostPrice;
   }, [quantityNumber, selectedService, selectedUnitCostPrice]);
 
@@ -884,7 +981,8 @@ export default function SmmToraPage() {
     !!phoneNumber.trim() &&
     !!contactType &&
     !!contactValue.trim() &&
-    !!paymentMethod;
+    !!paymentMethod &&
+    paymentTermsAccepted;
 
   const scrollProducts = (direction: "up" | "down") => {
     if (!productsScrollRef.current) return;
@@ -896,7 +994,10 @@ export default function SmmToraPage() {
   };
 
   const goToCart = () => {
-    cartSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    cartSectionRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
   };
 
   const resetItemForm = () => {
@@ -912,6 +1013,7 @@ export default function SmmToraPage() {
     setContactType("");
     setContactValue("");
     setPaymentMethod("");
+    setPaymentTermsAccepted(false);
   };
 
   const buildCurrentItem = (): CartItem | null => {
@@ -944,6 +1046,7 @@ export default function SmmToraPage() {
     setError("");
     setCartMessage("");
     setCreatedOrderNumbers([]);
+    setCreatedPaymentInfo(null);
     setSuccessOpen(false);
   };
 
@@ -974,6 +1077,7 @@ export default function SmmToraPage() {
     setCartMessage(t.successOrder);
     setError("");
     setCreatedOrderNumbers([]);
+    setCreatedPaymentInfo(null);
     setSuccessOpen(false);
   };
 
@@ -1023,6 +1127,7 @@ export default function SmmToraPage() {
 
     setCheckoutItems([item]);
     setCheckoutMode("single");
+    setPaymentTermsAccepted(false);
     setError("");
   };
 
@@ -1052,16 +1157,23 @@ export default function SmmToraPage() {
 
     setCheckoutItems(cartItems);
     setCheckoutMode("cart");
+    setPaymentTermsAccepted(false);
     setError("");
   };
 
   const submitItems = async () => {
     if (!isCheckoutValid || checkoutItems.length === 0) return;
 
+    const checkoutTotalAmount = checkoutItems.reduce(
+      (sum, item) => sum + item.total_price,
+      0
+    );
+
     setLoading(true);
     setError("");
     setCartMessage("");
     setCreatedOrderNumbers([]);
+    setCreatedPaymentInfo(null);
 
     try {
       const res = await fetch("/api/order-request", {
@@ -1096,7 +1208,7 @@ export default function SmmToraPage() {
           order_numbers: data.orderNumbers || [],
           checkout_mode: checkoutMode,
           item_count: checkoutItems.length,
-          total_price: checkoutItems.reduce((sum, item) => sum + item.total_price, 0),
+          total_price: checkoutTotalAmount,
           currency: selectedCurrency,
           payment_method: paymentMethod,
           contact_type: contactType,
@@ -1112,7 +1224,19 @@ export default function SmmToraPage() {
         },
       });
 
-      setCreatedOrderNumbers(data.orderNumbers || []);
+      const createdNumbers = Array.isArray(data.orderNumbers)
+        ? data.orderNumbers
+        : [];
+
+      setCreatedOrderNumbers(createdNumbers);
+      setCreatedPaymentInfo({
+        fullName: fullName.trim(),
+        phoneNumber: phoneNumber.trim(),
+        paymentMethod,
+        currency: selectedCurrency,
+        totalAmount: checkoutTotalAmount,
+        orderNumbers: createdNumbers,
+      });
       setSuccessOpen(true);
       setCheckoutMode(null);
 
@@ -1143,41 +1267,42 @@ export default function SmmToraPage() {
 
         <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.03),transparent_22%,transparent_78%,rgba(255,255,255,0.02))]" />
       </div>
+
       <ServiceTermsModal />
 
-<div className="mx-auto max-w-7xl space-y-5">
-  <header className="flex flex-col gap-4 rounded-[28px] border border-white/10 bg-[#121826]/90 p-4 shadow-[0_18px_70px_rgba(0,0,0,0.28)] ring-1 ring-white/[0.025] backdrop-blur-xl md:flex-row md:items-center md:justify-between">
-    <a href="/" className="inline-flex items-center gap-3">
-      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-400 font-black text-black">
-        MT
-      </div>
+      <div className="mx-auto max-w-7xl space-y-5">
+        <header className="flex flex-col gap-4 rounded-[28px] border border-white/10 bg-[#121826]/90 p-4 shadow-[0_18px_70px_rgba(0,0,0,0.28)] ring-1 ring-white/[0.025] backdrop-blur-xl md:flex-row md:items-center md:justify-between">
+          <a href="/" className="inline-flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-400 font-black text-black">
+              MT
+            </div>
 
-      <div>
-        <div className="text-lg font-black tracking-tight text-white">
-          MedyaTora
-        </div>
-        <div className="text-xs text-white/45">
-          SMMTora sosyal medya paneli
-        </div>
-      </div>
-    </a>
+            <div>
+              <div className="text-lg font-black tracking-tight text-white">
+                MedyaTora
+              </div>
+              <div className="text-xs text-white/45">
+                SMMTora sosyal medya paneli
+              </div>
+            </div>
+          </a>
 
-    <nav className="flex flex-wrap items-center gap-3 text-sm font-semibold text-white/70">
-      <a href="/" className="transition hover:text-white">
-        Ana Sayfa
-      </a>
-      <a href="/#analysis" className="transition hover:text-white">
-        Analiz
-      </a>
-      <a href="/paketler" className="transition hover:text-white">
-        Paketler
-      </a>
-    </nav>
+          <nav className="flex flex-wrap items-center gap-3 text-sm font-semibold text-white/70">
+            <a href="/" className="transition hover:text-white">
+              Ana Sayfa
+            </a>
+            <a href="/#analysis" className="transition hover:text-white">
+              Analiz
+            </a>
+            <a href="/paketler" className="transition hover:text-white">
+              Paketler
+            </a>
+          </nav>
 
-    <UserMenu />
-  </header>
+          <UserMenu />
+        </header>
 
-  <section className="relative overflow-hidden rounded-[34px] border border-white/10 bg-[#121826]/90 p-5 shadow-[0_24px_100px_rgba(0,0,0,0.42)] ring-1 ring-white/[0.03] backdrop-blur-xl sm:p-6">
+        <section className="relative overflow-hidden rounded-[34px] border border-white/10 bg-[#121826]/90 p-5 shadow-[0_24px_100px_rgba(0,0,0,0.42)] ring-1 ring-white/[0.03] backdrop-blur-xl sm:p-6">
           <div className="pointer-events-none absolute -right-32 -top-32 h-72 w-72 rounded-full bg-emerald-400/10 blur-3xl" />
           <div className="pointer-events-none absolute -left-24 bottom-0 h-64 w-64 rounded-full bg-sky-400/10 blur-3xl" />
 
@@ -1700,7 +1825,10 @@ export default function SmmToraPage() {
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
                               <p className="line-clamp-2 text-sm font-bold text-white sm:text-base">
-                                {getLocalizedServiceTitle(service.title, selectedLocale)}
+                                {getLocalizedServiceTitle(
+                                  service.title,
+                                  selectedLocale
+                                )}
                               </p>
 
                               {active && (
@@ -1723,7 +1851,10 @@ export default function SmmToraPage() {
                               </span>
 
                               <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-bold text-white/70 sm:text-[11px]">
-                                {localizeCommonServiceText(service.level, selectedLocale)}
+                                {localizeCommonServiceText(
+                                  service.level,
+                                  selectedLocale
+                                )}
                               </span>
                             </div>
 
@@ -1735,7 +1866,8 @@ export default function SmmToraPage() {
                                 {t.minMax}: {service.min} · Max: {service.max}
                               </p>
                               <p>
-                                {t.speed}: {getLocalizedSpeed(service.speed, selectedLocale)}
+                                {t.speed}:{" "}
+                                {getLocalizedSpeed(service.speed, selectedLocale)}
                               </p>
                             </div>
                           </div>
@@ -1815,7 +1947,10 @@ export default function SmmToraPage() {
                   <div className="rounded-2xl border border-emerald-400/15 bg-gradient-to-br from-emerald-400/10 to-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="font-bold text-white">
-                        {getLocalizedServiceTitle(selectedService.title, selectedLocale)}
+                        {getLocalizedServiceTitle(
+                          selectedService.title,
+                          selectedLocale
+                        )}
                       </p>
 
                       <span
@@ -1832,16 +1967,21 @@ export default function SmmToraPage() {
                       </span>
 
                       <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-bold text-white/70 sm:text-[11px]">
-                        {localizeCommonServiceText(selectedService.level, selectedLocale)}
+                        {localizeCommonServiceText(
+                          selectedService.level,
+                          selectedLocale
+                        )}
                       </span>
                     </div>
 
                     <p className="mt-3 text-sm text-white/60">
-                      {t.minMax} {selectedService.min} · Max {selectedService.max}
+                      {t.minMax} {selectedService.min} · Max{" "}
+                      {selectedService.max}
                     </p>
 
                     <p className="mt-1 text-sm text-white/60">
-                      {t.speed}: {getLocalizedSpeed(selectedService.speed, selectedLocale)}
+                      {t.speed}:{" "}
+                      {getLocalizedSpeed(selectedService.speed, selectedLocale)}
                     </p>
                   </div>
 
@@ -1945,7 +2085,9 @@ export default function SmmToraPage() {
                 <div className="rounded-2xl border border-emerald-400/20 bg-gradient-to-br from-emerald-400/12 to-emerald-400/[0.035] p-4 shadow-[0_14px_42px_rgba(52,211,153,0.08),inset_0_1px_0_rgba(255,255,255,0.04)]">
                   <p className="text-sm text-white/50">{t.totalSalePrice}</p>
                   <p className="mt-1 text-2xl font-bold text-white">
-                    {totalPrice > 0 ? formatPrice(totalPrice, selectedCurrency) : "-"}
+                    {totalPrice > 0
+                      ? formatPrice(totalPrice, selectedCurrency)
+                      : "-"}
                   </p>
                 </div>
 
@@ -2022,7 +2164,8 @@ export default function SmmToraPage() {
                             <p>{t.quantity}: {item.quantity}</p>
                             <p>{t.orderNote}: {item.order_note || "-"}</p>
                             <p>
-                              {t.per1000}: {formatPrice(item.unit_price, selectedCurrency)}
+                              {t.per1000}:{" "}
+                              {formatPrice(item.unit_price, selectedCurrency)}
                             </p>
                             <p>
                               {t.totalSalePrice}:{" "}
@@ -2090,7 +2233,9 @@ export default function SmmToraPage() {
           <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-[32px] border border-white/10 bg-[#121826]/95 p-5 shadow-[0_28px_120px_rgba(0,0,0,0.58)] ring-1 ring-white/[0.035] backdrop-blur-xl">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-2xl font-bold text-white">{t.checkoutTitle}</h2>
+                <h2 className="text-2xl font-bold text-white">
+                  {t.checkoutTitle}
+                </h2>
                 <p className="mt-2 text-sm leading-6 text-white/60">
                   {t.checkoutDesc}
                 </p>
@@ -2106,12 +2251,22 @@ export default function SmmToraPage() {
             </div>
 
             <div className="mt-5 grid gap-3 md:grid-cols-2">
-              <input
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder={t.fullName}
-                className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
-              />
+              <div>
+                <input
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder={
+                    selectedLocale === "tr"
+                      ? "Ödeme Yapacak Kişinin Adı Soyadı"
+                      : t.fullName
+                  }
+                  className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
+                />
+
+                <p className="mt-2 text-xs leading-5 text-amber-100/80">
+                  Dekonttaki gönderen adı soyadı ile aynı olmalıdır.
+                </p>
+              </div>
 
               <input
                 value={phoneNumber}
@@ -2182,53 +2337,59 @@ export default function SmmToraPage() {
                       : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
                   }`}
                 >
-                  <p className="text-sm font-bold text-white">{t.turkeyBankTransfer}</p>
+                  <p className="text-sm font-bold text-white">
+                    {t.turkeyBankTransfer}
+                  </p>
                   <p className="mt-1 text-xs leading-5 text-white/55">
                     {t.turkeyBankTransferDesc}
                   </p>
                 </button>
 
                 <button
-  type="button"
-  onClick={() => {
-    setPaymentMethod("balance");
+                  type="button"
+                  onClick={() => {
+                    setPaymentMethod("balance");
 
-    trackVisitorAction({
-      event_type: "payment_method_select",
-      event_label: "MedyaTora Bakiyesi",
-      event_value: "balance",
-      event_data: {
-        checkout_mode: checkoutMode,
-        item_count: checkoutItems.length,
-        total_price: checkoutItems.reduce(
-          (sum, item) => sum + item.total_price,
-          0
-        ),
-        currency: selectedCurrency,
-        balance_usd: authUser?.balance_usd || 0,
-      },
-    });
-  }}
-  disabled={!authUser || selectedCurrency !== "USD"}
-  className={`rounded-2xl border p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-50 ${
-    paymentMethod === "balance"
-      ? "border-emerald-400 bg-emerald-400/10 shadow-[0_12px_34px_rgba(52,211,153,0.12)]"
-      : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
-  }`}
->
-  <p className="text-sm font-bold text-white">MedyaTora Bakiyesi</p>
-  <p className="mt-1 text-xs leading-5 text-white/55">
-    {authUser
-      ? `Mevcut bakiye: ${Number(authUser.balance_usd || 0).toFixed(2)} USD`
-      : "Bakiye ile ödeme için giriş yapmalısın."}
-  </p>
+                    trackVisitorAction({
+                      event_type: "payment_method_select",
+                      event_label: "MedyaTora Bakiyesi",
+                      event_value: "balance",
+                      event_data: {
+                        checkout_mode: checkoutMode,
+                        item_count: checkoutItems.length,
+                        total_price: checkoutItems.reduce(
+                          (sum, item) => sum + item.total_price,
+                          0
+                        ),
+                        currency: selectedCurrency,
+                        balance_usd: authUser?.balance_usd || 0,
+                      },
+                    });
+                  }}
+                  disabled={!authUser || selectedCurrency !== "USD"}
+                  className={`rounded-2xl border p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                    paymentMethod === "balance"
+                      ? "border-emerald-400 bg-emerald-400/10 shadow-[0_12px_34px_rgba(52,211,153,0.12)]"
+                      : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
+                  }`}
+                >
+                  <p className="text-sm font-bold text-white">
+                    MedyaTora Bakiyesi
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-white/55">
+                    {authUser
+                      ? `Mevcut bakiye: ${Number(
+                          authUser.balance_usd || 0
+                        ).toFixed(2)} USD`
+                      : "Bakiye ile ödeme için giriş yapmalısın."}
+                  </p>
 
-  {selectedCurrency !== "USD" && (
-    <p className="mt-2 text-xs leading-5 text-amber-200">
-      Bakiye ile ödeme için para birimini USD seç.
-    </p>
-  )}
-</button>
+                  {selectedCurrency !== "USD" && (
+                    <p className="mt-2 text-xs leading-5 text-amber-200">
+                      Bakiye ile ödeme için para birimini USD seç.
+                    </p>
+                  )}
+                </button>
 
                 <button
                   type="button"
@@ -2256,7 +2417,9 @@ export default function SmmToraPage() {
                       : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
                   }`}
                 >
-                  <p className="text-sm font-bold text-white">{t.otherPaymentMethods}</p>
+                  <p className="text-sm font-bold text-white">
+                    {t.otherPaymentMethods}
+                  </p>
                   <p className="mt-1 text-xs leading-5 text-white/55">
                     {t.otherPaymentMethodsDesc}
                   </p>
@@ -2269,7 +2432,9 @@ export default function SmmToraPage() {
 
                   <div className="mt-3 space-y-2">
                     <p>
-                      <span className="font-bold text-white">{t.receiverName}:</span>{" "}
+                      <span className="font-bold text-white">
+                        {t.receiverName}:
+                      </span>{" "}
                       {TURKEY_BANK_ACCOUNT_NAME}
                     </p>
                     <p>
@@ -2289,21 +2454,68 @@ export default function SmmToraPage() {
 
               {paymentMethod === "support" && (
                 <div className="mt-4 rounded-2xl border border-sky-400/20 bg-sky-400/10 p-4 text-sm leading-6 text-sky-50">
-                  <p className="font-bold text-white">{t.otherPaymentMethods}</p>
-                  <p className="mt-2 text-white/70">{t.otherPaymentInfoText}</p>
+                  <p className="font-bold text-white">
+                    {t.otherPaymentMethods}
+                  </p>
+                  <p className="mt-2 text-white/70">
+                    {t.otherPaymentInfoText}
+                  </p>
                 </div>
               )}
 
-{paymentMethod === "balance" && (
-  <div className="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm leading-6 text-emerald-50">
-    <p className="font-bold text-white">Bakiye ile ödeme</p>
-    <p className="mt-2 text-white/70">
-      Sipariş onaylandığında toplam tutar MedyaTora bakiyenden düşülür.
-      Bakiye ile ödeme şu an sadece USD para biriminde kullanılabilir.
-    </p>
-  </div>
-)}
+              {paymentMethod === "balance" && (
+                <div className="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm leading-6 text-emerald-50">
+                  <p className="font-bold text-white">Bakiye ile ödeme</p>
+                  <p className="mt-2 text-white/70">
+                    Sipariş onaylandığında toplam tutar MedyaTora bakiyenden
+                    düşülür. Bakiye ile ödeme şu an sadece USD para biriminde
+                    kullanılabilir.
+                  </p>
+                </div>
+              )}
+            </div>
 
+            <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm leading-6 text-amber-50">
+              <p className="font-bold text-white">Ödeme Güvenliği</p>
+
+              <p className="mt-2 text-white/75">
+                Ödeme yapacak kişinin adı soyadı, dekonttaki gönderen adı
+                soyadı ile aynı olmalıdır. Eşleşmeyen ödemeler onaylanmaz.
+              </p>
+
+              <p className="mt-2 text-white/75">
+                Kişisel bilgileriniz yalnızca ödeme doğrulama amacıyla
+                kullanılır ve üçüncü kişilerle paylaşılmaz.
+              </p>
+
+              <p className="mt-4 font-bold text-white">İade Koşulları</p>
+
+              <p className="mt-2 text-white/75">
+                İşlem başlamadan önce iade talep edebilirsiniz. İşlem
+                başladıktan sonra iptal/iade yapılamaz.
+              </p>
+
+              <p className="mt-2 text-white/75">
+                İşlem bizden kaynaklı bir sebeple tamamen veya kısmen
+                tamamlanamazsa, tamamlanamayan kısma ait tutar siparişinizin
+                ödeme yöntemi ve hesap durumuna göre iade edilir veya
+                hesabınıza bakiye olarak yansıtılır.
+              </p>
+
+              <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-black/20 p-3">
+                <input
+                  type="checkbox"
+                  checked={paymentTermsAccepted}
+                  onChange={(event) =>
+                    setPaymentTermsAccepted(event.target.checked)
+                  }
+                  className="mt-1 h-4 w-4 accent-emerald-400"
+                />
+
+                <span className="text-sm font-semibold text-white">
+                  Okudum, ödeme güvenliği ve iade koşullarını kabul ediyorum.
+                </span>
+              </label>
             </div>
 
             <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.055] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
@@ -2345,7 +2557,9 @@ export default function SmmToraPage() {
       {successOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
           <div className="w-full max-w-2xl rounded-[32px] border border-white/10 bg-[#121826]/95 p-5 shadow-[0_28px_120px_rgba(0,0,0,0.58)] ring-1 ring-white/[0.035] backdrop-blur-xl">
-            <h2 className="text-2xl font-bold text-white">{t.orderConfirmedTitle}</h2>
+            <h2 className="text-2xl font-bold text-white">
+              {t.orderConfirmedTitle}
+            </h2>
 
             <p className="mt-2 text-sm leading-6 text-white/60">
               {t.orderConfirmedDesc}
@@ -2357,22 +2571,57 @@ export default function SmmToraPage() {
                   key={number}
                   className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]"
                 >
-                  <p className="text-sm text-emerald-200">{t.yourOrderNumber}</p>
+                  <p className="text-sm text-emerald-200">
+                    {t.yourOrderNumber}
+                  </p>
                   <p className="mt-1 text-lg font-bold text-white">{number}</p>
                 </div>
               ))}
             </div>
 
             <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.055] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
-              <p className="text-sm font-bold text-white">{t.paymentStepTitle}</p>
+              <p className="text-sm font-bold text-white">
+                {t.paymentStepTitle}
+              </p>
 
-              <p className="mt-1 text-sm leading-6 text-white/60">
+              {createdPaymentInfo && (
+                <div className="mt-3 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm leading-6 text-emerald-50">
+                  <p>
+                    <span className="font-bold text-white">
+                      Gönderen Ad Soyad:
+                    </span>{" "}
+                    {createdPaymentInfo.fullName}
+                  </p>
+
+                  <p>
+                    <span className="font-bold text-white">Ödenecek Tutar:</span>{" "}
+                    {formatPrice(
+                      createdPaymentInfo.totalAmount,
+                      createdPaymentInfo.currency
+                    )}
+                  </p>
+
+                  <p>
+                    <span className="font-bold text-white">Ödeme Yöntemi:</span>{" "}
+                    {getPaymentMethodSupportLabel(
+                      createdPaymentInfo.paymentMethod,
+                      selectedLocale
+                    )}
+                  </p>
+                </div>
+              )}
+
+              <p className="mt-3 text-sm leading-6 text-white/60">
                 {t.paymentStepDesc}
               </p>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <a
-                  href={buildTelegramLink(createdOrderNumbers, selectedLocale)}
+                  href={
+                    createdPaymentInfo
+                      ? buildTelegramLink(createdPaymentInfo, selectedLocale)
+                      : "#"
+                  }
                   target="_blank"
                   rel="noopener noreferrer"
                   className="rounded-2xl bg-sky-500 px-5 py-3 text-center text-sm font-bold text-black shadow-[0_16px_38px_rgba(56,189,248,0.16)] transition hover:-translate-y-0.5 hover:bg-sky-400"
@@ -2381,7 +2630,11 @@ export default function SmmToraPage() {
                 </a>
 
                 <a
-                  href={buildWhatsappLink(createdOrderNumbers, selectedLocale)}
+                  href={
+                    createdPaymentInfo
+                      ? buildWhatsappLink(createdPaymentInfo, selectedLocale)
+                      : "#"
+                  }
                   target="_blank"
                   rel="noopener noreferrer"
                   className="rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-5 py-3 text-center text-sm font-black text-black shadow-[0_16px_38px_rgba(52,211,153,0.18)] transition hover:-translate-y-0.5 hover:from-emerald-300 hover:to-emerald-400"
