@@ -2250,7 +2250,7 @@ export default function SmmToraPage() {
               </button>
             </div>
 
-            <div className="mt-5 grid gap-3 md:grid-cols-2">
+            <div className="mt-5 grid items-start gap-3 md:grid-cols-2">
               <div>
                 <input
                   value={fullName}
@@ -2268,13 +2268,15 @@ export default function SmmToraPage() {
                 </p>
               </div>
 
+              <div>
               <input
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))}
-                placeholder={t.phoneNumber}
-                inputMode="numeric"
-                className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
+              value={phoneNumber}
+               onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))}
+              placeholder={t.phoneNumber}
+              inputMode="numeric"
+              className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-emerald-400 focus:bg-white/[0.075]"
               />
+               </div>
 
               <select
                 value={contactType}
