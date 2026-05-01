@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import AuthModal from "./AuthModal";
 
+type PreferredCurrency = "TL" | "USD" | "RUB";
+
 type PublicUser = {
   id: number;
   email: string;
@@ -14,27 +16,40 @@ type PublicUser = {
   balance_usd: number;
   balance_tl: number;
   balance_rub: number;
+  preferred_currency: PreferredCurrency;
   free_analysis_used: boolean;
   welcome_bonus_claimed: boolean;
 };
 
 type AuthMode = "login" | "register";
-type CurrencyCode = "TL" | "USD" | "RUB";
 type LocaleCode = "tr" | "en" | "ru";
 
-const currencyOptions: CurrencyCode[] = ["TL", "USD", "RUB"];
 const localeOptions: LocaleCode[] = ["tr", "en", "ru"];
 
-function getStoredCurrency(): CurrencyCode {
-  if (typeof window === "undefined") return "TL";
+function normalizePreferredCurrency(value: unknown): PreferredCurrency {
+  const currency = String(value || "").trim().toUpperCase();
 
-  const saved = window.localStorage.getItem("medyatora_header_currency");
-
-  if (saved === "TL" || saved === "USD" || saved === "RUB") {
-    return saved;
-  }
-
+  if (currency === "USD") return "USD";
+  if (currency === "RUB") return "RUB";
   return "TL";
+}
+
+function normalizePublicUser(value: any): PublicUser {
+  return {
+    id: Number(value?.id || 0),
+    email: String(value?.email || ""),
+    full_name: value?.full_name || null,
+    username: value?.username || null,
+    phone_number: value?.phone_number || null,
+    email_verified: Boolean(value?.email_verified),
+    phone_verified: Boolean(value?.phone_verified),
+    balance_usd: Number(value?.balance_usd || 0),
+    balance_tl: Number(value?.balance_tl || 0),
+    balance_rub: Number(value?.balance_rub || 0),
+    preferred_currency: normalizePreferredCurrency(value?.preferred_currency),
+    free_analysis_used: Boolean(value?.free_analysis_used),
+    welcome_bonus_claimed: Boolean(value?.welcome_bonus_claimed),
+  };
 }
 
 function getStoredLocale(): LocaleCode {
@@ -49,16 +64,39 @@ function getStoredLocale(): LocaleCode {
   return "tr";
 }
 
-function formatBalance(user: PublicUser, currency: CurrencyCode) {
-  if (currency === "USD") {
-    return `${Number(user.balance_usd || 0).toFixed(2)} USD`;
+function formatMoney(value: number, currency: PreferredCurrency) {
+  const safeValue = Number(value || 0);
+
+  if (currency === "TL") {
+    return `${safeValue.toLocaleString("tr-TR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })} TL`;
   }
 
   if (currency === "RUB") {
-    return `${Number(user.balance_rub || 0).toFixed(2)} RUB`;
+    return `${safeValue.toLocaleString("tr-TR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })} RUB`;
   }
 
-  return `${Number(user.balance_tl || 0).toFixed(2)} TL`;
+  return `${safeValue.toLocaleString("tr-TR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })} USD`;
+}
+
+function getWalletBalance(user: PublicUser) {
+  if (user.preferred_currency === "USD") {
+    return formatMoney(user.balance_usd, "USD");
+  }
+
+  if (user.preferred_currency === "RUB") {
+    return formatMoney(user.balance_rub, "RUB");
+  }
+
+  return formatMoney(user.balance_tl, "TL");
 }
 
 function getInitials(user: PublicUser) {
@@ -77,9 +115,6 @@ export default function UserMenu() {
   const [loading, setLoading] = useState(true);
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>("login");
-
-  const [selectedCurrency, setSelectedCurrency] =
-    useState<CurrencyCode>("TL");
   const [selectedLocale, setSelectedLocale] = useState<LocaleCode>("tr");
 
   async function loadMe() {
@@ -93,20 +128,7 @@ export default function UserMenu() {
       const data = await res.json();
 
       if (data.ok && data.user) {
-        setUser({
-          id: Number(data.user.id),
-          email: data.user.email,
-          full_name: data.user.full_name,
-          username: data.user.username,
-          phone_number: data.user.phone_number,
-          email_verified: Boolean(data.user.email_verified),
-          phone_verified: Boolean(data.user.phone_verified),
-          balance_usd: Number(data.user.balance_usd || 0),
-          balance_tl: Number(data.user.balance_tl || 0),
-          balance_rub: Number(data.user.balance_rub || 0),
-          free_analysis_used: Boolean(data.user.free_analysis_used),
-          welcome_bonus_claimed: Boolean(data.user.welcome_bonus_claimed),
-        });
+        setUser(normalizePublicUser(data.user));
       } else {
         setUser(null);
       }
@@ -118,19 +140,9 @@ export default function UserMenu() {
   }
 
   useEffect(() => {
-    setSelectedCurrency(getStoredCurrency());
     setSelectedLocale(getStoredLocale());
     loadMe();
   }, []);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(
-        "medyatora_header_currency",
-        selectedCurrency
-      );
-    }
-  }, [selectedCurrency]);
 
   async function handleLogout() {
     try {
@@ -159,10 +171,10 @@ export default function UserMenu() {
     }
   }
 
-  const shownBalance = useMemo(() => {
-    if (!user) return "0.00 TL";
-    return formatBalance(user, selectedCurrency);
-  }, [user, selectedCurrency]);
+  const walletBalance = useMemo(() => {
+    if (!user) return "0,00 TL";
+    return getWalletBalance(user);
+  }, [user]);
 
   if (loading) {
     return (
@@ -192,33 +204,23 @@ export default function UserMenu() {
             </div>
           </div>
 
-          <div className="flex h-12 min-w-0 items-center justify-between gap-2 rounded-2xl border border-sky-400/20 bg-sky-400/10 px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:gap-3">
+          <a
+            href="/hesabim/bakiye"
+            className="flex h-12 min-w-0 items-center justify-between gap-2 rounded-2xl border border-sky-400/20 bg-gradient-to-br from-sky-400/14 to-emerald-400/10 px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition hover:-translate-y-0.5 hover:border-emerald-300/30 hover:bg-emerald-400/10"
+          >
             <div className="min-w-0">
-              <p className="text-[9px] font-black uppercase tracking-[0.16em] text-sky-200/70">
-                Bakiye
+              <p className="text-[9px] font-black uppercase tracking-[0.16em] text-sky-100/70">
+                Cüzdan
               </p>
               <p className="truncate text-xs font-black text-white">
-                {shownBalance}
+                {walletBalance}
               </p>
             </div>
 
-            <div className="flex shrink-0 overflow-hidden rounded-xl border border-white/10 bg-black/20">
-              {currencyOptions.map((currency) => (
-                <button
-                  key={currency}
-                  type="button"
-                  onClick={() => setSelectedCurrency(currency)}
-                  className={`px-2 py-1.5 text-[10px] font-black transition sm:px-2.5 ${
-                    selectedCurrency === currency
-                      ? "bg-emerald-400 text-black"
-                      : "text-white/60 hover:bg-white/[0.08] hover:text-white"
-                  }`}
-                >
-                  {currency}
-                </button>
-              ))}
-            </div>
-          </div>
+            <span className="shrink-0 rounded-xl border border-white/10 bg-black/20 px-2 py-1 text-[10px] font-black text-emerald-300">
+              {user.preferred_currency}
+            </span>
+          </a>
 
           <div className="flex h-12 items-center overflow-hidden rounded-2xl border border-white/10 bg-white/[0.05] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
             {localeOptions.map((locale) => (
@@ -293,7 +295,7 @@ export default function UserMenu() {
         open={authOpen}
         initialMode={authMode}
         onClose={() => setAuthOpen(false)}
-        onAuthenticated={(nextUser) => setUser(nextUser)}
+        onAuthenticated={(nextUser) => setUser(normalizePublicUser(nextUser))}
       />
     </>
   );

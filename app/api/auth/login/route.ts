@@ -17,6 +17,7 @@ type LoginUserRow = RowDataPacket & {
   balance_usd: string | number;
   balance_tl: string | number;
   balance_rub: string | number;
+  preferred_currency: string | null;
   free_analysis_used: number;
   welcome_bonus_claimed: number;
   is_active: number;
@@ -35,6 +36,14 @@ function getClientIp(request: NextRequest) {
     request.headers.get("cf-connecting-ip") ||
     null
   );
+}
+
+function normalizePreferredCurrency(value: string | null | undefined) {
+  const currency = value?.trim().toUpperCase();
+
+  if (currency === "USD") return "USD";
+  if (currency === "RUB") return "RUB";
+  return "TL";
 }
 
 export async function POST(request: NextRequest) {
@@ -67,6 +76,7 @@ export async function POST(request: NextRequest) {
         balance_usd,
         balance_tl,
         balance_rub,
+        preferred_currency,
         free_analysis_used,
         welcome_bonus_claimed,
         is_active,
@@ -130,6 +140,7 @@ export async function POST(request: NextRequest) {
         balance_usd: Number(user.balance_usd || 0),
         balance_tl: Number(user.balance_tl || 0),
         balance_rub: Number(user.balance_rub || 0),
+        preferred_currency: normalizePreferredCurrency(user.preferred_currency),
         free_analysis_used: Boolean(user.free_analysis_used),
         welcome_bonus_claimed: Boolean(user.welcome_bonus_claimed),
         is_active: Boolean(user.is_active),

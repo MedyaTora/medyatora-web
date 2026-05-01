@@ -25,6 +25,7 @@ type CreatedUserRow = RowDataPacket & {
   balance_usd: string | number;
   balance_tl: string | number;
   balance_rub: string | number;
+  preferred_currency: string | null;
   free_analysis_used: number;
   welcome_bonus_claimed: number;
   is_active: number;
@@ -172,6 +173,11 @@ export async function POST(request: NextRequest) {
         balance_usd: Number(createdUser.balance_usd || 0),
         balance_tl: Number(createdUser.balance_tl || 0),
         balance_rub: Number(createdUser.balance_rub || 0),
+        preferred_currency:
+          createdUser.preferred_currency === "USD" ||
+          createdUser.preferred_currency === "RUB"
+            ? createdUser.preferred_currency
+            : "TL",
         free_analysis_used: Boolean(createdUser.free_analysis_used),
         welcome_bonus_claimed: Boolean(createdUser.welcome_bonus_claimed),
         is_active: Boolean(createdUser.is_active),

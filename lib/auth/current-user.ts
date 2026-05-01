@@ -3,6 +3,8 @@ import type { RowDataPacket } from "mysql2";
 import { getMysqlPool } from "@/lib/mysql";
 import { AUTH_COOKIE_NAME, hashSessionToken } from "./session";
 
+export type PreferredCurrency = "TL" | "USD" | "RUB";
+
 export type CurrentUser = {
   id: number;
   email: string;
@@ -14,6 +16,7 @@ export type CurrentUser = {
   balance_usd: number;
   balance_tl: number;
   balance_rub: number;
+  preferred_currency: PreferredCurrency;
   free_analysis_used: boolean;
   welcome_bonus_claimed: boolean;
   is_active: boolean;
@@ -31,11 +34,20 @@ type CurrentUserRow = RowDataPacket & {
   balance_usd: string | number;
   balance_tl: string | number;
   balance_rub: string | number;
+  preferred_currency: string | null;
   free_analysis_used: number;
   welcome_bonus_claimed: number;
   is_active: number;
   is_admin: number;
 };
+
+function normalizePreferredCurrency(value: string | null | undefined): PreferredCurrency {
+  const currency = value?.trim().toUpperCase();
+
+  if (currency === "USD") return "USD";
+  if (currency === "RUB") return "RUB";
+  return "TL";
+}
 
 export async function getCurrentUser(): Promise<CurrentUser | null> {
   const cookieStore = await cookies();
@@ -61,6 +73,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
       users.balance_usd,
       users.balance_tl,
       users.balance_rub,
+      users.preferred_currency,
       users.free_analysis_used,
       users.welcome_bonus_claimed,
       users.is_active,
@@ -103,6 +116,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     balance_usd: Number(user.balance_usd || 0),
     balance_tl: Number(user.balance_tl || 0),
     balance_rub: Number(user.balance_rub || 0),
+    preferred_currency: normalizePreferredCurrency(user.preferred_currency),
     free_analysis_used: Boolean(user.free_analysis_used),
     welcome_bonus_claimed: Boolean(user.welcome_bonus_claimed),
     is_active: Boolean(user.is_active),
@@ -126,6 +140,7 @@ export function getPublicUser(user: CurrentUser | null) {
     balance_usd: user.balance_usd,
     balance_tl: user.balance_tl,
     balance_rub: user.balance_rub,
+    preferred_currency: user.preferred_currency,
     free_analysis_used: user.free_analysis_used,
     welcome_bonus_claimed: user.welcome_bonus_claimed,
   };
