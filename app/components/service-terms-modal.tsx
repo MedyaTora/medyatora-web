@@ -53,6 +53,21 @@ export default function ServiceTermsModal() {
     }
   }, []);
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const originalOverflow = document.body.style.overflow;
+    const originalTouchAction = document.body.style.touchAction;
+
+    document.body.style.overflow = "hidden";
+    document.body.style.touchAction = "none";
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.body.style.touchAction = originalTouchAction;
+    };
+  }, [isOpen]);
+
   function handleAccept() {
     if (!acceptedCheck) return;
 
@@ -69,37 +84,47 @@ export default function ServiceTermsModal() {
   if (!isMounted || !isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/75 px-4 py-6 backdrop-blur-sm">
-      <div className="relative max-h-[92vh] w-full max-w-4xl overflow-hidden rounded-[28px] border border-white/10 bg-[#080b12] text-white shadow-[0_30px_120px_rgba(0,0,0,0.65)]">
-        {hasAcceptedBefore ? (
-          <button
-            type="button"
-            onClick={handleClose}
-            className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-white/70 transition hover:bg-white/[0.12] hover:text-white"
-            aria-label="Kapat"
-          >
-            ×
-          </button>
-        ) : null}
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/75 p-3 backdrop-blur-sm sm:p-4">
+      <div className="flex max-h-[calc(100dvh-24px)] w-full max-w-4xl flex-col overflow-hidden rounded-[28px] border border-white/10 bg-[#080b12] text-white shadow-[0_30px_120px_rgba(0,0,0,0.65)] sm:max-h-[92vh]">
+        <div className="shrink-0 border-b border-white/10 bg-[#080b12]/95 px-4 py-4 backdrop-blur sm:px-6">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="mb-3 inline-flex rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-300">
+                MedyaTora Bilgilendirme
+              </div>
 
-        <div className="max-h-[92vh] overflow-y-auto p-5 md:p-8">
-          <div className="mb-6 rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-5">
-            <div className="mb-3 inline-flex rounded-full border border-emerald-400/20 bg-black/20 px-3 py-1 text-xs font-semibold text-emerald-300">
-              MedyaTora Bilgilendirme
+              <h2 className="text-xl font-black leading-tight text-white sm:text-2xl md:text-3xl">
+                Hizmet Kullanım ve Gizlilik Onayı
+              </h2>
+
+              <p className="mt-2 text-sm leading-6 text-white/60">
+                Sipariş vermeden önce aşağıdaki şartları okuyup onaylaman gerekir.
+              </p>
             </div>
 
-            <h2 className="text-2xl font-bold md:text-3xl">
-              Hizmet Kullanım ve Gizlilik Onayı
-            </h2>
+            {hasAcceptedBefore ? (
+              <button
+                type="button"
+                onClick={handleClose}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-xl font-black text-white/70 transition hover:bg-white/[0.12] hover:text-white"
+                aria-label="Kapat"
+              >
+                ×
+              </button>
+            ) : null}
+          </div>
+        </div>
 
-            <p className="mt-3 text-sm leading-7 text-white/70">
-              Sipariş vermeden önce aşağıdaki şartları dikkatlice okumanız gerekir.
-              Bu bilgilendirme; işlem süreci, iptal/iade şartları, bakiye kullanımı,
-              gizlilik ve garanti takibi hakkında temel kuralları içerir.
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6">
+          <div className="rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-4 sm:p-5">
+            <p className="text-sm leading-7 text-white/70">
+              Bu bilgilendirme; işlem süreci, iptal/iade şartları, bakiye
+              kullanımı, gizlilik ve garanti takibi hakkında temel kuralları
+              içerir.
             </p>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
             {rules.map((rule, index) => (
               <div
                 key={rule.title}
@@ -109,6 +134,7 @@ export default function ServiceTermsModal() {
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-xs font-bold text-black">
                     {index + 1}
                   </span>
+
                   <h3 className="font-semibold text-white">{rule.title}</h3>
                 </div>
 
@@ -117,17 +143,18 @@ export default function ServiceTermsModal() {
             ))}
           </div>
 
-          <div className="mt-5 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm leading-6 text-amber-50">
+          <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm leading-6 text-amber-50">
             <p className="font-semibold text-white">Önemli ayrım:</p>
             <p className="mt-1 text-white/75">
-              Tamamlanan dijital hizmetlerde iade yapılmaz. Ancak ürün yüklemesinde
-              sorun yaşanırsa veya hizmet tamamlanamazsa, yüklenmeyen miktarın karşılığı
-              MedyaTora bakiyesine iade edilebilir.
+              Tamamlanan dijital hizmetlerde iade yapılmaz. Ancak ürün
+              yüklemesinde sorun yaşanırsa veya hizmet tamamlanamazsa,
+              yüklenmeyen miktarın karşılığı MedyaTora bakiyesine iade
+              edilebilir.
             </p>
           </div>
 
           {!hasAcceptedBefore ? (
-            <label className="mt-5 flex cursor-pointer gap-3 rounded-2xl border border-white/10 bg-black/25 p-4">
+            <label className="mt-4 flex cursor-pointer gap-3 rounded-2xl border border-white/10 bg-black/25 p-4">
               <input
                 type="checkbox"
                 checked={acceptedCheck}
@@ -137,19 +164,22 @@ export default function ServiceTermsModal() {
 
               <span className="text-sm leading-6 text-white/75">
                 Okudum, anladım ve kabul ediyorum. İşlem başladıktan sonra keyfi
-                iptal yapılamayacağını, tamamlanan dijital hizmetlerde iade olmadığını,
-                bakiye olarak eklenen tutarın nakit iade kapsamında olmadığını kabul ediyorum.
+                iptal yapılamayacağını, tamamlanan dijital hizmetlerde iade
+                olmadığını, bakiye olarak eklenen tutarın nakit iade kapsamında
+                olmadığını kabul ediyorum.
               </span>
             </label>
           ) : null}
+        </div>
 
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+        <div className="shrink-0 border-t border-white/10 bg-[#080b12]/95 px-4 py-3 backdrop-blur sm:px-6">
+          <div className="flex flex-col gap-3 sm:flex-row">
             {!hasAcceptedBefore ? (
               <button
                 type="button"
                 onClick={handleAccept}
                 disabled={!acceptedCheck}
-                className="rounded-2xl bg-white px-6 py-3 text-center font-bold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-40"
+                className="w-full rounded-2xl bg-white px-6 py-3 text-center font-black text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-40 sm:flex-1"
               >
                 Okudum ve Kabul Ediyorum
               </button>
@@ -157,7 +187,7 @@ export default function ServiceTermsModal() {
               <button
                 type="button"
                 onClick={handleClose}
-                className="rounded-2xl bg-white px-6 py-3 text-center font-bold text-black transition hover:bg-white/90"
+                className="w-full rounded-2xl bg-white px-6 py-3 text-center font-black text-black transition hover:bg-white/90 sm:flex-1"
               >
                 Devam Et
               </button>
@@ -165,7 +195,7 @@ export default function ServiceTermsModal() {
 
             <a
               href="/"
-              className="rounded-2xl border border-white/10 bg-white/[0.04] px-6 py-3 text-center font-semibold text-white/75 transition hover:bg-white/[0.08] hover:text-white"
+              className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-6 py-3 text-center font-semibold text-white/75 transition hover:bg-white/[0.08] hover:text-white sm:flex-1"
             >
               Ana Ekrana Dön
             </a>

@@ -1,9 +1,18 @@
 import https from "https";
 import { NextResponse } from "next/server";
+import type { RowDataPacket } from "mysql2";
 import { getMysqlPool, hasMysqlConfig } from "@/lib/mysql";
 import { getCurrentUser } from "@/lib/auth/current-user";
 
 type ContactType = "Telegram" | "WhatsApp" | "Instagram" | "E-posta";
+type CurrencyCode = "TL" | "USD" | "RUB";
+
+type CurrentUserDbRow = RowDataPacket & {
+  id: number;
+  email: string;
+  email_verified: number | boolean;
+  free_analysis_used: number | boolean;
+};
 
 const ALLOWED_CONTACT_TYPES: ContactType[] = [
   "Telegram",
@@ -11,6 +20,14 @@ const ALLOWED_CONTACT_TYPES: ContactType[] = [
   "Instagram",
   "E-posta",
 ];
+
+const ALLOWED_CURRENCIES: CurrencyCode[] = ["TL", "USD", "RUB"];
+
+const ANALYSIS_PRICES: Record<CurrencyCode, number> = {
+  TL: 1000,
+  USD: 15,
+  RUB: 1800,
+};
 
 function isNonEmptyString(value: unknown) {
   return typeof value === "string" && value.trim().length > 0;
@@ -41,18 +58,30 @@ function normalizeContactType(value: unknown): ContactType | "" {
   return "";
 }
 
+function normalizeCurrency(value: unknown): CurrencyCode {
+  const raw = normalizeString(value).toUpperCase();
+
+  if (raw === "USD") return "USD";
+  if (raw === "RUB") return "RUB";
+  return "TL";
+}
+
 function normalizeDailyPostCount(value: unknown) {
   const num = Number(value);
   if (!Number.isFinite(num) || num < 0) return 0;
   return Math.floor(num);
 }
 
-function normalizeCoupon(value: unknown) {
-  return typeof value === "string" ? value.trim().toUpperCase() : "";
+function boolValue(value: unknown) {
+  return value === true || value === 1 || value === "1";
 }
 
-function isFreeAnalysisCoupon(couponCode: string) {
-  return couponCode === "ANALIZ100";
+function formatMoney(value: number, currency: CurrencyCode) {
+  if (currency === "TL" || currency === "RUB") {
+    return `${Math.round(value).toLocaleString("tr-TR")} ${currency}`;
+  }
+
+  return `${value.toFixed(2)} ${currency}`;
 }
 
 async function sendTelegramMessage(text: string) {
@@ -151,11 +180,11 @@ export async function POST(req: Request) {
     const accountType = normalizeString(body?.account_type);
     const contentType = normalizeString(body?.content_type);
     const dailyPostCount = normalizeDailyPostCount(body?.daily_post_count);
-    const couponCode = normalizeCoupon(body?.coupon_code);
     const mainProblem = normalizeString(body?.main_problem);
     const mainMissing = normalizeString(body?.main_missing);
     const contactType = normalizeContactType(body?.contact_type);
     const contactValue = normalizeString(body?.contact_value);
+    const currency = normalizeCurrency(body?.currency);
 
     if (!isNonEmptyString(fullName)) {
       return NextResponse.json(
@@ -213,16 +242,12 @@ export async function POST(req: Request) {
       );
     }
 
-    const currentUser = await getCurrentUser();
-
-    const couponMakesFree = isFreeAnalysisCoupon(couponCode);
-    const memberFreeAnalysisAvailable =
-      Boolean(currentUser) && !currentUser?.free_analysis_used;
-    
-    const isFreeAnalysis = couponMakesFree || memberFreeAnalysisAvailable;
-    const packagePrice = isFreeAnalysis ? 0 : 5;
-    const shouldMarkMemberFreeAnalysisUsed =
-      Boolean(currentUser) && memberFreeAnalysisAvailable;
+    if (!ALLOWED_CURRENCIES.includes(currency)) {
+      return NextResponse.json(
+        { success: false, error: "Geçerli bir para birimi seçiniz." },
+        { status: 400 }
+      );
+    }
 
     if (!hasMysqlConfig()) {
       console.warn("[MedyaTora] Analiz başvurusu alınamadı: MySQL env eksik.");
@@ -237,14 +262,44 @@ export async function POST(req: Request) {
       );
     }
 
+    const currentUser = await getCurrentUser();
+
     const pool = getMysqlPool();
     const connection = await pool.getConnection();
 
     let customerId: number | null = null;
     let analysisRequestId: number | null = null;
 
+    let verifiedFreeRight = false;
+    let packagePrice = ANALYSIS_PRICES[currency];
+
     try {
       await connection.beginTransaction();
+
+      let lockedUser: CurrentUserDbRow | null = null;
+
+      if (currentUser?.id) {
+        const [userRows] = await connection.query<CurrentUserDbRow[]>(
+          `
+          SELECT id, email, email_verified, free_analysis_used
+          FROM users
+          WHERE id = ?
+          LIMIT 1
+          FOR UPDATE
+          `,
+          [currentUser.id]
+        );
+
+        lockedUser = userRows[0] || null;
+      }
+
+      verifiedFreeRight = Boolean(
+        lockedUser &&
+          boolValue(lockedUser.email_verified) &&
+          !boolValue(lockedUser.free_analysis_used)
+      );
+
+      packagePrice = verifiedFreeRight ? 0 : ANALYSIS_PRICES[currency];
 
       const [customerResult] = await connection.execute(
         `
@@ -283,47 +338,47 @@ export async function POST(req: Request) {
 
       const [analysisResult] = await connection.execute(
         `
-INSERT INTO analysis_requests (
-  user_id,
-  customer_id,
-  coupon_code,
-  package_type,
-  package_price,
-  currency,
-  status,
-  is_free_analysis,
-  analysis_price_usd
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO analysis_requests (
+          user_id,
+          customer_id,
+          coupon_code,
+          package_type,
+          package_price,
+          currency,
+          status,
+          is_free_analysis,
+          analysis_price_usd
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
           currentUser?.id || null,
           customerId,
-          couponCode || null,
-          "analysis",
+          null,
+          "professional_analysis",
           packagePrice,
-          "USD",
+          currency,
           "pending",
-          isFreeAnalysis ? 1 : 0,
-          packagePrice,
+          verifiedFreeRight ? 1 : 0,
+          currency === "USD" ? packagePrice : 15,
         ]
       );
 
       analysisRequestId =
-      (analysisResult as { insertId?: number }).insertId || null;
-    
-    if (shouldMarkMemberFreeAnalysisUsed && currentUser?.id) {
-      await connection.execute(
-        `
-        UPDATE users
-        SET free_analysis_used = 1
-        WHERE id = ?
-        LIMIT 1
-        `,
-        [currentUser.id]
-      );
-    }
-    
-    await connection.commit();
+        (analysisResult as { insertId?: number }).insertId || null;
+
+      if (verifiedFreeRight && currentUser?.id) {
+        await connection.execute(
+          `
+          UPDATE users
+          SET free_analysis_used = 1
+          WHERE id = ?
+          LIMIT 1
+          `,
+          [currentUser.id]
+        );
+      }
+
+      await connection.commit();
     } catch (dbError) {
       await connection.rollback();
 
@@ -344,19 +399,18 @@ INSERT INTO analysis_requests (
     const telegramMessage =
       `📥 Yeni analiz başvurusu alındı\n\n` +
       `🆔 Başvuru ID: ${analysisRequestId || "-"}\n` +
-`👤 Müşteri ID: ${customerId || "-"}\n` +
- `🧑‍💻 Kullanıcı Hesabı: ${
-  currentUser ? `#${currentUser.id} | ${currentUser.email}` : "Üyeliksiz başvuru"
-}\n` +
-`🎁 Ücretsiz Analiz: ${isFreeAnalysis ? "Evet" : "Hayır"}\n` +
-`👤 Ad Soyad: ${fullName}\n` +
+      `👤 Müşteri ID: ${customerId || "-"}\n` +
+      `🧑‍💻 Kullanıcı Hesabı: ${
+        currentUser ? `#${currentUser.id} | ${currentUser.email}` : "Üyeliksiz başvuru"
+      }\n` +
+      `🎁 Ücretsiz Analiz: ${verifiedFreeRight ? "Evet" : "Hayır"}\n` +
+      `💵 Analiz Fiyatı: ${formatMoney(packagePrice, currency)}\n` +
+      `👤 Ad Soyad: ${fullName}\n` +
       `📷 Kullanıcı Adı: ${username || "-"}\n` +
       `🔗 Hesap Linki: ${accountLink || "-"}\n` +
       `🏷️ Hesap Türü: ${accountType}\n` +
       `🎬 İçerik Türü: ${contentType}\n` +
       `📆 Günlük Paylaşım: ${dailyPostCount}\n` +
-      `🎟️ Kupon: ${couponCode || "-"}\n` +
-      `💵 Analiz Fiyatı: ${packagePrice} USD\n` +
       `📞 İletişim Türü: ${contactType}\n` +
       `📩 İletişim: ${contactValue}\n\n` +
       `⚠️ Genel Sorun: ${mainProblem}\n` +
@@ -371,10 +425,18 @@ INSERT INTO analysis_requests (
     return NextResponse.json(
       {
         success: true,
-        message:
-          "Analiz başvurunuz alındı. Ekibimiz bilgilerinizi inceleyip sizinle iletişime geçecek.",
+        message: verifiedFreeRight
+          ? "Ücretsiz analiz başvurunuz alındı. Ekibimiz hesabınızı inceleyip sizinle iletişime geçecek."
+          : `Analiz başvurunuz alındı. Analiz ücreti ${formatMoney(
+              packagePrice,
+              currency
+            )}. Ekibimiz ödeme ve analiz süreci için sizinle iletişime geçecek.`,
         customerId,
         analysisRequestId,
+        isFreeAnalysis: verifiedFreeRight,
+        freeAnalysisUsed: verifiedFreeRight,
+        packagePrice,
+        currency,
         telegramWarning: telegramResult.warning,
       },
       { status: 200 }

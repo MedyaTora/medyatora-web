@@ -45,9 +45,9 @@ const quickCards: {
   variant?: "primary" | "default";
 }[] = [
   {
-    title: "Ücretsiz Analiz",
+    title: "Profesyonel Analiz",
     description:
-      "Hesabının görünümü, içerik düzeni ve güven algısı için analiz talebi bırak.",
+      "E-postanı doğrula, 1 defalık ücretsiz analiz hakkı kazan. Normal analiz fiyatı: 1000 TL / 15 USD / 1800 RUB.",
     href: "#analysis",
     cta: "Analiz Al",
     icon: FaChartLine,
@@ -250,7 +250,7 @@ export default function Home() {
                   href="#analysis"
                   className="rounded-2xl bg-emerald-400 px-6 py-3 text-center font-semibold text-black transition hover:bg-emerald-300"
                 >
-                  Ücretsiz Analiz Al
+                 Analiz Hakkı Kazan
                 </a>
 
                 <a
@@ -282,10 +282,10 @@ export default function Home() {
                   <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-emerald-400/20 bg-black/20 text-xl text-emerald-300">
                     <FaChartLine />
                   </div>
-                  <h3 className="text-xl font-bold">Ücretsiz Analiz</h3>
+                  <h3 className="text-xl font-bold">Profesyonel Analiz</h3>
                   <p className="mt-2 text-sm leading-6 text-white/65">
-                    Hesabının görünümünü ve güven algısını değerlendirmek için.
-                  </p>
+                   E-postanı doğrula, 1 defalık ücretsiz analiz hakkı kazan. Ücretsiz hakkı olmayanlar ücretli analiz talebi bırakabilir.
+                 </p>
                 </a>
 
                 <a
@@ -369,19 +369,18 @@ export default function Home() {
         className="mx-auto max-w-4xl px-6 pb-20 scroll-mt-8"
       >
         <div className="mb-6 rounded-[28px] border border-white/10 bg-white/[0.04] p-8">
-          <p className="mb-3 text-sm uppercase tracking-[0.2em] text-white/45">
-            Ücretsiz analiz
-          </p>
+        <p className="mb-3 text-sm uppercase tracking-[0.2em] text-white/45">
+  Profesyonel hesap analizi
+</p>
 
-          <h2 className="mb-3 text-3xl font-bold">
-            Hesabındaki eksikleri öğren
-          </h2>
+<h2 className="mb-3 text-3xl font-bold">
+  Hesabındaki eksikleri ve dönüşüm problemlerini öğren
+</h2>
 
-          <p className="leading-7 text-white/70">
-            Profil görünümü, içerik yapısı ve güven algısı için analiz talebi bırak.
-            Üyelik sistemiyle birlikte analiz hakkı ve kullanıcı paneli hesabına
-            bağlanacak.
-          </p>
+<p className="leading-7 text-white/70">
+  E-posta adresini doğrulayan kullanıcılar 1 defaya mahsus ücretsiz analiz hakkı kazanır.
+  Normal analiz fiyatı 1000 TL, 15 USD veya 1800 RUB olarak uygulanır.
+</p>
         </div>
 
         <AnalysisForm />
