@@ -21,6 +21,7 @@ type ProfitOrderRow = {
   total_price: number | null;
   unit_cost_price: number | null;
   total_cost_price: number | null;
+  refunded_total: number;
   currency: CurrencyCode | null;
   status: string | null;
 };
@@ -81,18 +82,34 @@ function safeNumber(value: unknown) {
   return Number.isFinite(num) ? num : 0;
 }
 
-function formatMoney(value: number, currency?: string | null) {
-  if (!currency) return String(value);
+function normalizeCurrency(currency: string | null | undefined) {
+  const value = currency?.trim().toUpperCase();
 
-  if (currency === "TL") {
+  if (value === "TRY") return "TL";
+  if (value === "₺") return "TL";
+  if (value === "TL") return "TL";
+  if (value === "USD") return "USD";
+  if (value === "RUB") return "RUB";
+
+  return value || "UNKNOWN";
+}
+
+function formatMoney(value: number, currency?: string | null) {
+  const displayCurrency = normalizeCurrency(currency);
+
+  if (displayCurrency === "TL") {
     return `${Math.round(value).toLocaleString("tr-TR")} TL`;
   }
 
-  return `${value.toFixed(2)} ${currency}`;
+  return `${value.toFixed(2)} ${displayCurrency}`;
+}
+
+function getNetSale(order: ProfitOrderRow) {
+  return Math.max(0, safeNumber(order.total_price) - safeNumber(order.refunded_total));
 }
 
 function calculateProfit(order: ProfitOrderRow) {
-  return safeNumber(order.total_price) - safeNumber(order.total_cost_price);
+  return getNetSale(order) - safeNumber(order.total_cost_price);
 }
 
 function getCurrencyTotals(orders: ProfitOrderRow[]) {
@@ -100,7 +117,9 @@ function getCurrencyTotals(orders: ProfitOrderRow[]) {
     string,
     {
       currency: string;
-      sale: number;
+      grossSale: number;
+      refunded: number;
+      netSale: number;
       cost: number;
       profit: number;
       count: number;
@@ -108,21 +127,27 @@ function getCurrencyTotals(orders: ProfitOrderRow[]) {
   >();
 
   for (const order of orders) {
-    const currency = order.currency || "UNKNOWN";
+    const currency = normalizeCurrency(order.currency);
     const current = totals.get(currency) || {
       currency,
-      sale: 0,
+      grossSale: 0,
+      refunded: 0,
+      netSale: 0,
       cost: 0,
       profit: 0,
       count: 0,
     };
 
-    const sale = safeNumber(order.total_price);
+    const grossSale = safeNumber(order.total_price);
+    const refunded = safeNumber(order.refunded_total);
+    const netSale = Math.max(0, grossSale - refunded);
     const cost = safeNumber(order.total_cost_price);
 
-    current.sale += sale;
+    current.grossSale += grossSale;
+    current.refunded += refunded;
+    current.netSale += netSale;
     current.cost += cost;
-    current.profit += sale - cost;
+    current.profit += netSale - cost;
     current.count += 1;
 
     totals.set(currency, current);
@@ -131,6 +156,15 @@ function getCurrencyTotals(orders: ProfitOrderRow[]) {
   return Array.from(totals.values()).sort((a, b) =>
     a.currency.localeCompare(b.currency, "tr")
   );
+}
+
+function getStatusLabel(status: string | null | undefined) {
+  const map: Record<string, string> = {
+    completed: "Tamamlandı",
+    partial_refunded: "Kısmi Tamamlandı",
+  };
+
+  return map[status || ""] || status || "-";
 }
 
 function StatCard({
@@ -154,7 +188,9 @@ function StatCard({
 
   return (
     <div className={`rounded-[24px] border p-5 ${accentMap[accent]}`}>
-      <p className="text-xs font-semibold uppercase tracking-wide opacity-75">{title}</p>
+      <p className="text-xs font-semibold uppercase tracking-wide opacity-75">
+        {title}
+      </p>
       <p className="mt-3 text-2xl font-bold tracking-tight">{value}</p>
       {subtitle ? <p className="mt-2 text-xs opacity-65">{subtitle}</p> : null}
     </div>
@@ -188,36 +224,45 @@ export default async function ProfitPage({
     let currencyCondition = "";
 
     if (selectedCurrency !== "all") {
-      currencyCondition = "AND currency = ?";
+      currencyCondition = "AND o.currency = ?";
       sqlParams.push(selectedCurrency);
     }
 
     const [rows] = await pool.query(
       `
       SELECT
-        id,
-        created_at,
-        order_number,
-        batch_code,
-        full_name,
-        platform,
-        category,
-        service_id,
-        site_code,
-        service_title,
-        quantity,
-        unit_price,
-        total_price,
-        unit_cost_price,
-        total_cost_price,
-        currency,
-        status
-      FROM order_requests
-      WHERE status = 'completed'
-        AND created_at >= ?
-        AND created_at < ?
+        o.id,
+        o.created_at,
+        o.order_number,
+        o.batch_code,
+        o.full_name,
+        o.platform,
+        o.category,
+        o.service_id,
+        o.site_code,
+        o.service_title,
+        o.quantity,
+        o.unit_price,
+        o.total_price,
+        o.unit_cost_price,
+        o.total_cost_price,
+        COALESCE(r.refunded_total, 0) AS refunded_total,
+        o.currency,
+        o.status
+      FROM order_requests o
+      LEFT JOIN (
+        SELECT
+          order_id,
+          currency,
+          SUM(amount) AS refunded_total
+        FROM order_refund_transactions
+        GROUP BY order_id, currency
+      ) r ON r.order_id = o.id AND r.currency = o.currency
+      WHERE o.status IN ('completed', 'partial_refunded')
+        AND o.created_at >= ?
+        AND o.created_at < ?
         ${currencyCondition}
-      ORDER BY created_at DESC
+      ORDER BY o.created_at DESC
       `,
       sqlParams
     );
@@ -236,9 +281,12 @@ export default async function ProfitPage({
       quantity: row.quantity === null ? null : Number(row.quantity),
       unit_price: row.unit_price === null ? null : Number(row.unit_price),
       total_price: row.total_price === null ? null : Number(row.total_price),
-      unit_cost_price: row.unit_cost_price === null ? null : Number(row.unit_cost_price),
-      total_cost_price: row.total_cost_price === null ? null : Number(row.total_cost_price),
-      currency: row.currency,
+      unit_cost_price:
+        row.unit_cost_price === null ? null : Number(row.unit_cost_price),
+      total_cost_price:
+        row.total_cost_price === null ? null : Number(row.total_cost_price),
+      refunded_total: Number(row.refunded_total || 0),
+      currency: normalizeCurrency(row.currency),
       status: row.status,
     }));
   } catch (error) {
@@ -277,33 +325,35 @@ export default async function ProfitPage({
               </h1>
 
               <p className="mt-2 max-w-2xl text-sm leading-6 text-white/55">
-                Sadece tamamlanan siparişler kâr hesabına dahil edilir. İptal edilen,
-                iade edilen ve bekleyen siparişler bu ekranda hesaplanmaz.
+                Tamamlanan ve kısmi tamamlanan siparişler kâr hesabına dahil edilir.
+                İade edilen tutarlar brüt satıştan düşülerek net satış ve net kâr
+                hesaplanır. İptal edilen, tam iade edilen ve bekleyen siparişler bu
+                ekranda hesaplanmaz.
               </p>
             </div>
 
             <div className="flex flex-wrap gap-3">
-  <a
-    href="/admin"
-    className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/[0.08]"
-  >
-    Admin Panel
-  </a>
+              <a
+                href="/admin"
+                className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/[0.08]"
+              >
+                Admin Panel
+              </a>
 
-  <a
-    href="/admin/customers"
-    className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/[0.08]"
-  >
-    Müşteriler
-  </a>
+              <a
+                href="/admin/customers"
+                className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/[0.08]"
+              >
+                Müşteriler
+              </a>
 
-  <a
-    href="/admin/profit"
-    className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2.5 text-sm font-medium text-emerald-300 transition hover:bg-emerald-400/15"
-  >
-    Kâr Paneli
-  </a>
-</div>
+              <a
+                href="/admin/profit"
+                className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2.5 text-sm font-medium text-emerald-300 transition hover:bg-emerald-400/15"
+              >
+                Kâr Paneli
+              </a>
+            </div>
           </div>
         </header>
 
@@ -369,16 +419,16 @@ export default async function ProfitPage({
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <StatCard
-            title="Tamamlanan Sipariş"
+            title="Kâr Hesabına Dahil Sipariş"
             value={totalOrderCount}
-            subtitle="Sadece completed durumundaki siparişler"
+            subtitle="completed + partial_refunded"
             accent="sky"
           />
 
           {currencyTotals.length === 0 ? (
             <>
-              <StatCard title="Toplam Satış" value="0" accent="emerald" />
-              <StatCard title="Toplam Alış" value="0" accent="amber" />
+              <StatCard title="Brüt Satış" value="0" accent="emerald" />
+              <StatCard title="Toplam İade" value="0" accent="amber" />
               <StatCard title="Net Kâr" value="0" accent="white" />
             </>
           ) : (
@@ -387,10 +437,16 @@ export default async function ProfitPage({
                 key={total.currency}
                 title={`${total.currency} Net Kâr`}
                 value={formatMoney(total.profit, total.currency)}
-                subtitle={`Satış: ${formatMoney(total.sale, total.currency)} • Alış: ${formatMoney(
-                  total.cost,
+                subtitle={`Brüt: ${formatMoney(
+                  total.grossSale,
                   total.currency
-                )}`}
+                )} • İade: ${formatMoney(
+                  total.refunded,
+                  total.currency
+                )} • Net: ${formatMoney(
+                  total.netSale,
+                  total.currency
+                )} • Alış: ${formatMoney(total.cost, total.currency)}`}
                 accent={total.profit >= 0 ? "emerald" : "rose"}
               />
             ))
@@ -400,16 +456,20 @@ export default async function ProfitPage({
         <section className="rounded-[28px] border border-white/10 bg-white/[0.03] p-5 md:p-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-2xl font-bold tracking-tight">Para Birimi Toplamları</h2>
-            <span className="text-sm text-white/45">{currencyTotals.length} para birimi</span>
+            <span className="text-sm text-white/45">
+              {currencyTotals.length} para birimi
+            </span>
           </div>
 
           <div className="mt-5 overflow-x-auto">
-            <table className="w-full min-w-[760px] border-separate border-spacing-y-2 text-left text-sm">
+            <table className="w-full min-w-[980px] border-separate border-spacing-y-2 text-left text-sm">
               <thead className="text-xs uppercase tracking-wide text-white/40">
                 <tr>
                   <th className="px-3 py-2">Para Birimi</th>
                   <th className="px-3 py-2">Sipariş</th>
-                  <th className="px-3 py-2">Toplam Satış</th>
+                  <th className="px-3 py-2">Brüt Satış</th>
+                  <th className="px-3 py-2">Toplam İade</th>
+                  <th className="px-3 py-2">Net Satış</th>
                   <th className="px-3 py-2">Toplam Alış</th>
                   <th className="px-3 py-2">Net Kâr</th>
                 </tr>
@@ -418,8 +478,11 @@ export default async function ProfitPage({
               <tbody>
                 {currencyTotals.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="rounded-2xl bg-black/20 px-3 py-5 text-white/45">
-                      Bu ay için tamamlanan sipariş bulunamadı.
+                    <td
+                      colSpan={7}
+                      className="rounded-2xl bg-black/20 px-3 py-5 text-white/45"
+                    >
+                      Bu ay için tamamlanan veya kısmi tamamlanan sipariş bulunamadı.
                     </td>
                   </tr>
                 ) : (
@@ -428,14 +491,30 @@ export default async function ProfitPage({
                       <td className="rounded-l-2xl px-3 py-3 font-semibold">
                         {total.currency}
                       </td>
+
                       <td className="px-3 py-3 text-white/70">{total.count}</td>
+
                       <td className="px-3 py-3 text-white/70">
-                        {formatMoney(total.sale, total.currency)}
+                        {formatMoney(total.grossSale, total.currency)}
                       </td>
+
+                      <td className="px-3 py-3 text-amber-300">
+                        {formatMoney(total.refunded, total.currency)}
+                      </td>
+
+                      <td className="px-3 py-3 text-sky-300">
+                        {formatMoney(total.netSale, total.currency)}
+                      </td>
+
                       <td className="px-3 py-3 text-white/70">
                         {formatMoney(total.cost, total.currency)}
                       </td>
-                      <td className="rounded-r-2xl px-3 py-3 font-bold text-emerald-300">
+
+                      <td
+                        className={`rounded-r-2xl px-3 py-3 font-bold ${
+                          total.profit >= 0 ? "text-emerald-300" : "text-rose-300"
+                        }`}
+                      >
                         {formatMoney(total.profit, total.currency)}
                       </td>
                     </tr>
@@ -448,15 +527,18 @@ export default async function ProfitPage({
 
         <section className="rounded-[28px] border border-white/10 bg-white/[0.03] p-5 md:p-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="text-2xl font-bold tracking-tight">Tamamlanan Siparişler</h2>
+            <h2 className="text-2xl font-bold tracking-tight">
+              Kâr Hesabına Dahil Siparişler
+            </h2>
             <span className="text-sm text-white/45">{orders.length} kayıt</span>
           </div>
 
           <div className="mt-5 overflow-x-auto">
-            <table className="w-full min-w-[1200px] border-separate border-spacing-y-2 text-left text-sm">
+            <table className="w-full min-w-[1450px] border-separate border-spacing-y-2 text-left text-sm">
               <thead className="text-xs uppercase tracking-wide text-white/40">
                 <tr>
                   <th className="px-3 py-2">Tarih</th>
+                  <th className="px-3 py-2">Durum</th>
                   <th className="px-3 py-2">Sipariş No</th>
                   <th className="px-3 py-2">Müşteri</th>
                   <th className="px-3 py-2">Panel ID</th>
@@ -464,9 +546,11 @@ export default async function ProfitPage({
                   <th className="px-3 py-2">Hizmet</th>
                   <th className="px-3 py-2">Platform</th>
                   <th className="px-3 py-2">Miktar</th>
-                  <th className="px-3 py-2">Satış</th>
+                  <th className="px-3 py-2">Brüt Satış</th>
+                  <th className="px-3 py-2">İade</th>
+                  <th className="px-3 py-2">Net Satış</th>
                   <th className="px-3 py-2">Alış</th>
-                  <th className="px-3 py-2">Kâr</th>
+                  <th className="px-3 py-2">Net Kâr</th>
                   <th className="px-3 py-2">Detay</th>
                 </tr>
               </thead>
@@ -474,18 +558,26 @@ export default async function ProfitPage({
               <tbody>
                 {orders.length === 0 ? (
                   <tr>
-                    <td colSpan={12} className="rounded-2xl bg-black/20 px-3 py-5 text-white/45">
-                      Bu filtreye uygun tamamlanan sipariş bulunamadı.
+                    <td
+                      colSpan={15}
+                      className="rounded-2xl bg-black/20 px-3 py-5 text-white/45"
+                    >
+                      Bu filtreye uygun tamamlanan veya kısmi tamamlanan sipariş bulunamadı.
                     </td>
                   </tr>
                 ) : (
                   orders.map((order) => {
+                    const netSale = getNetSale(order);
                     const profit = calculateProfit(order);
 
                     return (
                       <tr key={order.id} className="bg-black/20">
                         <td className="rounded-l-2xl px-3 py-3 text-white/60">
                           {formatDate(order.created_at)}
+                        </td>
+
+                        <td className="px-3 py-3 text-white/70">
+                          {getStatusLabel(order.status)}
                         </td>
 
                         <td className="px-3 py-3 text-white/80">
@@ -520,11 +612,23 @@ export default async function ProfitPage({
                           {formatMoney(safeNumber(order.total_price), order.currency)}
                         </td>
 
+                        <td className="px-3 py-3 text-amber-300">
+                          {formatMoney(safeNumber(order.refunded_total), order.currency)}
+                        </td>
+
+                        <td className="px-3 py-3 text-sky-300">
+                          {formatMoney(netSale, order.currency)}
+                        </td>
+
                         <td className="px-3 py-3 text-white/70">
                           {formatMoney(safeNumber(order.total_cost_price), order.currency)}
                         </td>
 
-                        <td className="px-3 py-3 font-bold text-emerald-300">
+                        <td
+                          className={`px-3 py-3 font-bold ${
+                            profit >= 0 ? "text-emerald-300" : "text-rose-300"
+                          }`}
+                        >
                           {formatMoney(profit, order.currency)}
                         </td>
 

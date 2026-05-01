@@ -318,11 +318,18 @@ export default async function OrderDetailPage({
     ) / 100
   );
 
-  const profit = calculateProfit(order);
-  const profitRate =
-    typeof order.total_price === "number" && order.total_price > 0
-      ? Math.round((profit / order.total_price) * 100)
-      : 0;
+  const grossSale =
+  typeof order.total_price === "number" ? order.total_price : 0;
+
+const totalCost =
+  typeof order.total_cost_price === "number" ? order.total_cost_price : 0;
+
+const netSale = Math.max(0, grossSale - alreadyRefunded);
+
+const profit = netSale - totalCost;
+
+const profitRate =
+  netSale > 0 ? Math.round((profit / netSale) * 100) : 0;
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#171717_0%,#090909_55%,#050505_100%)] p-4 text-white md:p-8">
@@ -399,39 +406,46 @@ export default async function OrderDetailPage({
 
         <section className="grid gap-6 xl:grid-cols-[1fr_420px]">
           <div className="space-y-6">
-            <section className="rounded-[28px] border border-white/10 bg-white/[0.03] p-5 md:p-6">
-              <h2 className="text-xl font-bold">Sipariş Bilgileri</h2>
+          <section className="rounded-[28px] border border-white/10 bg-white/[0.03] p-5 md:p-6">
+  <h2 className="text-xl font-bold">Fiyat ve Kâr</h2>
 
-              <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <InfoCard
-                  title="Panel Servis ID"
-                  value={order.service_id ?? "-"}
-                  highlight
-                />
-                <InfoCard
-                  title="Müşteri Ürün Kodu"
-                  value={order.site_code ?? "-"}
-                  highlight
-                />
-                <InfoCard title="Platform" value={order.platform || "-"} />
-                <InfoCard title="Kategori" value={order.category || "-"} />
-              </div>
-
-              <div className="mt-5 grid gap-4 md:grid-cols-2">
-                <TextCard title="Hizmet Adı" value={order.service_title} />
-                <TextCard title="Hedef Link" value={order.target_link} />
-              </div>
-
-              <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <InfoCard title="Miktar" value={order.quantity ?? "-"} />
-                <InfoCard title="Garanti" value={order.guarantee_label || "-"} />
-                <InfoCard title="Hız" value={order.speed || "-"} />
-                <InfoCard
-                  title="Durum"
-                  value={getOrderStatusLabel(order.status)}
-                />
-              </div>
-            </section>
+  <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <InfoCard
+      title="Birim Alış"
+      value={`${order.unit_cost_price ?? 0} ${displayCurrency} / 1000`}
+    />
+    <InfoCard
+      title="Birim Satış"
+      value={`${order.unit_price ?? 0} ${displayCurrency} / 1000`}
+    />
+    <InfoCard
+      title="Brüt Satış"
+      value={formatMoney(order.total_price, displayCurrency)}
+    />
+    <InfoCard
+      title="Toplam Maliyet"
+      value={formatMoney(order.total_cost_price, displayCurrency)}
+    />
+    <InfoCard
+      title="Toplam İade"
+      value={formatMoney(alreadyRefunded, displayCurrency)}
+    />
+    <InfoCard
+      title="Net Satış"
+      value={formatMoney(netSale, displayCurrency)}
+      highlight
+    />
+    <InfoCard
+      title="Net Kâr"
+      value={`${formatMoney(profit, displayCurrency)} (${profitRate}%)`}
+      highlight
+    />
+    <InfoCard
+      title="İade Edilebilir Kalan"
+      value={formatMoney(remainingRefundable, displayCurrency)}
+    />
+  </div>
+</section>
 
             <section className="rounded-[28px] border border-white/10 bg-white/[0.03] p-5 md:p-6">
               <h2 className="text-xl font-bold">Müşteri Bilgileri</h2>

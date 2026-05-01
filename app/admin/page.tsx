@@ -130,6 +130,7 @@ function getOrderStatusLabel(status: string | null | undefined) {
     completed: "Tamamlandı",
     cancelled: "İptal Edildi",
     refunded: "İade Edildi",
+    partial_refunded: "Kısmi Tamamlandı",
     failed: "Başarısız",
   };
 
@@ -144,6 +145,7 @@ function getOrderStatusBadgeClass(status: string | null | undefined) {
     completed: "border-emerald-400/20 bg-emerald-400/10 text-emerald-300",
     cancelled: "border-rose-400/20 bg-rose-400/10 text-rose-300",
     refunded: "border-violet-400/20 bg-violet-400/10 text-violet-300",
+    partial_refunded: "border-amber-400/20 bg-amber-400/10 text-amber-300",
     failed: "border-red-400/20 bg-red-400/10 text-red-300",
   };
 
@@ -652,6 +654,7 @@ export default async function AdminPage({
                 ["completed", "Tamamlandı"],
                 ["cancelled", "İptal Edildi"],
                 ["refunded", "İade Edildi"],
+                ["partial_refunded", "Kısmi Tamamlandı"],
                 ["failed", "Başarısız"],
               ]}
             />

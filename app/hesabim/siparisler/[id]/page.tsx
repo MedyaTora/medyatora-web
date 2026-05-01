@@ -277,7 +277,7 @@ export default async function OrderDetailPage({
   const supportMessage = createSupportMessage(order.order_number);
   const encodedSupportMessage = encodeURIComponent(supportMessage);
 
-  const telegramUrl = "https://t.me/medyatora";
+  const telegramUrl = `https://t.me/share/url?url=https://medyatora.store&text=${encodedSupportMessage}`;
   const whatsappUrl = `https://wa.me/?text=${encodedSupportMessage}`;
 
   return (

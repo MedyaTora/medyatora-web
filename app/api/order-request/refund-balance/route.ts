@@ -84,7 +84,7 @@ function buildRefundDescription({
   refundNote: string | null;
   currency: CurrencyCode;
 }) {
-  const base = `Siparis iadesi - ${orderNumber || orderId} - ${currency}`;
+    const base = `Sipariş iadesi - ${orderNumber || orderId} - ${currency}`;
 
   if (!refundNote) return base;
 
@@ -356,8 +356,8 @@ export async function POST(request: NextRequest) {
       [
         nextStatus,
         refundNote
-          ? `Iade kaydi: ${refundAmount.toFixed(2)} ${currency} - ${refundNote}`
-          : `Iade kaydi: ${refundAmount.toFixed(2)} ${currency}`,
+        ? `İade kaydı: ${refundAmount.toFixed(2)} ${currency} - ${refundNote}`
+        : `İade kaydı: ${refundAmount.toFixed(2)} ${currency}`,
         order.id,
       ]
     );
