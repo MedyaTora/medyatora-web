@@ -337,6 +337,10 @@ function formatPrice(value: number, currency: CurrencyCode) {
   return `${value.toFixed(2)} ${currency}`;
 }
 
+function roundMoney(value: number) {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
 function formatWalletBalance(value: number, currency: CurrencyCode) {
   const safeValue = Number(value || 0);
 
@@ -1081,6 +1085,65 @@ export default function SmmToraPage() {
     };
   };
 
+  const repriceCartItem = (item: CartItem, currency: CurrencyCode): CartItem => {
+    const service =
+      services.find(
+        (serviceItem) =>
+          serviceItem.id === item.service_id &&
+          serviceItem.siteCode === item.site_code
+      ) || services.find((serviceItem) => serviceItem.id === item.service_id);
+  
+    if (!service) {
+      return item;
+    }
+  
+    const unitPrice = roundMoney(getUnitSalePrice(service, currency));
+    const unitCostPrice = roundMoney(getUnitCostPrice(service, currency));
+    const totalPrice = roundMoney((item.quantity / 1000) * unitPrice);
+    const totalCostPrice = roundMoney((item.quantity / 1000) * unitCostPrice);
+  
+    return {
+      ...item,
+      service_title: getLocalizedServiceTitle(service.title, selectedLocale),
+      guarantee_label: getLocalizedGuaranteeLabel(
+        service.guaranteeLabel,
+        selectedLocale
+      ),
+      speed: getLocalizedSpeed(service.speed, selectedLocale),
+      unit_price: unitPrice,
+      total_price: totalPrice,
+      unit_cost_price: unitCostPrice,
+      total_cost_price: totalCostPrice,
+    };
+  };
+  
+  const handleCurrencyChange = (currency: CurrencyCode) => {
+    setSelectedCurrency(currency);
+    setError("");
+    setCartMessage("");
+    setPaymentReviewMessage("");
+    setPaymentReviewError("");
+  
+    setCartItems((prev) =>
+      prev.map((item) => repriceCartItem(item, currency))
+    );
+  
+    setCheckoutItems((prev) =>
+      prev.map((item) => repriceCartItem(item, currency))
+    );
+  
+    trackVisitorAction({
+      event_type: "payment_method_select",
+      event_label: `Para birimi seçildi: ${currency}`,
+      event_value: currency,
+      event_data: {
+        checkout_mode: checkoutMode,
+        item_count: checkoutItems.length,
+        selected_currency: currency,
+      },
+    });
+  };
+
   const clearStatusMessages = () => {
     setError("");
     setCartMessage("");
@@ -1471,7 +1534,7 @@ export default function SmmToraPage() {
                       key={currency}
                       type="button"
                       onClick={() => {
-                        setSelectedCurrency(currency);
+                        handleCurrencyChange(currency);
                         clearStatusMessages();
                       }}
                       className={`rounded-full border px-4 py-2 text-xs font-bold transition sm:text-sm ${
@@ -2618,52 +2681,68 @@ export default function SmmToraPage() {
     </p>
 
     {authUser && (
-      <div className="mt-4 grid gap-2 sm:grid-cols-3">
-        <div
-          className={`rounded-2xl border p-3 ${
-            selectedCurrency === "TL"
-              ? "border-emerald-300/40 bg-emerald-300/10"
-              : "border-white/10 bg-black/20"
-          }`}
-        >
-          <p className="text-xs font-black text-white/45">TL Bakiyesi</p>
-          <p className="mt-1 text-sm font-black text-white">
-            {formatWalletBalance(authUser.balance_tl, "TL")}
-          </p>
-        </div>
+  <div className="mt-4 grid gap-2 sm:grid-cols-3">
+    <button
+      type="button"
+      onClick={() => handleCurrencyChange("TL")}
+      className={`rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 ${
+        selectedCurrency === "TL"
+          ? "border-emerald-300/50 bg-emerald-300/15 shadow-[0_12px_30px_rgba(52,211,153,0.12)]"
+          : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
+      }`}
+    >
+      <p className="text-xs font-black text-white/45">TL Bakiyesi</p>
+      <p className="mt-1 text-sm font-black text-white">
+        {formatWalletBalance(authUser.balance_tl, "TL")}
+      </p>
+      <p className="mt-1 text-[10px] font-bold text-emerald-200/70">
+        TL ile öde
+      </p>
+    </button>
 
-        <div
-          className={`rounded-2xl border p-3 ${
-            selectedCurrency === "USD"
-              ? "border-emerald-300/40 bg-emerald-300/10"
-              : "border-white/10 bg-black/20"
-          }`}
-        >
-          <p className="text-xs font-black text-white/45">USD Bakiyesi</p>
-          <p className="mt-1 text-sm font-black text-white">
-            {formatWalletBalance(authUser.balance_usd, "USD")}
-          </p>
-        </div>
+    <button
+      type="button"
+      onClick={() => handleCurrencyChange("USD")}
+      className={`rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 ${
+        selectedCurrency === "USD"
+          ? "border-emerald-300/50 bg-emerald-300/15 shadow-[0_12px_30px_rgba(52,211,153,0.12)]"
+          : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
+      }`}
+    >
+      <p className="text-xs font-black text-white/45">USD Bakiyesi</p>
+      <p className="mt-1 text-sm font-black text-white">
+        {formatWalletBalance(authUser.balance_usd, "USD")}
+      </p>
+      <p className="mt-1 text-[10px] font-bold text-emerald-200/70">
+        USD ile öde
+      </p>
+    </button>
 
-        <div
-          className={`rounded-2xl border p-3 ${
-            selectedCurrency === "RUB"
-              ? "border-emerald-300/40 bg-emerald-300/10"
-              : "border-white/10 bg-black/20"
-          }`}
-        >
-          <p className="text-xs font-black text-white/45">RUB Bakiyesi</p>
-          <p className="mt-1 text-sm font-black text-white">
-            {formatWalletBalance(authUser.balance_rub, "RUB")}
-          </p>
-        </div>
-      </div>
-    )}
+    <button
+      type="button"
+      onClick={() => handleCurrencyChange("RUB")}
+      className={`rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 ${
+        selectedCurrency === "RUB"
+          ? "border-emerald-300/50 bg-emerald-300/15 shadow-[0_12px_30px_rgba(52,211,153,0.12)]"
+          : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
+      }`}
+    >
+      <p className="text-xs font-black text-white/45">RUB Bakiyesi</p>
+      <p className="mt-1 text-sm font-black text-white">
+        {formatWalletBalance(authUser.balance_rub, "RUB")}
+      </p>
+      <p className="mt-1 text-[10px] font-bold text-emerald-200/70">
+        RUB ile öde
+      </p>
+    </button>
+  </div>
+)}
 
     <p className="mt-3 text-xs leading-5 text-white/55">
       Seçili ödeme birimi:{" "}
       <span className="font-bold text-emerald-200">{selectedCurrency}</span>.
-      Bu sipariş yalnızca {selectedCurrency} bakiyenden düşecektir.
+      Bu sipariş yalnızca {selectedCurrency} bakiyenden düşecektir. Para birimini
+      yukarıdaki bakiye kartlarından değiştirebilirsin.
     </p>
   </div>
 )}
