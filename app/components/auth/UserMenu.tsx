@@ -166,7 +166,7 @@ export default function UserMenu() {
 
   if (loading) {
     return (
-      <div className="inline-flex h-12 items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.045] px-4 text-sm font-semibold text-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+      <div className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/[0.045] px-4 text-sm font-semibold text-white/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:w-auto">
         <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
         Hesap kontrol ediliyor...
       </div>
@@ -176,8 +176,8 @@ export default function UserMenu() {
   return (
     <>
       {user ? (
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <div className="flex h-12 items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.05] px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:justify-end">
+          <div className="flex h-12 min-w-0 items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.05] px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-400 text-xs font-black text-black shadow-[0_10px_26px_rgba(52,211,153,0.18)]">
               {getInitials(user)}
             </div>
@@ -186,27 +186,29 @@ export default function UserMenu() {
               <p className="text-[9px] font-black uppercase tracking-[0.16em] text-emerald-200/70">
                 Hoş geldin
               </p>
-              <p className="max-w-[118px] truncate text-xs font-black text-white">
+              <p className="max-w-[95px] truncate text-xs font-black text-white sm:max-w-[118px]">
                 {user.full_name || user.email}
               </p>
             </div>
           </div>
 
-          <div className="flex h-12 items-center gap-3 rounded-2xl border border-sky-400/20 bg-sky-400/10 px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-            <div className="min-w-[102px]">
+          <div className="flex h-12 min-w-0 items-center justify-between gap-2 rounded-2xl border border-sky-400/20 bg-sky-400/10 px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:gap-3">
+            <div className="min-w-0">
               <p className="text-[9px] font-black uppercase tracking-[0.16em] text-sky-200/70">
                 Bakiye
               </p>
-              <p className="text-xs font-black text-white">{shownBalance}</p>
+              <p className="truncate text-xs font-black text-white">
+                {shownBalance}
+              </p>
             </div>
 
-            <div className="flex overflow-hidden rounded-xl border border-white/10 bg-black/20">
+            <div className="flex shrink-0 overflow-hidden rounded-xl border border-white/10 bg-black/20">
               {currencyOptions.map((currency) => (
                 <button
                   key={currency}
                   type="button"
                   onClick={() => setSelectedCurrency(currency)}
-                  className={`px-2.5 py-1.5 text-[10px] font-black transition ${
+                  className={`px-2 py-1.5 text-[10px] font-black transition sm:px-2.5 ${
                     selectedCurrency === currency
                       ? "bg-emerald-400 text-black"
                       : "text-white/60 hover:bg-white/[0.08] hover:text-white"
@@ -224,7 +226,7 @@ export default function UserMenu() {
                 key={locale}
                 type="button"
                 onClick={() => handleLocaleChange(locale)}
-                className={`h-9 rounded-xl px-3 text-[10px] font-black uppercase transition ${
+                className={`h-9 flex-1 rounded-xl px-2 text-[10px] font-black uppercase transition sm:px-3 ${
                   selectedLocale === locale
                     ? "bg-white text-black"
                     : "text-white/60 hover:bg-white/[0.08] hover:text-white"
@@ -237,7 +239,7 @@ export default function UserMenu() {
 
           <a
             href="/hesabim"
-            className="inline-flex h-12 items-center rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-xs font-black text-white/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:bg-white/[0.1] hover:text-white"
+            className="inline-flex h-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-xs font-black text-white/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:bg-white/[0.1] hover:text-white"
           >
             Hesabım
           </a>
@@ -245,20 +247,20 @@ export default function UserMenu() {
           <button
             type="button"
             onClick={handleLogout}
-            className="inline-flex h-12 items-center rounded-2xl border border-rose-400/20 bg-rose-400/10 px-4 text-xs font-black text-rose-300 transition hover:-translate-y-0.5 hover:bg-rose-400/15"
+            className="col-span-2 inline-flex h-12 items-center justify-center rounded-2xl border border-rose-400/20 bg-rose-400/10 px-4 text-xs font-black text-rose-300 transition hover:-translate-y-0.5 hover:bg-rose-400/15 sm:col-span-auto"
           >
             Çıkış
           </button>
         </div>
       ) : (
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <div className="flex h-12 items-center overflow-hidden rounded-2xl border border-white/10 bg-white/[0.05] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:justify-end">
+          <div className="col-span-2 flex h-12 items-center overflow-hidden rounded-2xl border border-white/10 bg-white/[0.05] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:col-span-auto">
             {localeOptions.map((locale) => (
               <button
                 key={locale}
                 type="button"
                 onClick={() => handleLocaleChange(locale)}
-                className={`h-9 rounded-xl px-3 text-[10px] font-black uppercase transition ${
+                className={`h-9 flex-1 rounded-xl px-3 text-[10px] font-black uppercase transition ${
                   selectedLocale === locale
                     ? "bg-white text-black"
                     : "text-white/60 hover:bg-white/[0.08] hover:text-white"
@@ -272,7 +274,7 @@ export default function UserMenu() {
           <button
             type="button"
             onClick={() => openAuth("login")}
-            className="inline-flex h-12 items-center rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-xs font-black text-white/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:bg-white/[0.1] hover:text-white"
+            className="inline-flex h-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-xs font-black text-white/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:bg-white/[0.1] hover:text-white"
           >
             Giriş Yap
           </button>
@@ -280,7 +282,7 @@ export default function UserMenu() {
           <button
             type="button"
             onClick={() => openAuth("register")}
-            className="inline-flex h-12 items-center rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-4 text-xs font-black text-black shadow-[0_16px_38px_rgba(52,211,153,0.18)] transition hover:-translate-y-0.5 hover:from-emerald-300 hover:to-emerald-400"
+            className="inline-flex h-12 items-center justify-center rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-4 text-xs font-black text-black shadow-[0_16px_38px_rgba(52,211,153,0.18)] transition hover:-translate-y-0.5 hover:from-emerald-300 hover:to-emerald-400"
           >
             Üye Ol
           </button>
