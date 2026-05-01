@@ -66,12 +66,6 @@ function normalizeCurrency(value: unknown): CurrencyCode {
   return "TL";
 }
 
-function normalizeDailyPostCount(value: unknown) {
-  const num = Number(value);
-  if (!Number.isFinite(num) || num < 0) return 0;
-  return Math.floor(num);
-}
-
 function boolValue(value: unknown) {
   return value === true || value === 1 || value === "1";
 }
@@ -82,6 +76,23 @@ function formatMoney(value: number, currency: CurrencyCode) {
   }
 
   return `${value.toFixed(2)} ${currency}`;
+}
+
+function getPaymentMethodLabel({
+  paymentMethod,
+  isFree,
+}: {
+  paymentMethod: string;
+  isFree: boolean;
+}) {
+  if (isFree || paymentMethod === "free_analysis_right") {
+    return "Ücretsiz analiz hakkı";
+  }
+
+  if (paymentMethod === "turkey_bank") return "Havale / EFT";
+  if (paymentMethod === "support") return "Destek ile ödeme";
+
+  return "Belirtilmedi";
 }
 
 async function sendTelegramMessage(text: string) {
@@ -179,12 +190,18 @@ export async function POST(req: Request) {
     const accountLink = normalizeString(body?.account_link);
     const accountType = normalizeString(body?.account_type);
     const contentType = normalizeString(body?.content_type);
-    const dailyPostCount = normalizeDailyPostCount(body?.daily_post_count);
+
+    const dailyPostCountRaw = normalizeString(body?.daily_post_count);
+    const dailyPostCount = 0;
+
     const mainProblem = normalizeString(body?.main_problem);
     const mainMissing = normalizeString(body?.main_missing);
     const contactType = normalizeContactType(body?.contact_type);
     const contactValue = normalizeString(body?.contact_value);
-    const currency = normalizeCurrency(body?.currency);
+
+    const currency = normalizeCurrency(body?.analysis_currency ?? body?.currency);
+    const analysisPlatform = normalizeString(body?.analysis_platform);
+    const paymentMethod = normalizeString(body?.payment_method);
 
     if (!isNonEmptyString(fullName)) {
       return NextResponse.json(
@@ -343,20 +360,24 @@ export async function POST(req: Request) {
           customer_id,
           coupon_code,
           package_type,
+          analysis_platform,
           package_price,
           currency,
+          payment_method,
           status,
           is_free_analysis,
           analysis_price_usd
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
           currentUser?.id || null,
           customerId,
           null,
           "professional_analysis",
+          analysisPlatform || accountType || null,
           packagePrice,
           currency,
+          paymentMethod || null,
           "pending",
           verifiedFreeRight ? 1 : 0,
           currency === "USD" ? packagePrice : 15,
@@ -396,6 +417,11 @@ export async function POST(req: Request) {
       connection.release();
     }
 
+    const paymentMethodLabel = getPaymentMethodLabel({
+      paymentMethod,
+      isFree: verifiedFreeRight,
+    });
+
     const telegramMessage =
       `📥 Yeni analiz başvurusu alındı\n\n` +
       `🆔 Başvuru ID: ${analysisRequestId || "-"}\n` +
@@ -403,18 +429,20 @@ export async function POST(req: Request) {
       `🧑‍💻 Kullanıcı Hesabı: ${
         currentUser ? `#${currentUser.id} | ${currentUser.email}` : "Üyeliksiz başvuru"
       }\n` +
+      `📱 Analiz Platformu: ${analysisPlatform || accountType || "-"}\n` +
       `🎁 Ücretsiz Analiz: ${verifiedFreeRight ? "Evet" : "Hayır"}\n` +
+      `💳 Ödeme Yöntemi: ${paymentMethodLabel}\n` +
       `💵 Analiz Fiyatı: ${formatMoney(packagePrice, currency)}\n` +
       `👤 Ad Soyad: ${fullName}\n` +
       `📷 Kullanıcı Adı: ${username || "-"}\n` +
       `🔗 Hesap Linki: ${accountLink || "-"}\n` +
       `🏷️ Hesap Türü: ${accountType}\n` +
       `🎬 İçerik Türü: ${contentType}\n` +
-      `📆 Günlük Paylaşım: ${dailyPostCount}\n` +
+      `📆 Paylaşım Sıklığı: ${dailyPostCountRaw || "-"}\n` +
       `📞 İletişim Türü: ${contactType}\n` +
       `📩 İletişim: ${contactValue}\n\n` +
-      `⚠️ Genel Sorun: ${mainProblem}\n` +
-      `❗ En Büyük Eksik: ${mainMissing}`;
+      `⚠️ Genel Sorun:\n${mainProblem}\n\n` +
+      `❗ En Büyük Eksik / Beklenen Cevap:\n${mainMissing}`;
 
     const telegramResult = await sendTelegramMessage(telegramMessage);
 
@@ -426,17 +454,18 @@ export async function POST(req: Request) {
       {
         success: true,
         message: verifiedFreeRight
-          ? "Ücretsiz analiz başvurunuz alındı. Ekibimiz hesabınızı inceleyip sizinle iletişime geçecek."
-          : `Analiz başvurunuz alındı. Analiz ücreti ${formatMoney(
+          ? "Analiz başvurunuz oluşturuldu. 24 saat içerisinde ekibimiz sizinle iletişime geçecektir."
+          : `Analiz başvurunuz oluşturuldu. Analiz ücreti ${formatMoney(
               packagePrice,
               currency
-            )}. Ekibimiz ödeme ve analiz süreci için sizinle iletişime geçecek.`,
+            )}. 24 saat içerisinde ekibimiz sizinle iletişime geçecektir.`,
         customerId,
         analysisRequestId,
         isFreeAnalysis: verifiedFreeRight,
         freeAnalysisUsed: verifiedFreeRight,
         packagePrice,
         currency,
+        paymentMethod: paymentMethodLabel,
         telegramWarning: telegramResult.warning,
       },
       { status: 200 }
