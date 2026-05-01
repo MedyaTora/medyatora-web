@@ -34,15 +34,31 @@ type OrderDetailRow = RowDataPacket & {
   target_link: string | null;
   order_note: string | null;
   status: string;
+  start_count: number | null;
+  end_count: number | null;
+  completion_note: string | null;
+  admin_note: string | null;
   created_at: string;
 };
 
 type RefundSummaryRow = RowDataPacket & {
   refunded_total: string | number | null;
+  latest_refund_amount: string | number | null;
+  latest_refund_currency: string | null;
+  latest_refund_note: string | null;
+  latest_refund_created_at: string | null;
 };
 
 function roundMoney(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
+function formatQuantity(value: number | null | undefined) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) {
+    return "-";
+  }
+
+  return Number(value).toLocaleString("tr-TR");
 }
 
 function InfoCard({
@@ -64,6 +80,22 @@ function InfoCard({
 
 function createSupportMessage(orderNumber: string) {
   return `Merhaba, MedyaTora siparişim hakkında destek almak istiyorum. Sipariş No: ${orderNumber}`;
+}
+
+function getCustomerStatusLabel(status: string) {
+  if (status === "partial_refunded") {
+    return "Kısmi Tamamlandı";
+  }
+
+  return getOrderStatusLabel(status);
+}
+
+function getCustomerStatusDescription(status: string) {
+  if (status === "partial_refunded") {
+    return "Siparişinizin büyük kısmı tamamlandı. Teslim edilemeyen kısım için bakiye iadesi yapılmıştır.";
+  }
+
+  return getOrderStatusDescription(status);
 }
 
 function getDeliverySpeedText(status: string, speed: string | null | undefined) {
@@ -92,7 +124,7 @@ function getDeliverySpeedText(status: string, speed: string | null | undefined) 
   }
 
   if (status === "partial_refunded") {
-    return "Kısmi iade yapıldı";
+    return "Sipariş kısmi olarak tamamlandı";
   }
 
   if (status === "cancelled") {
@@ -116,7 +148,7 @@ function getRefundBoxText(status: string, refundedTotal: number) {
   }
 
   if (status === "partial_refunded") {
-    return "Bu sipariş için kısmi iade kaydı oluşturulmuş.";
+    return "Sipariş kısmi olarak tamamlandı ve eksik kalan kısım için iade yapıldı.";
   }
 
   return "Bu sipariş için iade kaydı bulunuyor.";
@@ -166,6 +198,10 @@ export default async function OrderDetailPage({
       target_link,
       order_note,
       status,
+      start_count,
+      end_count,
+      completion_note,
+      admin_note,
       created_at
     FROM order_requests
     WHERE order_number = ?
@@ -183,17 +219,60 @@ export default async function OrderDetailPage({
 
   const [refundRows] = await pool.query<RefundSummaryRow[]>(
     `
-    SELECT COALESCE(SUM(amount), 0) AS refunded_total
-    FROM order_refund_transactions
-    WHERE order_id = ?
-      AND currency = ?
+    SELECT
+      totals.refunded_total,
+      latest.amount AS latest_refund_amount,
+      latest.currency AS latest_refund_currency,
+      latest.note AS latest_refund_note,
+      latest.created_at AS latest_refund_created_at
+    FROM (
+      SELECT COALESCE(SUM(amount), 0) AS refunded_total
+      FROM order_refund_transactions
+      WHERE order_id = ?
+        AND currency = ?
+    ) totals
+    LEFT JOIN (
+      SELECT amount, currency, note, created_at
+      FROM order_refund_transactions
+      WHERE order_id = ?
+        AND currency = ?
+      ORDER BY created_at DESC, id DESC
+      LIMIT 1
+    ) latest ON 1 = 1
     `,
-    [order.id, order.currency]
+    [order.id, order.currency, order.id, order.currency]
   );
 
+  const refundSummary = refundRows[0];
+
   const orderTotal = roundMoney(Number(order.total_price || 0));
-  const refundedTotal = roundMoney(Number(refundRows[0]?.refunded_total || 0));
+  const refundedTotal = roundMoney(Number(refundSummary?.refunded_total || 0));
   const remainingRefundable = roundMoney(Math.max(orderTotal - refundedTotal, 0));
+
+  const startCount =
+    order.start_count === null || order.start_count === undefined
+      ? null
+      : Number(order.start_count);
+
+  const endCount =
+    order.end_count === null || order.end_count === undefined
+      ? null
+      : Number(order.end_count);
+
+  const deliveredQuantity =
+    startCount !== null && endCount !== null && endCount >= startCount
+      ? Math.max(endCount - startCount, 0)
+      : null;
+
+  const missingQuantity =
+    deliveredQuantity !== null
+      ? Math.max(Number(order.quantity || 0) - deliveredQuantity, 0)
+      : null;
+
+  const isPartialRefunded = order.status === "partial_refunded";
+  const hasRefundNote =
+    refundSummary?.latest_refund_note &&
+    refundSummary.latest_refund_note.trim().length > 0;
 
   const supportMessage = createSupportMessage(order.order_number);
   const encodedSupportMessage = encodeURIComponent(supportMessage);
@@ -237,7 +316,7 @@ export default async function OrderDetailPage({
                   order.status
                 )}`}
               >
-                {getOrderStatusLabel(order.status)}
+                {getCustomerStatusLabel(order.status)}
               </span>
 
               <h2 className="mt-4 text-2xl font-black text-white">
@@ -245,7 +324,7 @@ export default async function OrderDetailPage({
               </h2>
 
               <p className="mt-2 max-w-3xl text-sm leading-6 text-white/60">
-                {getOrderStatusDescription(order.status)}
+                {getCustomerStatusDescription(order.status)}
               </p>
             </div>
 
@@ -257,6 +336,77 @@ export default async function OrderDetailPage({
             </div>
           </div>
         </section>
+
+        {isPartialRefunded && (
+          <section className="mb-5 rounded-[32px] border border-amber-300/20 bg-amber-300/10 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.22)] md:p-6">
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.22em] text-amber-100/80">
+                  Kısmi Tamamlandı
+                </p>
+
+                <h2 className="mt-2 text-xl font-black text-white">
+                  Siparişinizin teslim edilemeyen kısmı için iade yapıldı.
+                </h2>
+
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-white/65">
+                  Siparişinizin büyük kısmı tamamlandı. Eksik kalan bölüm için
+                  ilgili tutar aynı para birimindeki bakiyenize geri yansıtıldı.
+                </p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2 md:min-w-[520px]">
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/35">
+                    Sipariş Miktarı
+                  </p>
+                  <p className="mt-2 text-sm font-black text-white">
+                    {formatQuantity(order.quantity)}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/35">
+                    Teslim Edilen
+                  </p>
+                  <p className="mt-2 text-sm font-black text-white">
+                    {formatQuantity(deliveredQuantity)}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/35">
+                    Eksik Kalan
+                  </p>
+                  <p className="mt-2 text-sm font-black text-white">
+                    {formatQuantity(missingQuantity)}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-amber-200/20 bg-amber-200/10 p-4">
+                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-amber-100/70">
+                    İade Edilen Tutar
+                  </p>
+                  <p className="mt-2 text-sm font-black text-white">
+                    {formatOrderMoney(refundedTotal, order.currency)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-amber-200/20 bg-black/20 p-4">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-100/70">
+                İade Açıklaması
+              </p>
+
+              <p className="mt-2 text-sm leading-6 text-white/70">
+                {hasRefundNote
+                  ? refundSummary.latest_refund_note
+                  : "Teslim edilemeyen kısım için ilgili tutar bakiyenize geri yansıtılmıştır."}
+              </p>
+            </div>
+          </section>
+        )}
 
         <section className="mb-5 rounded-[32px] border border-cyan-400/20 bg-cyan-400/10 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.22)] md:p-6">
           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -372,7 +522,8 @@ export default async function OrderDetailPage({
           <h2 className="text-xl font-black text-white">Desteğe Ulaş</h2>
 
           <p className="mt-2 text-sm leading-6 text-white/65">
-            Bu siparişle ilgili destek almak istersen aşağıdaki butonlardan bize ulaşabilirsin.
+            Bu siparişle ilgili destek almak istersen aşağıdaki butonlardan bize
+            ulaşabilirsin.
           </p>
 
           <div className="mt-4 grid gap-3 md:grid-cols-2">
