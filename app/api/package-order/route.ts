@@ -41,6 +41,7 @@ type ServiceRow = RowDataPacket & {
   clean_title: string;
   subtitle: string;
   guarantee_label: string;
+  guarantee: number;
   min: number;
   max: number;
   speed: string;
@@ -71,13 +72,274 @@ const ALLOWED_PAYMENT_METHODS: PaymentMethod[] = [
   "balance",
 ];
 
-const PACKAGE_PRICE_TL_PER_1000: Record<PackageType, number> = {
-  ekonomik: 79,
-  global: 99,
-  turk: 149,
-  garantili: 199,
-  hizli: 249,
+const PACKAGE_PRICE_MATRIX: Record<
+  string,
+  Record<string, Record<PackageType, number>>
+> = {
+  instagram: {
+    takipci: {
+      ekonomik: 119,
+      global: 149,
+      turk: 249,
+      garantili: 249,
+      hizli: 299,
+    },
+    begeni: {
+      ekonomik: 59,
+      global: 79,
+      turk: 119,
+      garantili: 119,
+      hizli: 149,
+    },
+    reels_izlenme: {
+      ekonomik: 29,
+      global: 39,
+      turk: 59,
+      garantili: 59,
+      hizli: 79,
+    },
+    reels_begeni: {
+      ekonomik: 59,
+      global: 79,
+      turk: 119,
+      garantili: 119,
+      hizli: 149,
+    },
+    reels_yorum: {
+      ekonomik: 199,
+      global: 249,
+      turk: 399,
+      garantili: 399,
+      hizli: 449,
+    },
+    yorum: {
+      ekonomik: 199,
+      global: 249,
+      turk: 399,
+      garantili: 399,
+      hizli: 449,
+    },
+    kaydetme: {
+      ekonomik: 69,
+      global: 89,
+      turk: 139,
+      garantili: 139,
+      hizli: 169,
+    },
+    story_izlenme: {
+      ekonomik: 39,
+      global: 49,
+      turk: 79,
+      garantili: 79,
+      hizli: 99,
+    },
+    profil_ziyareti: {
+      ekonomik: 49,
+      global: 69,
+      turk: 99,
+      garantili: 99,
+      hizli: 129,
+    },
+  },
+
+  tiktok: {
+    takipci: {
+      ekonomik: 109,
+      global: 139,
+      turk: 229,
+      garantili: 229,
+      hizli: 279,
+    },
+    begeni: {
+      ekonomik: 49,
+      global: 69,
+      turk: 109,
+      garantili: 109,
+      hizli: 139,
+    },
+    izlenme: {
+      ekonomik: 19,
+      global: 29,
+      turk: 49,
+      garantili: 49,
+      hizli: 69,
+    },
+    yorum: {
+      ekonomik: 179,
+      global: 229,
+      turk: 379,
+      garantili: 379,
+      hizli: 429,
+    },
+    kaydetme: {
+      ekonomik: 59,
+      global: 79,
+      turk: 119,
+      garantili: 119,
+      hizli: 149,
+    },
+    paylasim: {
+      ekonomik: 59,
+      global: 79,
+      turk: 119,
+      garantili: 119,
+      hizli: 149,
+    },
+    favori: {
+      ekonomik: 59,
+      global: 79,
+      turk: 119,
+      garantili: 119,
+      hizli: 149,
+    },
+  },
+
+  youtube: {
+    abone: {
+      ekonomik: 299,
+      global: 399,
+      turk: 599,
+      garantili: 599,
+      hizli: 699,
+    },
+    izlenme: {
+      ekonomik: 69,
+      global: 89,
+      turk: 149,
+      garantili: 149,
+      hizli: 179,
+    },
+    shorts_izlenme: {
+      ekonomik: 39,
+      global: 59,
+      turk: 89,
+      garantili: 89,
+      hizli: 119,
+    },
+    begeni: {
+      ekonomik: 89,
+      global: 119,
+      turk: 179,
+      garantili: 179,
+      hizli: 219,
+    },
+    yorum: {
+      ekonomik: 249,
+      global: 329,
+      turk: 499,
+      garantili: 499,
+      hizli: 599,
+    },
+    canli_yayin: {
+      ekonomik: 99,
+      global: 129,
+      turk: 199,
+      garantili: 199,
+      hizli: 249,
+    },
+  },
+
+  x: {
+    takipci: {
+      ekonomik: 149,
+      global: 199,
+      turk: 299,
+      garantili: 299,
+      hizli: 349,
+    },
+    begeni: {
+      ekonomik: 69,
+      global: 89,
+      turk: 139,
+      garantili: 139,
+      hizli: 169,
+    },
+    izlenme: {
+      ekonomik: 29,
+      global: 39,
+      turk: 69,
+      garantili: 69,
+      hizli: 89,
+    },
+    retweet: {
+      ekonomik: 89,
+      global: 119,
+      turk: 179,
+      garantili: 179,
+      hizli: 219,
+    },
+    yorum: {
+      ekonomik: 199,
+      global: 249,
+      turk: 399,
+      garantili: 399,
+      hizli: 449,
+    },
+    bookmark: {
+      ekonomik: 69,
+      global: 89,
+      turk: 139,
+      garantili: 139,
+      hizli: 169,
+    },
+  },
+
+  telegram: {
+    uye: {
+      ekonomik: 129,
+      global: 169,
+      turk: 249,
+      garantili: 249,
+      hizli: 299,
+    },
+    izlenme: {
+      ekonomik: 19,
+      global: 29,
+      turk: 49,
+      garantili: 49,
+      hizli: 69,
+    },
+    reaksiyon: {
+      ekonomik: 49,
+      global: 69,
+      turk: 99,
+      garantili: 99,
+      hizli: 129,
+    },
+    paylasim: {
+      ekonomik: 59,
+      global: 79,
+      turk: 119,
+      garantili: 119,
+      hizli: 149,
+    },
+    oylama: {
+      ekonomik: 79,
+      global: 99,
+      turk: 149,
+      garantili: 149,
+      hizli: 179,
+    },
+  },
 };
+
+function getPackagePricePer1000(
+  platform: string,
+  category: string,
+  packageType: PackageType
+) {
+  const platformPrices = PACKAGE_PRICE_MATRIX[platform];
+  const categoryPrices = platformPrices?.[category];
+
+  if (categoryPrices?.[packageType]) {
+    return categoryPrices[packageType];
+  }
+
+  const firstCategoryKey = Object.keys(platformPrices || {})[0];
+  const fallbackPrice = platformPrices?.[firstCategoryKey]?.[packageType];
+
+  return fallbackPrice || 149;
+}
 
 function normalizeString(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -221,6 +483,7 @@ async function findPackageService(params: {
       original_name,
       clean_title,
       subtitle,
+      guarantee,
       guarantee_label,
       min,
       max,
@@ -262,6 +525,7 @@ async function findPackageService(params: {
       original_name,
       clean_title,
       subtitle,
+      guarantee,
       guarantee_label,
       min,
       max,
@@ -505,7 +769,12 @@ export async function POST(req: Request) {
       );
     }
 
-    const unitSalePrice = PACKAGE_PRICE_TL_PER_1000[packageType];
+    const unitSalePrice = getPackagePricePer1000(
+      platform,
+      category,
+      packageType
+    );
+
     const unitCostPrice = roundMoney(Number(service.tl_cost_price || 0));
     const totalPrice = roundMoney((quantity / 1000) * unitSalePrice);
     const totalCostPrice = roundMoney((quantity / 1000) * unitCostPrice);
@@ -649,7 +918,9 @@ export async function POST(req: Request) {
           targetUsername,
           targetLink || null,
           orderNote ||
-            `Paketler sayfasından oluşturuldu. Paket türü: ${packageLabel}. Kaynak servis: ${service.clean_title || service.original_name}`,
+            `Paketler sayfasından oluşturuldu. Paket türü: ${packageLabel}. Kaynak servis: ${
+              service.clean_title || service.original_name
+            }`,
           status,
         ]
       );
@@ -734,6 +1005,8 @@ export async function POST(req: Request) {
       `🧩 Kaynak Panel Servis ID: ${service.panel_service_id}\n` +
       `🧩 Müşteri Ürün Kodu: ${service.site_code}\n` +
       `🧩 Kaynak Servis: ${service.clean_title || service.original_name}\n\n` +
+      `💰 Birim Alış: ${unitCostPrice} TL / 1000\n` +
+      `🏷️ Birim Satış: ${unitSalePrice} TL / 1000\n` +
       `💰 Toplam Alış: ${totalCostPrice} TL\n` +
       `🏷️ Toplam Satış: ${totalPrice} TL\n` +
       `📈 Tahmini Kâr: ${profit} TL\n` +

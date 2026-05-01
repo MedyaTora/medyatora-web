@@ -26,12 +26,14 @@ type CategoryConfig = {
   description: string;
 };
 
+type PackageTypeSlug = "ekonomik" | "global" | "turk" | "garantili" | "hizli";
+
 type PackageTypeConfig = {
-  slug: "ekonomik" | "global" | "turk" | "garantili" | "hizli";
+  slug: PackageTypeSlug;
   title: string;
   description: string;
   badge: string;
-  pricePer1000: number;
+  colorClass: string;
 };
 
 type PlatformConfig = {
@@ -265,39 +267,115 @@ const packageTypes: PackageTypeConfig[] = [
   {
     slug: "ekonomik",
     title: "Ekonomik",
-    description: "Daha uygun fiyatlı başlangıç seçeneği.",
+    description: "Uygun fiyatlı, hızlı başlangıç yapmak isteyenler için.",
     badge: "Uygun Fiyat",
-    pricePer1000: 79,
+    colorClass:
+      "border-lime-400/40 bg-lime-400/10 text-lime-200 shadow-[0_18px_60px_rgba(163,230,53,0.08)]",
   },
   {
     slug: "global",
     title: "Global",
-    description: "Yabancı / global kitle ağırlıklı paket.",
+    description: "Yabancı / global kitle ağırlıklı dengeli paket.",
     badge: "Global",
-    pricePer1000: 99,
+    colorClass:
+      "border-sky-400/40 bg-sky-400/10 text-sky-200 shadow-[0_18px_60px_rgba(56,189,248,0.08)]",
   },
   {
     slug: "turk",
     title: "Türk Kitle",
     description: "Türkiye odaklı daha kaliteli görünüm isteyenler için.",
     badge: "TR",
-    pricePer1000: 149,
+    colorClass:
+      "border-red-400/40 bg-red-400/10 text-red-200 shadow-[0_18px_60px_rgba(248,113,113,0.08)]",
   },
   {
     slug: "garantili",
     title: "Garantili / Düşmeyen",
     description: "Düşüş riskine karşı daha güvenli paket seçeneği.",
     badge: "Garantili",
-    pricePer1000: 199,
+    colorClass:
+      "border-emerald-400/40 bg-emerald-400/10 text-emerald-200 shadow-[0_18px_60px_rgba(52,211,153,0.08)]",
   },
   {
     slug: "hizli",
     title: "Hızlı Teslimat",
     description: "Daha hızlı başlangıç isteyen kullanıcılar için.",
     badge: "Hızlı",
-    pricePer1000: 249,
+    colorClass:
+      "border-amber-400/40 bg-amber-400/10 text-amber-200 shadow-[0_18px_60px_rgba(251,191,36,0.08)]",
   },
 ];
+
+const PACKAGE_PRICE_MATRIX: Record<
+  PlatformSlug,
+  Record<string, Record<PackageTypeSlug, number>>
+> = {
+  instagram: {
+    takipci: { ekonomik: 119, global: 149, turk: 249, garantili: 249, hizli: 299 },
+    begeni: { ekonomik: 59, global: 79, turk: 119, garantili: 119, hizli: 149 },
+    reels_izlenme: { ekonomik: 29, global: 39, turk: 59, garantili: 59, hizli: 79 },
+    reels_begeni: { ekonomik: 59, global: 79, turk: 119, garantili: 119, hizli: 149 },
+    reels_yorum: { ekonomik: 199, global: 249, turk: 399, garantili: 399, hizli: 449 },
+    yorum: { ekonomik: 199, global: 249, turk: 399, garantili: 399, hizli: 449 },
+    kaydetme: { ekonomik: 69, global: 89, turk: 139, garantili: 139, hizli: 169 },
+    story_izlenme: { ekonomik: 39, global: 49, turk: 79, garantili: 79, hizli: 99 },
+    profil_ziyareti: { ekonomik: 49, global: 69, turk: 99, garantili: 99, hizli: 129 },
+  },
+
+  tiktok: {
+    takipci: { ekonomik: 109, global: 139, turk: 229, garantili: 229, hizli: 279 },
+    begeni: { ekonomik: 49, global: 69, turk: 109, garantili: 109, hizli: 139 },
+    izlenme: { ekonomik: 19, global: 29, turk: 49, garantili: 49, hizli: 69 },
+    yorum: { ekonomik: 179, global: 229, turk: 379, garantili: 379, hizli: 429 },
+    kaydetme: { ekonomik: 59, global: 79, turk: 119, garantili: 119, hizli: 149 },
+    paylasim: { ekonomik: 59, global: 79, turk: 119, garantili: 119, hizli: 149 },
+    favori: { ekonomik: 59, global: 79, turk: 119, garantili: 119, hizli: 149 },
+  },
+
+  youtube: {
+    abone: { ekonomik: 299, global: 399, turk: 599, garantili: 599, hizli: 699 },
+    izlenme: { ekonomik: 69, global: 89, turk: 149, garantili: 149, hizli: 179 },
+    shorts_izlenme: { ekonomik: 39, global: 59, turk: 89, garantili: 89, hizli: 119 },
+    begeni: { ekonomik: 89, global: 119, turk: 179, garantili: 179, hizli: 219 },
+    yorum: { ekonomik: 249, global: 329, turk: 499, garantili: 499, hizli: 599 },
+    canli_yayin: { ekonomik: 99, global: 129, turk: 199, garantili: 199, hizli: 249 },
+  },
+
+  x: {
+    takipci: { ekonomik: 149, global: 199, turk: 299, garantili: 299, hizli: 349 },
+    begeni: { ekonomik: 69, global: 89, turk: 139, garantili: 139, hizli: 169 },
+    izlenme: { ekonomik: 29, global: 39, turk: 69, garantili: 69, hizli: 89 },
+    retweet: { ekonomik: 89, global: 119, turk: 179, garantili: 179, hizli: 219 },
+    yorum: { ekonomik: 199, global: 249, turk: 399, garantili: 399, hizli: 449 },
+    bookmark: { ekonomik: 69, global: 89, turk: 139, garantili: 139, hizli: 169 },
+  },
+
+  telegram: {
+    uye: { ekonomik: 129, global: 169, turk: 249, garantili: 249, hizli: 299 },
+    izlenme: { ekonomik: 19, global: 29, turk: 49, garantili: 49, hizli: 69 },
+    reaksiyon: { ekonomik: 49, global: 69, turk: 99, garantili: 99, hizli: 129 },
+    paylasim: { ekonomik: 59, global: 79, turk: 119, garantili: 119, hizli: 149 },
+    oylama: { ekonomik: 79, global: 99, turk: 149, garantili: 149, hizli: 179 },
+  },
+};
+
+function getPackagePricePer1000(
+  platform: PlatformSlug,
+  category: string,
+  packageType: PackageTypeSlug
+) {
+  const platformPrices = PACKAGE_PRICE_MATRIX[platform];
+  const categoryPrices = platformPrices?.[category];
+
+  if (categoryPrices?.[packageType]) {
+    return categoryPrices[packageType];
+  }
+
+  const firstCategoryKey = Object.keys(platformPrices || {})[0];
+  const fallbackPrice = platformPrices?.[firstCategoryKey]?.[packageType];
+
+  return fallbackPrice || 149;
+}
 
 const highlights: {
   title: string;
@@ -429,9 +507,17 @@ export default function PaketlerPage() {
     );
   }, [selectedPackageTypeSlug]);
 
+  const selectedPricePer1000 = useMemo(() => {
+    return getPackagePricePer1000(
+      selectedPlatform.slug,
+      selectedCategory.slug,
+      selectedPackageType.slug
+    );
+  }, [selectedPlatform.slug, selectedCategory.slug, selectedPackageType.slug]);
+  
   const estimatedPrice = useMemo(() => {
-    return (quantity / 1000) * selectedPackageType.pricePer1000;
-  }, [quantity, selectedPackageType]);
+    return (quantity / 1000) * selectedPricePer1000;
+  }, [quantity, selectedPricePer1000]);
 
   const canOpenCheckout = Boolean(targetUsername.trim()) && quantity >= MIN_QUANTITY;
 
@@ -664,7 +750,7 @@ export default function PaketlerPage() {
                   <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
                     <p className="text-xs text-white/40">Birim</p>
                     <p className="mt-1 font-black text-white">
-                      {formatMoney(selectedPackageType.pricePer1000)} / 1000
+                      {formatMoney(selectedPricePer1000)} / 1000
                     </p>
                   </div>
 
@@ -844,12 +930,15 @@ export default function PaketlerPage() {
                   key={type.slug}
                   type="button"
                   onClick={() => setSelectedPackageTypeSlug(type.slug)}
-                  className={`rounded-3xl border p-4 text-left transition hover:-translate-y-0.5 ${
+                  className={`relative overflow-hidden rounded-3xl border p-4 text-left transition hover:-translate-y-0.5 ${
                     active
-                      ? "border-emerald-400/70 bg-emerald-400/10"
+                      ? type.colorClass
                       : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
                   }`}
                 >
+
+                  <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-white/10 blur-3xl" />
+
                   <span className="mb-3 inline-flex rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-[10px] font-black uppercase tracking-wide text-white/55">
                     {type.badge}
                   </span>
@@ -860,7 +949,7 @@ export default function PaketlerPage() {
                   </p>
 
                   <p className="mt-3 text-sm font-black text-emerald-300">
-                    {formatMoney(type.pricePer1000)} / 1000
+                    {formatMoney(selectedPricePer1000)} / 1000
                   </p>
                 </button>
               );
