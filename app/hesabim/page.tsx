@@ -65,14 +65,13 @@ function formatMoney(value: string | number, currency: string) {
   const numberValue = Number(value || 0);
 
   if (!Number.isFinite(numberValue)) {
-    return `0 ${currency}`;
+    return `0,00 ${currency}`;
   }
 
-  if (currency === "TL") {
-    return `${Math.round(numberValue).toLocaleString("tr-TR")} TL`;
-  }
-
-  return `${numberValue.toFixed(2)} ${currency}`;
+  return `${numberValue.toLocaleString("tr-TR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })} ${currency}`;
 }
 
 function formatDate(value: Date | string) {
@@ -219,7 +218,7 @@ export default async function AccountPage() {
             <div className="pointer-events-none absolute -right-28 -top-28 h-72 w-72 rounded-full bg-emerald-400/10 blur-3xl" />
             <div className="pointer-events-none absolute -left-20 bottom-0 h-64 w-64 rounded-full bg-sky-400/10 blur-3xl" />
 
-            <div className="relative grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+            <div className="relative grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.24em] text-emerald-300">
                   Hesabım
@@ -230,8 +229,9 @@ export default async function AccountPage() {
                 </h1>
 
                 <p className="mt-4 max-w-2xl text-sm leading-7 text-white/60 md:text-base">
-                  Bu alanda bakiye durumunu, analiz hakkını, telefon doğrulama
-                  durumunu ve hesabına bağlı son siparişleri takip edebilirsin.
+                  Bu alanda TL, USD ve RUB bakiyelerini, analiz hakkını, telefon
+                  doğrulama durumunu ve hesabına bağlı son siparişleri takip
+                  edebilirsin.
                 </p>
 
                 <div className="mt-6 flex flex-wrap gap-3">
@@ -252,39 +252,65 @@ export default async function AccountPage() {
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-5">
-  <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-200/75">
-    Bakiye
-  </p>
+                <div className="rounded-3xl border border-emerald-400/20 bg-gradient-to-br from-emerald-400/12 to-sky-400/8 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:col-span-2">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-200/75">
+                        Cüzdan Bakiyeleri
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-white/55">
+                        TL, USD ve RUB bakiyeleri ayrı ayrı tutulur. Sipariş
+                        hangi para birimiyle oluşturulursa ödeme o cüzdandan
+                        düşer.
+                      </p>
+                    </div>
 
-  <div className="mt-3 space-y-2">
-    <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
-      <span className="text-sm font-bold text-white/70">USD</span>
-      <span className="text-lg font-black text-white">
-        {Number(user.balance_usd || 0).toFixed(2)} USD
-      </span>
-    </div>
+                    <Link
+                      href="/smmtora"
+                      className="inline-flex shrink-0 items-center justify-center rounded-2xl bg-emerald-400 px-4 py-2 text-xs font-black text-black transition hover:-translate-y-0.5 hover:bg-emerald-300"
+                    >
+                      Bakiye ile alışveriş
+                    </Link>
+                  </div>
 
-    <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
-      <span className="text-sm font-bold text-white/70">TL</span>
-      <span className="text-lg font-black text-white">
-        {Number(user.balance_tl || 0).toFixed(2)} TL
-      </span>
-    </div>
+                  <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-3xl border border-emerald-400/20 bg-black/25 p-4">
+                      <div className="mb-3 inline-flex rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-emerald-200">
+                        TL Cüzdanı
+                      </div>
+                      <p className="text-2xl font-black text-white">
+                        {formatMoney(user.balance_tl, "TL")}
+                      </p>
+                      <p className="mt-2 text-xs leading-5 text-white/45">
+                        TL ile verilen siparişlerde kullanılır.
+                      </p>
+                    </div>
 
-    <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
-      <span className="text-sm font-bold text-white/70">RUB</span>
-      <span className="text-lg font-black text-white">
-        {Number(user.balance_rub || 0).toFixed(2)} RUB
-      </span>
-    </div>
-  </div>
+                    <div className="rounded-3xl border border-sky-400/20 bg-black/25 p-4">
+                      <div className="mb-3 inline-flex rounded-full border border-sky-400/20 bg-sky-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-sky-200">
+                        USD Cüzdanı
+                      </div>
+                      <p className="text-2xl font-black text-white">
+                        {formatMoney(user.balance_usd, "USD")}
+                      </p>
+                      <p className="mt-2 text-xs leading-5 text-white/45">
+                        USD ile verilen siparişlerde kullanılır.
+                      </p>
+                    </div>
 
-  <p className="mt-3 text-sm leading-6 text-white/55">
-    Bakiye ile TL, USD ve RUB siparişlerinde seçili para birimine göre ödeme
-    yapabilirsin.
-  </p>
-</div>
+                    <div className="rounded-3xl border border-violet-400/20 bg-black/25 p-4">
+                      <div className="mb-3 inline-flex rounded-full border border-violet-400/20 bg-violet-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-violet-200">
+                        RUB Cüzdanı
+                      </div>
+                      <p className="text-2xl font-black text-white">
+                        {formatMoney(user.balance_rub, "RUB")}
+                      </p>
+                      <p className="mt-2 text-xs leading-5 text-white/45">
+                        RUB ile verilen siparişlerde kullanılır.
+                      </p>
+                    </div>
+                  </div>
+                </div>
 
                 <div className="rounded-3xl border border-sky-400/20 bg-sky-400/10 p-5">
                   <p className="text-xs font-bold uppercase tracking-[0.18em] text-sky-200/75">
@@ -310,7 +336,7 @@ export default async function AccountPage() {
                   </p>
                 </div>
 
-                <div className="rounded-3xl border border-white/10 bg-white/[0.045] p-5">
+                <div className="rounded-3xl border border-white/10 bg-white/[0.045] p-5 sm:col-span-2">
                   <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/40">
                     Telefon
                   </p>
@@ -341,14 +367,18 @@ export default async function AccountPage() {
               Son sipariş
             </p>
             <p className="mt-3 text-3xl font-black text-white">{totalOrders}</p>
-            <p className="mt-2 text-sm text-white/45">Bu alanda son 20 görünür.</p>
+            <p className="mt-2 text-sm text-white/45">
+              Bu alanda son 20 görünür.
+            </p>
           </div>
 
           <div className="rounded-[28px] border border-white/10 bg-[#111827]/90 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.24)]">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/40">
               Aktif işlem
             </p>
-            <p className="mt-3 text-3xl font-black text-white">{activeOrders}</p>
+            <p className="mt-3 text-3xl font-black text-white">
+              {activeOrders}
+            </p>
           </div>
 
           <div className="rounded-[28px] border border-white/10 bg-[#111827]/90 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.24)]">

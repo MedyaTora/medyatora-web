@@ -37,6 +37,14 @@ type OrderDetailRow = RowDataPacket & {
   created_at: string;
 };
 
+type RefundSummaryRow = RowDataPacket & {
+  refunded_total: string | number | null;
+};
+
+function roundMoney(value: number) {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
 function InfoCard({
   label,
   value,
@@ -98,6 +106,22 @@ function getDeliverySpeedText(status: string, speed: string | null | undefined) 
   return speed && speed.trim() ? speed : "-";
 }
 
+function getRefundBoxText(status: string, refundedTotal: number) {
+  if (refundedTotal <= 0) {
+    return "Bu sipariş için henüz iade kaydı bulunmuyor.";
+  }
+
+  if (status === "refunded") {
+    return "Bu sipariş için tam iade kaydı oluşturulmuş.";
+  }
+
+  if (status === "partial_refunded") {
+    return "Bu sipariş için kısmi iade kaydı oluşturulmuş.";
+  }
+
+  return "Bu sipariş için iade kaydı bulunuyor.";
+}
+
 export default async function OrderDetailPage({
   params,
 }: {
@@ -156,6 +180,20 @@ export default async function OrderDetailPage({
   if (!order) {
     notFound();
   }
+
+  const [refundRows] = await pool.query<RefundSummaryRow[]>(
+    `
+    SELECT COALESCE(SUM(amount), 0) AS refunded_total
+    FROM order_refund_transactions
+    WHERE order_id = ?
+      AND currency = ?
+    `,
+    [order.id, order.currency]
+  );
+
+  const orderTotal = roundMoney(Number(order.total_price || 0));
+  const refundedTotal = roundMoney(Number(refundRows[0]?.refunded_total || 0));
+  const remainingRefundable = roundMoney(Math.max(orderTotal - refundedTotal, 0));
 
   const supportMessage = createSupportMessage(order.order_number);
   const encodedSupportMessage = encodeURIComponent(supportMessage);
@@ -216,6 +254,52 @@ export default async function OrderDetailPage({
               <p className="mt-1 text-2xl font-black text-white">
                 {formatOrderMoney(order.total_price, order.currency)}
               </p>
+            </div>
+          </div>
+        </section>
+
+        <section className="mb-5 rounded-[32px] border border-cyan-400/20 bg-cyan-400/10 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.22)] md:p-6">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.22em] text-cyan-200/80">
+                İade Bilgisi
+              </p>
+              <h2 className="mt-2 text-xl font-black text-white">
+                {getRefundBoxText(order.status, refundedTotal)}
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-white/60">
+                İade varsa, iade edilen tutar siparişin para birimiyle gösterilir.
+                TL, USD ve RUB bakiyeleri ayrı ayrı tutulur.
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3 md:min-w-[520px]">
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/35">
+                  Sipariş Tutarı
+                </p>
+                <p className="mt-2 text-sm font-black text-white">
+                  {formatOrderMoney(orderTotal, order.currency)}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-4">
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-cyan-100/70">
+                  İade Edilen
+                </p>
+                <p className="mt-2 text-sm font-black text-white">
+                  {formatOrderMoney(refundedTotal, order.currency)}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/35">
+                  Kalan İade
+                </p>
+                <p className="mt-2 text-sm font-black text-white">
+                  {formatOrderMoney(remainingRefundable, order.currency)}
+                </p>
+              </div>
             </div>
           </div>
         </section>

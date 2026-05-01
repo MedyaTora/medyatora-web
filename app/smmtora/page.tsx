@@ -337,6 +337,38 @@ function formatPrice(value: number, currency: CurrencyCode) {
   return `${value.toFixed(2)} ${currency}`;
 }
 
+function formatWalletBalance(value: number, currency: CurrencyCode) {
+  const safeValue = Number(value || 0);
+
+  if (currency === "TL") {
+    return `${safeValue.toLocaleString("tr-TR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })} TL`;
+  }
+
+  return `${safeValue.toLocaleString("tr-TR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })} ${currency}`;
+}
+
+function getSelectedBalance(
+  authUser: {
+    balance_usd: number;
+    balance_tl: number;
+    balance_rub: number;
+  } | null,
+  currency: CurrencyCode
+) {
+  if (!authUser) return 0;
+
+  if (currency === "USD") return Number(authUser.balance_usd || 0);
+  if (currency === "RUB") return Number(authUser.balance_rub || 0);
+
+  return Number(authUser.balance_tl || 0);
+}
+
 function normalizeSearchText(value: unknown) {
   return String(value || "")
     .toLocaleLowerCase("tr-TR")
@@ -2437,19 +2469,68 @@ export default function SmmToraPage() {
 >
   <p className="text-sm font-bold text-white">MedyaTora Bakiyesi</p>
 
-  <p className="mt-1 text-xs leading-5 text-white/55">
-    {authUser
-      ? selectedCurrency === "TL"
-        ? `Mevcut bakiye: ${Number(authUser.balance_tl || 0).toFixed(2)} TL`
-        : selectedCurrency === "RUB"
-          ? `Mevcut bakiye: ${Number(authUser.balance_rub || 0).toFixed(2)} RUB`
-          : `Mevcut bakiye: ${Number(authUser.balance_usd || 0).toFixed(2)} USD`
-      : "Bakiye ile ödeme için giriş yapmalısın."}
-  </p>
+  {authUser ? (
+    <>
+      <p className="mt-1 text-xs leading-5 text-white/55">
+        Seçili ödeme birimi:{" "}
+        <span className="font-bold text-emerald-300">{selectedCurrency}</span>
+      </p>
 
-  {authUser && (
-    <p className="mt-2 text-xs leading-5 text-white/45">
-      Seçili para birimine göre mevcut bakiyen gösterilir.
+      <p className="mt-1 text-xs leading-5 text-white/55">
+        Bu sipariş{" "}
+        <span className="font-bold text-white">
+          {formatWalletBalance(
+            getSelectedBalance(authUser, selectedCurrency),
+            selectedCurrency
+          )}
+        </span>{" "}
+        bakiyenden düşer.
+      </p>
+
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <div
+          className={`rounded-xl border px-2 py-2 ${
+            selectedCurrency === "TL"
+              ? "border-emerald-400/35 bg-emerald-400/10"
+              : "border-white/10 bg-white/[0.04]"
+          }`}
+        >
+          <p className="text-[10px] font-black text-white/40">TL</p>
+          <p className="mt-1 truncate text-[11px] font-black text-white">
+            {formatWalletBalance(authUser.balance_tl, "TL")}
+          </p>
+        </div>
+
+        <div
+          className={`rounded-xl border px-2 py-2 ${
+            selectedCurrency === "USD"
+              ? "border-emerald-400/35 bg-emerald-400/10"
+              : "border-white/10 bg-white/[0.04]"
+          }`}
+        >
+          <p className="text-[10px] font-black text-white/40">USD</p>
+          <p className="mt-1 truncate text-[11px] font-black text-white">
+            {formatWalletBalance(authUser.balance_usd, "USD")}
+          </p>
+        </div>
+
+        <div
+          className={`rounded-xl border px-2 py-2 ${
+            selectedCurrency === "RUB"
+              ? "border-emerald-400/35 bg-emerald-400/10"
+              : "border-white/10 bg-white/[0.04]"
+          }`}
+        >
+          <p className="text-[10px] font-black text-white/40">RUB</p>
+          <p className="mt-1 truncate text-[11px] font-black text-white">
+            {formatWalletBalance(authUser.balance_rub, "RUB")}
+          </p>
+        </div>
+      </div>
+    </>
+  ) : (
+    <p className="mt-1 text-xs leading-5 text-white/55">
+      Bakiye ile ödeme için giriş yapmalısın.
     </p>
   )}
 </button>
@@ -2529,10 +2610,60 @@ export default function SmmToraPage() {
 {paymentMethod === "balance" && (
   <div className="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm leading-6 text-emerald-50">
     <p className="font-bold text-white">Bakiye ile ödeme</p>
+
     <p className="mt-2 text-white/70">
-      Sipariş onaylandığında toplam tutar seçili para birimindeki
-      MedyaTora bakiyenden düşülür. TL, USD ve RUB bakiyeleri ayrı
-      ayrı takip edilir.
+      TL, USD ve RUB bakiyeleri ayrı ayrı tutulur. Sipariş hangi para
+      birimiyle oluşturuluyorsa ödeme sadece o para birimindeki bakiyeden
+      düşülür.
+    </p>
+
+    {authUser && (
+      <div className="mt-4 grid gap-2 sm:grid-cols-3">
+        <div
+          className={`rounded-2xl border p-3 ${
+            selectedCurrency === "TL"
+              ? "border-emerald-300/40 bg-emerald-300/10"
+              : "border-white/10 bg-black/20"
+          }`}
+        >
+          <p className="text-xs font-black text-white/45">TL Bakiyesi</p>
+          <p className="mt-1 text-sm font-black text-white">
+            {formatWalletBalance(authUser.balance_tl, "TL")}
+          </p>
+        </div>
+
+        <div
+          className={`rounded-2xl border p-3 ${
+            selectedCurrency === "USD"
+              ? "border-emerald-300/40 bg-emerald-300/10"
+              : "border-white/10 bg-black/20"
+          }`}
+        >
+          <p className="text-xs font-black text-white/45">USD Bakiyesi</p>
+          <p className="mt-1 text-sm font-black text-white">
+            {formatWalletBalance(authUser.balance_usd, "USD")}
+          </p>
+        </div>
+
+        <div
+          className={`rounded-2xl border p-3 ${
+            selectedCurrency === "RUB"
+              ? "border-emerald-300/40 bg-emerald-300/10"
+              : "border-white/10 bg-black/20"
+          }`}
+        >
+          <p className="text-xs font-black text-white/45">RUB Bakiyesi</p>
+          <p className="mt-1 text-sm font-black text-white">
+            {formatWalletBalance(authUser.balance_rub, "RUB")}
+          </p>
+        </div>
+      </div>
+    )}
+
+    <p className="mt-3 text-xs leading-5 text-white/55">
+      Seçili ödeme birimi:{" "}
+      <span className="font-bold text-emerald-200">{selectedCurrency}</span>.
+      Bu sipariş yalnızca {selectedCurrency} bakiyenden düşecektir.
     </p>
   </div>
 )}
@@ -2642,70 +2773,112 @@ export default function SmmToraPage() {
             ))}
           </div>
 
-          <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.055] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
-            <p className="text-sm font-bold text-white">
-              {t.paymentStepTitle}
-            </p>
+          {createdPaymentInfo?.paymentMethod === "balance" ? (
+            <div className="mt-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
+              <p className="text-sm font-bold text-white">
+                Bakiye ile ödeme tamamlandı
+              </p>
 
-            {createdPaymentInfo && (
-              <div className="mt-3 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm leading-6 text-emerald-50">
+              <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm leading-6 text-emerald-50">
                 <p>
+                  Sipariş tutarı{" "}
                   <span className="font-bold text-white">
-                    Gönderen Ad Soyad:
+                    {formatPrice(
+                      createdPaymentInfo.totalAmount,
+                      createdPaymentInfo.currency
+                    )}
                   </span>{" "}
-                  {createdPaymentInfo.fullName}
+                  olarak {createdPaymentInfo.currency} bakiyenden düşüldü.
                 </p>
 
-                <p>
-                  <span className="font-bold text-white">Ödenecek Tutar:</span>{" "}
-                  {formatPrice(
-                    createdPaymentInfo.totalAmount,
-                    createdPaymentInfo.currency
-                  )}
-                </p>
-
-                <p>
-                  <span className="font-bold text-white">Ödeme Yöntemi:</span>{" "}
-                  {getPaymentMethodSupportLabel(
-                    createdPaymentInfo.paymentMethod,
-                    selectedLocale
-                  )}
+                <p className="mt-2 text-white/70">
+                  Sipariş durumunu Hesabım sayfasındaki Siparişlerim bölümünden
+                  takip edebilirsin.
                 </p>
               </div>
-            )}
 
-            <p className="mt-3 text-sm leading-6 text-white/60">
-              {t.paymentStepDesc}
-            </p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <a
+                  href="/hesabim"
+                  className="rounded-2xl bg-emerald-400 px-5 py-3 text-center text-sm font-black text-black shadow-[0_16px_38px_rgba(52,211,153,0.18)] transition hover:-translate-y-0.5 hover:bg-emerald-300"
+                >
+                  Hesabıma Git
+                </a>
 
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <a
-                href={
-                  createdPaymentInfo
-                    ? buildTelegramLink(createdPaymentInfo, selectedLocale)
-                    : "#"
-                }
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-2xl bg-sky-500 px-5 py-3 text-center text-sm font-bold text-black shadow-[0_16px_38px_rgba(56,189,248,0.16)] transition hover:-translate-y-0.5 hover:bg-sky-400"
-              >
-                {t.telegramPaymentInfo}
-              </a>
-
-              <a
-                href={
-                  createdPaymentInfo
-                    ? buildWhatsappLink(createdPaymentInfo, selectedLocale)
-                    : "#"
-                }
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-5 py-3 text-center text-sm font-black text-black shadow-[0_16px_38px_rgba(52,211,153,0.18)] transition hover:-translate-y-0.5 hover:from-emerald-300 hover:to-emerald-400"
-              >
-                {t.whatsappPaymentInfo}
-              </a>
+                <a
+                  href="/hesabim/siparisler"
+                  className="rounded-2xl border border-white/10 bg-white/[0.06] px-5 py-3 text-center text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-white/[0.1]"
+                >
+                  Siparişlerimi Gör
+                </a>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.055] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
+              <p className="text-sm font-bold text-white">
+                {t.paymentStepTitle}
+              </p>
+
+              {createdPaymentInfo && (
+                <div className="mt-3 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm leading-6 text-emerald-50">
+                  <p>
+                    <span className="font-bold text-white">
+                      Gönderen Ad Soyad:
+                    </span>{" "}
+                    {createdPaymentInfo.fullName}
+                  </p>
+
+                  <p>
+                    <span className="font-bold text-white">Ödenecek Tutar:</span>{" "}
+                    {formatPrice(
+                      createdPaymentInfo.totalAmount,
+                      createdPaymentInfo.currency
+                    )}
+                  </p>
+
+                  <p>
+                    <span className="font-bold text-white">Ödeme Yöntemi:</span>{" "}
+                    {getPaymentMethodSupportLabel(
+                      createdPaymentInfo.paymentMethod,
+                      selectedLocale
+                    )}
+                  </p>
+                </div>
+              )}
+
+              <p className="mt-3 text-sm leading-6 text-white/60">
+                {t.paymentStepDesc}
+              </p>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <a
+                  href={
+                    createdPaymentInfo
+                      ? buildTelegramLink(createdPaymentInfo, selectedLocale)
+                      : "#"
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-2xl bg-sky-500 px-5 py-3 text-center text-sm font-bold text-black shadow-[0_16px_38px_rgba(56,189,248,0.16)] transition hover:-translate-y-0.5 hover:bg-sky-400"
+                >
+                  {t.telegramPaymentInfo}
+                </a>
+
+                <a
+                  href={
+                    createdPaymentInfo
+                      ? buildWhatsappLink(createdPaymentInfo, selectedLocale)
+                      : "#"
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-5 py-3 text-center text-sm font-black text-black shadow-[0_16px_38px_rgba(52,211,153,0.18)] transition hover:-translate-y-0.5 hover:from-emerald-300 hover:to-emerald-400"
+                >
+                  {t.whatsappPaymentInfo}
+                </a>
+              </div>
+            </div>
+          )}
 
           {createdPaymentInfo?.paymentMethod === "turkey_bank" && (
             <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4">

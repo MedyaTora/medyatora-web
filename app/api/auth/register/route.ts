@@ -50,6 +50,14 @@ function cleanFullName(value: unknown) {
   return String(value || "").trim().slice(0, 120);
 }
 
+function normalizePreferredCurrency(value: string | null | undefined) {
+  const currency = value?.trim().toUpperCase();
+
+  if (currency === "USD") return "USD";
+  if (currency === "RUB") return "RUB";
+  return "TL";
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -140,6 +148,7 @@ export async function POST(request: NextRequest) {
         balance_usd,
         balance_tl,
         balance_rub,
+        preferred_currency,
         free_analysis_used,
         welcome_bonus_claimed,
         is_active,
@@ -173,11 +182,9 @@ export async function POST(request: NextRequest) {
         balance_usd: Number(createdUser.balance_usd || 0),
         balance_tl: Number(createdUser.balance_tl || 0),
         balance_rub: Number(createdUser.balance_rub || 0),
-        preferred_currency:
-          createdUser.preferred_currency === "USD" ||
-          createdUser.preferred_currency === "RUB"
-            ? createdUser.preferred_currency
-            : "TL",
+        preferred_currency: normalizePreferredCurrency(
+          createdUser.preferred_currency
+        ),
         free_analysis_used: Boolean(createdUser.free_analysis_used),
         welcome_bonus_claimed: Boolean(createdUser.welcome_bonus_claimed),
         is_active: Boolean(createdUser.is_active),

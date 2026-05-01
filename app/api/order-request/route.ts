@@ -598,20 +598,42 @@ export async function POST(req: Request) {
         balanceAfterUsd =
           currency === "USD" ? balanceAfter : balanceBeforeUsd;
 
-        if (balanceBefore < totalSaleForBalance) {
-          await connection.rollback();
-
-          return NextResponse.json(
-            {
-              success: false,
-              error: `Bakiyen yetersiz. Mevcut bakiye: ${formatMoney(
-                balanceBefore,
-                currency
-              )}, sipariş tutarı: ${formatMoney(totalSaleForBalance, currency)}.`,
-            },
-            { status: 400 }
-          );
-        }
+          if (balanceBefore < totalSaleForBalance) {
+            await connection.rollback();
+          
+            const tlBalance = roundMoney(Number(userRow.balance_tl || 0));
+            const usdBalance = roundMoney(Number(userRow.balance_usd || 0));
+            const rubBalance = roundMoney(Number(userRow.balance_rub || 0));
+          
+            const otherBalanceHint =
+              currency === "USD" && tlBalance > 0
+                ? " TL bakiyeniz var; TL ile ödeme yapmak için para birimini TL seçebilirsiniz."
+                : currency === "USD" && rubBalance > 0
+                  ? " RUB bakiyeniz var; RUB ile ödeme yapmak için para birimini RUB seçebilirsiniz."
+                  : currency === "TL" && usdBalance > 0
+                    ? " USD bakiyeniz var; USD ile ödeme yapmak için para birimini USD seçebilirsiniz."
+                    : currency === "TL" && rubBalance > 0
+                      ? " RUB bakiyeniz var; RUB ile ödeme yapmak için para birimini RUB seçebilirsiniz."
+                      : currency === "RUB" && tlBalance > 0
+                        ? " TL bakiyeniz var; TL ile ödeme yapmak için para birimini TL seçebilirsiniz."
+                        : currency === "RUB" && usdBalance > 0
+                          ? " USD bakiyeniz var; USD ile ödeme yapmak için para birimini USD seçebilirsiniz."
+                          : "";
+          
+            return NextResponse.json(
+              {
+                success: false,
+                error:
+                  `${currency} bakiyeniz yetersiz. ` +
+                  `Sipariş tutarı: ${formatMoney(totalSaleForBalance, currency)}. ` +
+                  `Mevcut bakiyeleriniz: TL ${tlBalance.toFixed(2)}, USD ${usdBalance.toFixed(
+                    2
+                  )}, RUB ${rubBalance.toFixed(2)}.` +
+                  otherBalanceHint,
+              },
+              { status: 400 }
+            );
+          }
 
         await connection.execute(
           `
