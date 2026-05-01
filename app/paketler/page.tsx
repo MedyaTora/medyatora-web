@@ -81,8 +81,19 @@ const contactTypes: ContactType[] = [
 ];
 
 const quickQuantities = [
-  100, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000, 250000, 500000,
-  1000000, 5000000,
+  100,
+  500,
+  1000,
+  2500,
+  5000,
+  10000,
+  25000,
+  50000,
+  100000,
+  250000,
+  500000,
+  1000000,
+  5000000,
 ];
 
 const platforms: PlatformConfig[] = [
@@ -124,6 +135,11 @@ const platforms: PlatformConfig[] = [
         title: "Story İzlenme",
         description: "Hikaye görüntülenmelerini artırmak için.",
       },
+      {
+        slug: "profil_ziyareti",
+        title: "Profil Ziyareti",
+        description: "Profil ziyaretlerini artırmak için.",
+      },
     ],
   },
   {
@@ -159,6 +175,16 @@ const platforms: PlatformConfig[] = [
         title: "Paylaşım",
         description: "İçeriklerin yayılımını güçlendirmek için.",
       },
+      {
+        slug: "kaydetme",
+        title: "Kaydetme",
+        description: "İçeriklerin daha değerli görünmesi için.",
+      },
+      {
+        slug: "favori",
+        title: "Favori",
+        description: "Videoların favori / kayıt görünümünü güçlendirmek için.",
+      },
     ],
   },
   {
@@ -180,6 +206,11 @@ const platforms: PlatformConfig[] = [
         description: "Videoların izlenme sayısını artırmak için.",
       },
       {
+        slug: "shorts_izlenme",
+        title: "Shorts İzlenme",
+        description: "Shorts içerikleri için izlenme desteği.",
+      },
+      {
         slug: "begeni",
         title: "Beğeni",
         description: "Videolardaki olumlu etkileşim görünümü için.",
@@ -190,9 +221,9 @@ const platforms: PlatformConfig[] = [
         description: "Video altında daha aktif bir topluluk görünümü için.",
       },
       {
-        slug: "shorts_izlenme",
-        title: "Shorts İzlenme",
-        description: "Shorts içerikleri için izlenme desteği.",
+        slug: "canli_yayin",
+        title: "Canlı Yayın",
+        description: "Canlı yayın görünürlüğünü desteklemek için.",
       },
     ],
   },
@@ -229,6 +260,11 @@ const platforms: PlatformConfig[] = [
         title: "Yorum",
         description: "Paylaşımlarda daha aktif görünüm için.",
       },
+      {
+        slug: "bookmark",
+        title: "Yer İmi / Kaydetme",
+        description: "Paylaşımların daha değerli görünmesini destekler.",
+      },
     ],
   },
   {
@@ -258,6 +294,11 @@ const platforms: PlatformConfig[] = [
         slug: "paylasim",
         title: "Paylaşım",
         description: "Gönderi yayılımını desteklemek için.",
+      },
+      {
+        slug: "oylama",
+        title: "Oylama",
+        description: "Anket ve oylama görünümünü desteklemek için.",
       },
     ],
   },
@@ -441,11 +482,15 @@ ${orderText}
 Dekontu ekte iletiyorum.`;
 }
 
-function buildTelegramLink() {
-  return `https://t.me/${TELEGRAM_USERNAME}`;
+function buildTelegramLink(paymentInfo?: CreatedPaymentInfo | null) {
+  const message = paymentInfo ? getOrderSupportMessage(paymentInfo) : "";
+
+  return `https://t.me/${TELEGRAM_USERNAME}${
+    message ? `?text=${encodeURIComponent(message)}` : ""
+  }`;
 }
 
-function buildWhatsappLink(paymentInfo: CreatedPaymentInfo) {
+function buildWhatsappPaymentLink(paymentInfo: CreatedPaymentInfo) {
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
     getOrderSupportMessage(paymentInfo)
   )}`;
@@ -514,12 +559,21 @@ export default function PaketlerPage() {
       selectedPackageType.slug
     );
   }, [selectedPlatform.slug, selectedCategory.slug, selectedPackageType.slug]);
-  
+
+  function getTypePricePer1000(typeSlug: PackageTypeSlug) {
+    return getPackagePricePer1000(
+      selectedPlatform.slug,
+      selectedCategory.slug,
+      typeSlug
+    );
+  }
+
   const estimatedPrice = useMemo(() => {
     return (quantity / 1000) * selectedPricePer1000;
   }, [quantity, selectedPricePer1000]);
 
-  const canOpenCheckout = Boolean(targetUsername.trim()) && quantity >= MIN_QUANTITY;
+  const canOpenCheckout =
+    Boolean(targetUsername.trim()) && quantity >= MIN_QUANTITY;
 
   const isCheckoutValid =
     !!fullName.trim() &&
@@ -644,7 +698,6 @@ export default function PaketlerPage() {
       setLoading(false);
     }
   }
-
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#172033_0%,#080b12_50%,#030408_100%)] text-white">
       <section className="relative overflow-hidden">
@@ -936,21 +989,27 @@ export default function PaketlerPage() {
                       : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
                   }`}
                 >
-
                   <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-white/10 blur-3xl" />
 
-                  <span className="mb-3 inline-flex rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-[10px] font-black uppercase tracking-wide text-white/55">
-                    {type.badge}
-                  </span>
+                  <div className="relative">
+                    <span className="mb-3 inline-flex rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-[10px] font-black uppercase tracking-wide text-white/55">
+                      {type.badge}
+                    </span>
 
-                  <p className="font-black text-white">{type.title}</p>
-                  <p className="mt-2 text-sm leading-6 text-white/55">
-                    {type.description}
-                  </p>
+                    <p className="font-black text-white">{type.title}</p>
 
-                  <p className="mt-3 text-sm font-black text-emerald-300">
-                    {formatMoney(selectedPricePer1000)} / 1000
-                  </p>
+                    <p className="mt-2 text-sm leading-6 text-white/55">
+                      {type.description}
+                    </p>
+
+                    <p
+                      className={`mt-3 text-sm font-black ${
+                        active ? "text-white" : "text-emerald-300"
+                      }`}
+                    >
+                      {formatMoney(getTypePricePer1000(type.slug))} / 1000
+                    </p>
+                  </div>
                 </button>
               );
             })}
@@ -1448,7 +1507,7 @@ export default function PaketlerPage() {
 
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
                     <a
-                      href={buildTelegramLink()}
+                      href={buildTelegramLink(createdPaymentInfo)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="rounded-2xl bg-sky-500 px-5 py-3 text-center text-sm font-bold text-black transition hover:bg-sky-400"
@@ -1459,7 +1518,7 @@ export default function PaketlerPage() {
                     <a
                       href={
                         createdPaymentInfo
-                          ? buildWhatsappLink(createdPaymentInfo)
+                          ? buildWhatsappPaymentLink(createdPaymentInfo)
                           : "#"
                       }
                       target="_blank"
