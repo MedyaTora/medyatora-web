@@ -37,6 +37,29 @@ type AnalysisRow = RowDataPacket & {
   content_type: string | null;
 };
 
+type BalanceTransactionRow = RowDataPacket & {
+  id: number;
+  transaction_type: string;
+  currency: string;
+  amount: string | number;
+  balance_before: string | number;
+  balance_after: string | number;
+  description: string | null;
+  related_order_id: number | null;
+  created_at: Date | string;
+};
+
+type OrderStatsRow = RowDataPacket & {
+  total_orders: string | number;
+  completed_orders: string | number;
+  active_orders: string | number;
+};
+
+type AnalysisStatsRow = RowDataPacket & {
+  total_analysis_requests: string | number;
+  pending_analysis_requests: string | number;
+};
+
 const statusLabels: Record<string, string> = {
   pending_payment: "Ödeme Onaylanıyor",
   pending: "Sipariş Alındı",
@@ -45,7 +68,7 @@ const statusLabels: Record<string, string> = {
   completed: "Tamamlandı",
   cancelled: "İptal Edildi",
   refunded: "İade Edildi",
-  partial_refunded: "Kısmi İade Edildi",
+  partial_refunded: "Kısmi Tamamlandı",
   failed: "Başarısız",
 };
 
@@ -57,8 +80,18 @@ const statusClasses: Record<string, string> = {
   completed: "border-emerald-400/25 bg-emerald-400/10 text-emerald-200",
   cancelled: "border-rose-400/25 bg-rose-400/10 text-rose-200",
   refunded: "border-cyan-400/25 bg-cyan-400/10 text-cyan-200",
-  partial_refunded: "border-violet-400/25 bg-violet-400/10 text-violet-200",
+  partial_refunded: "border-amber-400/25 bg-amber-400/10 text-amber-200",
   failed: "border-rose-400/25 bg-rose-400/10 text-rose-200",
+};
+
+const transactionTypeLabels: Record<string, string> = {
+  topup: "Bakiye Yükleme",
+  balance_topup: "Bakiye Yükleme",
+  order_payment: "Sipariş Ödemesi",
+  order_refund: "Sipariş İadesi",
+  order_partial_refund: "Kısmi İade",
+  welcome_bonus: "Hoş Geldin Bonusu",
+  welcome_google_bonus: "Google Kayıt Bonusu",
 };
 
 function formatMoney(value: string | number, currency: string) {
@@ -72,6 +105,13 @@ function formatMoney(value: string | number, currency: string) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })} ${currency}`;
+}
+
+function formatSignedMoney(value: string | number, currency: string) {
+  const numberValue = Number(value || 0);
+  const sign = numberValue > 0 ? "+" : "";
+
+  return `${sign}${formatMoney(numberValue, currency)}`;
 }
 
 function formatDate(value: Date | string) {
@@ -99,6 +139,25 @@ function getStatusClass(status: string) {
     statusClasses[status] ||
     "border-white/10 bg-white/[0.06] text-white/70"
   );
+}
+
+function getTransactionTypeLabel(type: string | null | undefined) {
+  if (!type) return "-";
+  return transactionTypeLabels[type] || type;
+}
+
+function getTransactionAmountClass(value: string | number) {
+  const numberValue = Number(value || 0);
+
+  if (numberValue > 0) {
+    return "text-emerald-300";
+  }
+
+  if (numberValue < 0) {
+    return "text-rose-300";
+  }
+
+  return "text-white/70";
 }
 
 export default async function AccountPage() {
@@ -129,7 +188,7 @@ export default async function AccountPage() {
     FROM order_requests
     WHERE user_id = ?
     ORDER BY id DESC
-    LIMIT 20
+    LIMIT 5
     `,
     [user.id]
   );
@@ -154,25 +213,73 @@ export default async function AccountPage() {
     INNER JOIN customers ON customers.id = analysis_requests.customer_id
     WHERE analysis_requests.user_id = ?
     ORDER BY analysis_requests.id DESC
-    LIMIT 10
+    LIMIT 5
     `,
     [user.id]
   );
 
-  const totalOrders = orders.length;
-  const completedOrders = orders.filter(
-    (order) => order.status === "completed"
-  ).length;
-  const activeOrders = orders.filter((order) =>
-    ["pending_payment", "pending", "processing", "in_progress"].includes(
-      order.status
-    )
-  ).length;
+  const [balanceTransactions] = await pool.query<BalanceTransactionRow[]>(
+    `
+    SELECT
+      id,
+      transaction_type,
+      currency,
+      amount,
+      balance_before,
+      balance_after,
+      description,
+      related_order_id,
+      created_at
+    FROM balance_transactions
+    WHERE user_id = ?
+    ORDER BY id DESC
+    LIMIT 5
+    `,
+    [user.id]
+  );
 
-  const totalAnalysisRequests = analysisRequests.length;
-  const pendingAnalysisRequests = analysisRequests.filter(
-    (item) => item.status === "pending"
-  ).length;
+  const [orderStatsRows] = await pool.query<OrderStatsRow[]>(
+    `
+    SELECT
+      COUNT(*) AS total_orders,
+      SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed_orders,
+      SUM(
+        CASE
+          WHEN status IN ('pending_payment', 'pending', 'processing', 'in_progress')
+          THEN 1
+          ELSE 0
+        END
+      ) AS active_orders
+    FROM order_requests
+    WHERE user_id = ?
+    `,
+    [user.id]
+  );
+
+  const [analysisStatsRows] = await pool.query<AnalysisStatsRow[]>(
+    `
+    SELECT
+      COUNT(*) AS total_analysis_requests,
+      SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending_analysis_requests
+    FROM analysis_requests
+    WHERE user_id = ?
+    `,
+    [user.id]
+  );
+
+  const orderStats = orderStatsRows[0];
+  const analysisStats = analysisStatsRows[0];
+
+  const totalOrders = Number(orderStats?.total_orders || 0);
+  const completedOrders = Number(orderStats?.completed_orders || 0);
+  const activeOrders = Number(orderStats?.active_orders || 0);
+
+  const totalAnalysisRequests = Number(
+    analysisStats?.total_analysis_requests || 0
+  );
+  const pendingAnalysisRequests = Number(
+    analysisStats?.pending_analysis_requests || 0
+  );
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#1a2440_0%,#0a1020_45%,#04070f_100%)] px-4 py-6 text-white sm:px-6">
@@ -230,7 +337,7 @@ export default async function AccountPage() {
 
                 <p className="mt-4 max-w-2xl text-sm leading-7 text-white/60 md:text-base">
                   Bu alanda TL, USD ve RUB bakiyelerini, analiz hakkını, telefon
-                  doğrulama durumunu ve hesabına bağlı son siparişleri takip
+                  doğrulama durumunu ve hesabına bağlı son hareketleri takip
                   edebilirsin.
                 </p>
 
@@ -364,11 +471,11 @@ export default async function AccountPage() {
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-[28px] border border-white/10 bg-[#111827]/90 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.24)]">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/40">
-              Son sipariş
+              Toplam sipariş
             </p>
             <p className="mt-3 text-3xl font-black text-white">{totalOrders}</p>
             <p className="mt-2 text-sm text-white/45">
-              Bu alanda son 20 görünür.
+              Ana ekranda son 5 sipariş görünür.
             </p>
           </div>
 
@@ -404,6 +511,88 @@ export default async function AccountPage() {
         </section>
 
         <section className="rounded-[34px] border border-white/10 bg-[#111827]/90 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.32)] ring-1 ring-white/[0.025] backdrop-blur-xl md:p-6">
+          <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.22em] text-white/40">
+                Bakiye hareketleri
+              </p>
+              <h2 className="mt-2 text-2xl font-black text-white">
+                Son bakiye işlemleri
+              </h2>
+              <p className="mt-2 text-sm text-white/45">
+                Bu alanda sadece son 5 bakiye hareketi gösterilir.
+              </p>
+            </div>
+          </div>
+
+          {balanceTransactions.length === 0 ? (
+            <div className="rounded-3xl border border-dashed border-white/15 bg-white/[0.04] p-8 text-center">
+              <p className="text-lg font-bold text-white">
+                Henüz bakiye hareketi yok.
+              </p>
+              <p className="mt-2 text-sm leading-6 text-white/55">
+                Bakiye yükleme, sipariş ödemesi veya iade işlemleri olduğunda
+                burada görünecek.
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-3">
+              {balanceTransactions.map((transaction) => (
+                <div
+                  key={transaction.id}
+                  className="rounded-3xl border border-white/10 bg-white/[0.045] p-4 transition hover:bg-white/[0.07]"
+                >
+                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-black text-white md:text-base">
+                          {getTransactionTypeLabel(
+                            transaction.transaction_type
+                          )}
+                        </p>
+
+                        <span className="inline-flex rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs font-bold text-white/55">
+                          {transaction.currency}
+                        </span>
+                      </div>
+
+                      <p className="mt-2 text-sm leading-6 text-white/55">
+                        {transaction.description || "Açıklama yok."}
+                      </p>
+
+                      <p className="mt-1 text-xs text-white/40">
+                        {formatDate(transaction.created_at)}
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-right">
+                      <p className="text-xs text-white/40">Tutar</p>
+                      <p
+                        className={`mt-1 text-lg font-black ${getTransactionAmountClass(
+                          transaction.amount
+                        )}`}
+                      >
+                        {formatSignedMoney(
+                          transaction.amount,
+                          transaction.currency
+                        )}
+                      </p>
+                      <p className="mt-1 text-xs text-white/40">
+                        Son bakiye:{" "}
+                        {formatMoney(
+                          transaction.balance_after,
+                          transaction.currency
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="rounded-[34px] border border-white/10 bg-[#111827]/90 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.32)] ring-1 ring-white/[0.025] backdrop-blur-xl md:p-6">
           <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.22em] text-white/40">
@@ -412,11 +601,17 @@ export default async function AccountPage() {
               <h2 className="mt-2 text-2xl font-black text-white">
                 Analiz taleplerin
               </h2>
+              <p className="mt-2 text-sm text-white/45">
+                Bu alanda son 5 analiz talebi gösterilir.
+              </p>
             </div>
 
-            <p className="text-sm text-white/45">
-              Son 10 analiz talebi listelenir.
-            </p>
+            <Link
+              href="/#analysis"
+              className="rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-bold text-white transition hover:bg-white/[0.1]"
+            >
+              Yeni Analiz Talebi
+            </Link>
           </div>
 
           {analysisRequests.length === 0 ? (
@@ -471,10 +666,7 @@ export default async function AccountPage() {
                           Hesap türü: {item.account_type || "-"} · İçerik:{" "}
                           {item.content_type || "-"}
                         </p>
-                        <p>
-                          Kupon: {item.coupon_code || "-"} · Tarih:{" "}
-                          {formatDate(item.created_at)}
-                        </p>
+                        <p>Tarih: {formatDate(item.created_at)}</p>
                       </div>
                     </div>
 
@@ -501,7 +693,7 @@ export default async function AccountPage() {
                 Son siparişlerin
               </h2>
               <p className="mt-2 text-sm text-white/45">
-                Bu alanda son 20 sipariş görünür. Eski siparişlerini tüm
+                Bu alanda son 5 sipariş görünür. Eski siparişlerini tüm
                 siparişler sayfasından görebilirsin.
               </p>
             </div>

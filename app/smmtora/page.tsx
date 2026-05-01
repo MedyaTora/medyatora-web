@@ -2828,194 +2828,201 @@ export default function SmmToraPage() {
     )}
 
 {successOpen && (
-  <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/75 p-3 py-4 backdrop-blur-sm sm:items-center sm:p-4">
-    <div className="relative max-h-[calc(100dvh-32px)] w-full max-w-2xl overflow-y-auto rounded-[28px] border border-white/10 bg-[#121826]/95 p-4 pb-24 shadow-[0_28px_120px_rgba(0,0,0,0.58)] ring-1 ring-white/[0.035] backdrop-blur-xl sm:max-h-[92vh] sm:rounded-[32px] sm:p-5">
-    <button
-  type="button"
-  onClick={() => setSuccessOpen(false)}
-  className="sticky top-0 z-20 ml-auto flex rounded-2xl border border-white/10 bg-[#121826] px-4 py-2 text-sm font-bold text-white/75 shadow-[0_10px_30px_rgba(0,0,0,0.28)] transition hover:bg-white/10 hover:text-white"
->
-  {t.close}
-</button>
-          <h2 className="text-2xl font-bold text-white">
-            {t.orderConfirmedTitle}
-          </h2>
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-3 backdrop-blur-sm sm:p-4">
+    <div className="flex max-h-[calc(100dvh-24px)] w-full max-w-2xl flex-col overflow-hidden rounded-[28px] border border-white/10 bg-[#121826]/95 shadow-[0_28px_120px_rgba(0,0,0,0.58)] ring-1 ring-white/[0.035] backdrop-blur-xl sm:max-h-[92vh] sm:rounded-[32px]">
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 py-3 sm:px-5">
+        <p className="text-sm font-black text-white/80">Sipariş Bilgisi</p>
 
-          <p className="mt-2 text-sm leading-6 text-white/60">
-            {t.orderConfirmedDesc}
-          </p>
-
-          <div className="mt-5 space-y-3">
-            {createdOrderNumbers.map((number) => (
-              <div
-                key={number}
-                className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]"
-              >
-                <p className="text-sm text-emerald-200">
-                  {t.yourOrderNumber}
-                </p>
-                <p className="mt-1 text-lg font-bold text-white">{number}</p>
-              </div>
-            ))}
-          </div>
-
-          {createdPaymentInfo?.paymentMethod === "balance" ? (
-            <div className="mt-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
-              <p className="text-sm font-bold text-white">
-                Bakiye ile ödeme tamamlandı
-              </p>
-
-              <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm leading-6 text-emerald-50">
-                <p>
-                  Sipariş tutarı{" "}
-                  <span className="font-bold text-white">
-                    {formatPrice(
-                      createdPaymentInfo.totalAmount,
-                      createdPaymentInfo.currency
-                    )}
-                  </span>{" "}
-                  olarak {createdPaymentInfo.currency} bakiyenden düşüldü.
-                </p>
-
-                <p className="mt-2 text-white/70">
-                  Sipariş durumunu Hesabım sayfasındaki Siparişlerim bölümünden
-                  takip edebilirsin.
-                </p>
-              </div>
-
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <a
-                  href="/hesabim"
-                  className="rounded-2xl bg-emerald-400 px-5 py-3 text-center text-sm font-black text-black shadow-[0_16px_38px_rgba(52,211,153,0.18)] transition hover:-translate-y-0.5 hover:bg-emerald-300"
-                >
-                  Hesabıma Git
-                </a>
-
-                <a
-                  href="/hesabim/siparisler"
-                  className="rounded-2xl border border-white/10 bg-white/[0.06] px-5 py-3 text-center text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-white/[0.1]"
-                >
-                  Siparişlerimi Gör
-                </a>
-              </div>
-            </div>
-          ) : (
-            <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.055] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
-              <p className="text-sm font-bold text-white">
-                {t.paymentStepTitle}
-              </p>
-
-              {createdPaymentInfo && (
-                <div className="mt-3 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm leading-6 text-emerald-50">
-                  <p>
-                    <span className="font-bold text-white">
-                      Gönderen Ad Soyad:
-                    </span>{" "}
-                    {createdPaymentInfo.fullName}
-                  </p>
-
-                  <p>
-                    <span className="font-bold text-white">Ödenecek Tutar:</span>{" "}
-                    {formatPrice(
-                      createdPaymentInfo.totalAmount,
-                      createdPaymentInfo.currency
-                    )}
-                  </p>
-
-                  <p>
-                    <span className="font-bold text-white">Ödeme Yöntemi:</span>{" "}
-                    {getPaymentMethodSupportLabel(
-                      createdPaymentInfo.paymentMethod,
-                      selectedLocale
-                    )}
-                  </p>
-                </div>
-              )}
-
-              <p className="mt-3 text-sm leading-6 text-white/60">
-                {t.paymentStepDesc}
-              </p>
-
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <a
-                  href={
-                    createdPaymentInfo
-                      ? buildTelegramLink(createdPaymentInfo, selectedLocale)
-                      : "#"
-                  }
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-2xl bg-sky-500 px-5 py-3 text-center text-sm font-bold text-black shadow-[0_16px_38px_rgba(56,189,248,0.16)] transition hover:-translate-y-0.5 hover:bg-sky-400"
-                >
-                  {t.telegramPaymentInfo}
-                </a>
-
-                <a
-                  href={
-                    createdPaymentInfo
-                      ? buildWhatsappLink(createdPaymentInfo, selectedLocale)
-                      : "#"
-                  }
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-5 py-3 text-center text-sm font-black text-black shadow-[0_16px_38px_rgba(52,211,153,0.18)] transition hover:-translate-y-0.5 hover:from-emerald-300 hover:to-emerald-400"
-                >
-                  {t.whatsappPaymentInfo}
-                </a>
-              </div>
-            </div>
-          )}
-
-          {createdPaymentInfo?.paymentMethod === "turkey_bank" && (
-            <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4">
-              <p className="text-sm font-bold text-white">
-                Ödemeyi yaptıysan
-              </p>
-
-              <p className="mt-2 text-sm leading-6 text-amber-50/80">
-                Dekontu Telegram veya WhatsApp üzerinden gönderdikten sonra
-                aşağıdaki butona bas. Siparişin ödeme kontrolüne alınacak.
-              </p>
-
-              <button
-                type="button"
-                onClick={handlePaymentCompleted}
-                disabled={paymentReviewLoading || Boolean(paymentReviewMessage)}
-className="mt-4 w-full rounded-2xl bg-amber-300 px-4 py-3 text-sm font-black text-black transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-60 sm:px-5"
-              >
-                {paymentReviewLoading
-                  ? "Kontrole Alınıyor..."
-                  : paymentReviewMessage
-                    ? "Ödeme Kontrolüne Alındı"
-                    : "Ödemeyi Tamamladım"}
-              </button>
-
-              {paymentReviewMessage && (
-                <div className="mt-3 rounded-2xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">
-                  {paymentReviewMessage}
-                </div>
-              )}
-
-              {paymentReviewError && (
-                <div className="mt-3 rounded-2xl border border-rose-400/25 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">
-                  {paymentReviewError}
-                </div>
-              )}
-            </div>
-          )}
-
-<div className="sticky bottom-0 z-20 -mx-4 mt-5 border-t border-white/10 bg-[#121826]/95 px-4 py-3 backdrop-blur-xl sm:static sm:mx-0 sm:border-t-0 sm:bg-transparent sm:px-0 sm:py-0">
-  <button
-    type="button"
-    onClick={() => setSuccessOpen(false)}
-    className="w-full rounded-2xl bg-white px-5 py-3 text-sm font-bold text-black transition hover:-translate-y-0.5 hover:bg-white/90 sm:w-auto"
-  >
-    {t.ok}
-  </button>
-</div>
-        </div>
+        <button
+          type="button"
+          onClick={() => setSuccessOpen(false)}
+          className="rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-bold text-white/75 transition hover:bg-white/10 hover:text-white"
+        >
+          {t.close}
+        </button>
       </div>
-    )}
-  </main>
-);
+
+      <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
+        <h2 className="text-2xl font-bold text-white">
+          {t.orderConfirmedTitle}
+        </h2>
+
+        <p className="mt-2 text-sm leading-6 text-white/60">
+          {t.orderConfirmedDesc}
+        </p>
+
+        <div className="mt-5 space-y-3">
+          {createdOrderNumbers.map((number) => (
+            <div
+              key={number}
+              className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]"
+            >
+              <p className="text-sm text-emerald-200">
+                {t.yourOrderNumber}
+              </p>
+              <p className="mt-1 text-lg font-bold text-white">{number}</p>
+            </div>
+          ))}
+        </div>
+
+        {createdPaymentInfo?.paymentMethod === "balance" ? (
+          <div className="mt-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
+            <p className="text-sm font-bold text-white">
+              Bakiye ile ödeme tamamlandı
+            </p>
+
+            <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm leading-6 text-emerald-50">
+              <p>
+                Sipariş tutarı{" "}
+                <span className="font-bold text-white">
+                  {formatPrice(
+                    createdPaymentInfo.totalAmount,
+                    createdPaymentInfo.currency
+                  )}
+                </span>{" "}
+                olarak {createdPaymentInfo.currency} bakiyenden düşüldü.
+              </p>
+
+              <p className="mt-2 text-white/70">
+                Sipariş durumunu Hesabım sayfasındaki Siparişlerim bölümünden
+                takip edebilirsin.
+              </p>
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <a
+                href="/hesabim"
+                className="rounded-2xl bg-emerald-400 px-5 py-3 text-center text-sm font-black text-black shadow-[0_16px_38px_rgba(52,211,153,0.18)] transition hover:bg-emerald-300"
+              >
+                Hesabıma Git
+              </a>
+
+              <a
+                href="/hesabim/siparisler"
+                className="rounded-2xl border border-white/10 bg-white/[0.06] px-5 py-3 text-center text-sm font-bold text-white transition hover:bg-white/[0.1]"
+              >
+                Siparişlerimi Gör
+              </a>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.055] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
+            <p className="text-sm font-bold text-white">
+              {t.paymentStepTitle}
+            </p>
+
+            {createdPaymentInfo && (
+              <div className="mt-3 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm leading-6 text-emerald-50">
+                <p>
+                  <span className="font-bold text-white">
+                    Gönderen Ad Soyad:
+                  </span>{" "}
+                  {createdPaymentInfo.fullName}
+                </p>
+
+                <p>
+                  <span className="font-bold text-white">Ödenecek Tutar:</span>{" "}
+                  {formatPrice(
+                    createdPaymentInfo.totalAmount,
+                    createdPaymentInfo.currency
+                  )}
+                </p>
+
+                <p>
+                  <span className="font-bold text-white">Ödeme Yöntemi:</span>{" "}
+                  {getPaymentMethodSupportLabel(
+                    createdPaymentInfo.paymentMethod,
+                    selectedLocale
+                  )}
+                </p>
+              </div>
+            )}
+
+            <p className="mt-3 text-sm leading-6 text-white/60">
+              {t.paymentStepDesc}
+            </p>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <a
+                href={
+                  createdPaymentInfo
+                    ? buildTelegramLink(createdPaymentInfo, selectedLocale)
+                    : "#"
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-2xl bg-sky-500 px-5 py-3 text-center text-sm font-bold text-black shadow-[0_16px_38px_rgba(56,189,248,0.16)] transition hover:bg-sky-400"
+              >
+                {t.telegramPaymentInfo}
+              </a>
+
+              <a
+                href={
+                  createdPaymentInfo
+                    ? buildWhatsappLink(createdPaymentInfo, selectedLocale)
+                    : "#"
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-5 py-3 text-center text-sm font-black text-black shadow-[0_16px_38px_rgba(52,211,153,0.18)] transition hover:from-emerald-300 hover:to-emerald-400"
+              >
+                {t.whatsappPaymentInfo}
+              </a>
+            </div>
+          </div>
+        )}
+
+        {createdPaymentInfo?.paymentMethod === "turkey_bank" && (
+          <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4">
+            <p className="text-sm font-bold text-white">
+              Ödemeyi yaptıysan
+            </p>
+
+            <p className="mt-2 text-sm leading-6 text-amber-50/80">
+              Dekontu Telegram veya WhatsApp üzerinden gönderdikten sonra
+              aşağıdaki butona bas. Siparişin ödeme kontrolüne alınacak.
+            </p>
+
+            <button
+              type="button"
+              onClick={handlePaymentCompleted}
+              disabled={paymentReviewLoading || Boolean(paymentReviewMessage)}
+              className="mt-4 w-full rounded-2xl bg-amber-300 px-4 py-3 text-sm font-black text-black transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-60 sm:px-5"
+            >
+              {paymentReviewLoading
+                ? "Kontrole Alınıyor..."
+                : paymentReviewMessage
+                  ? "Ödeme Kontrolüne Alındı"
+                  : "Ödemeyi Tamamladım"}
+            </button>
+
+            {paymentReviewMessage && (
+              <div className="mt-3 rounded-2xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">
+                {paymentReviewMessage}
+              </div>
+            )}
+
+            {paymentReviewError && (
+              <div className="mt-3 rounded-2xl border border-rose-400/25 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">
+                {paymentReviewError}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="shrink-0 border-t border-white/10 bg-[#121826]/95 px-4 py-3 backdrop-blur-xl sm:px-5">
+        <button
+          type="button"
+          onClick={() => setSuccessOpen(false)}
+          className="w-full rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:bg-white/90"
+        >
+          {t.ok}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+    </main>
+  );
 }
