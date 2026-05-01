@@ -2380,8 +2380,8 @@ export default function SmmToraPage() {
     </div>
 
     {checkoutMode && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
-        <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-[32px] border border-white/10 bg-[#121826]/95 p-5 shadow-[0_28px_120px_rgba(0,0,0,0.58)] ring-1 ring-white/[0.035] backdrop-blur-xl">
+  <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/75 p-3 py-4 backdrop-blur-sm sm:items-center sm:p-4">
+    <div className="relative max-h-[calc(100dvh-32px)] w-full max-w-2xl overflow-y-auto rounded-[28px] border border-white/10 bg-[#121826]/95 p-4 shadow-[0_28px_120px_rgba(0,0,0,0.58)] ring-1 ring-white/[0.035] backdrop-blur-xl sm:max-h-[92vh] sm:rounded-[32px] sm:p-5">
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="text-2xl font-bold text-white">
@@ -2827,9 +2827,16 @@ export default function SmmToraPage() {
       </div>
     )}
 
-    {successOpen && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
-        <div className="w-full max-w-2xl rounded-[32px] border border-white/10 bg-[#121826]/95 p-5 shadow-[0_28px_120px_rgba(0,0,0,0.58)] ring-1 ring-white/[0.035] backdrop-blur-xl">
+{successOpen && (
+  <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/75 p-3 py-4 backdrop-blur-sm sm:items-center sm:p-4">
+    <div className="relative max-h-[calc(100dvh-32px)] w-full max-w-2xl overflow-y-auto rounded-[28px] border border-white/10 bg-[#121826]/95 p-4 pb-24 shadow-[0_28px_120px_rgba(0,0,0,0.58)] ring-1 ring-white/[0.035] backdrop-blur-xl sm:max-h-[92vh] sm:rounded-[32px] sm:p-5">
+    <button
+  type="button"
+  onClick={() => setSuccessOpen(false)}
+  className="sticky top-0 z-20 ml-auto flex rounded-2xl border border-white/10 bg-[#121826] px-4 py-2 text-sm font-bold text-white/75 shadow-[0_10px_30px_rgba(0,0,0,0.28)] transition hover:bg-white/10 hover:text-white"
+>
+  {t.close}
+</button>
           <h2 className="text-2xl font-bold text-white">
             {t.orderConfirmedTitle}
           </h2>
@@ -2974,7 +2981,7 @@ export default function SmmToraPage() {
                 type="button"
                 onClick={handlePaymentCompleted}
                 disabled={paymentReviewLoading || Boolean(paymentReviewMessage)}
-                className="mt-4 w-full rounded-2xl bg-amber-300 px-5 py-3 text-sm font-black text-black transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
+className="mt-4 w-full rounded-2xl bg-amber-300 px-4 py-3 text-sm font-black text-black transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-60 sm:px-5"
               >
                 {paymentReviewLoading
                   ? "Kontrole Alınıyor..."
@@ -2997,15 +3004,15 @@ export default function SmmToraPage() {
             </div>
           )}
 
-          <div className="mt-5 flex justify-end">
-            <button
-              type="button"
-              onClick={() => setSuccessOpen(false)}
-              className="rounded-2xl bg-white px-5 py-3 text-sm font-bold text-black transition hover:-translate-y-0.5 hover:bg-white/90"
-            >
-              {t.ok}
-            </button>
-          </div>
+<div className="sticky bottom-0 z-20 -mx-4 mt-5 border-t border-white/10 bg-[#121826]/95 px-4 py-3 backdrop-blur-xl sm:static sm:mx-0 sm:border-t-0 sm:bg-transparent sm:px-0 sm:py-0">
+  <button
+    type="button"
+    onClick={() => setSuccessOpen(false)}
+    className="w-full rounded-2xl bg-white px-5 py-3 text-sm font-bold text-black transition hover:-translate-y-0.5 hover:bg-white/90 sm:w-auto"
+  >
+    {t.ok}
+  </button>
+</div>
         </div>
       </div>
     )}
