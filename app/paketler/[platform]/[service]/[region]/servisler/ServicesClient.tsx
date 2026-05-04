@@ -23,6 +23,7 @@ type CardProps = {
 
 function formatPrice(value: number) {
   if (!Number.isFinite(value)) return "-";
+
   return value.toLocaleString("tr-TR", {
     maximumFractionDigits: 2,
   });
@@ -37,7 +38,9 @@ function ServiceCard({ item }: CardProps) {
   const [targetUsername, setTargetUsername] = useState("");
   const [targetLink, setTargetLink] = useState("");
   const [orderNote, setOrderNote] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("turkey_bank");
+  const [paymentMethod, setPaymentMethod] =
+    useState<PaymentMethod>("turkey_bank");
+  const [paymentTermsAccepted, setPaymentTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
 
   function handleQuantityChange(value: string) {
@@ -75,7 +78,8 @@ function ServiceCard({ item }: CardProps) {
     fullName.trim().length >= 2 &&
     phoneNumber.trim().length >= 7 &&
     contactValue.trim() !== "" &&
-    hasTarget;
+    hasTarget &&
+    paymentTermsAccepted;
 
   async function handleOrder() {
     if (!isValid || loading) return;
@@ -90,6 +94,7 @@ function ServiceCard({ item }: CardProps) {
         contact_value: contactValue.trim(),
         currency: "TL" as CurrencyCode,
         payment_method: paymentMethod,
+        policies_accepted: paymentTermsAccepted,
         items: [
           {
             service_id: item.id,
@@ -140,7 +145,8 @@ function ServiceCard({ item }: CardProps) {
       setTargetLink("");
       setOrderNote("");
       setPaymentMethod("turkey_bank");
-    } catch (error) {
+      setPaymentTermsAccepted(false);
+    } catch {
       alert("Sipariş gönderilirken hata oluştu.");
     } finally {
       setLoading(false);
@@ -199,7 +205,7 @@ function ServiceCard({ item }: CardProps) {
         <input
           type="text"
           value={quantity}
-          onChange={(e) => handleQuantityChange(e.target.value)}
+          onChange={(event) => handleQuantityChange(event.target.value)}
           inputMode="numeric"
           pattern="[0-9]*"
           placeholder="Miktar gir"
@@ -221,7 +227,7 @@ function ServiceCard({ item }: CardProps) {
         <input
           type="text"
           value={targetUsername}
-          onChange={(e) => setTargetUsername(e.target.value)}
+          onChange={(event) => setTargetUsername(event.target.value)}
           placeholder="Hedef kullanıcı adı"
           className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-gray-400"
         />
@@ -229,7 +235,7 @@ function ServiceCard({ item }: CardProps) {
         <input
           type="text"
           value={targetLink}
-          onChange={(e) => setTargetLink(e.target.value)}
+          onChange={(event) => setTargetLink(event.target.value)}
           placeholder="Hedef link"
           className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-gray-400"
         />
@@ -243,7 +249,7 @@ function ServiceCard({ item }: CardProps) {
         <input
           type="text"
           value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
+          onChange={(event) => setFullName(event.target.value)}
           placeholder="Ad Soyad"
           className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-gray-400"
         />
@@ -251,7 +257,7 @@ function ServiceCard({ item }: CardProps) {
         <input
           type="text"
           value={phoneNumber}
-          onChange={(e) => setPhoneNumber(e.target.value)}
+          onChange={(event) => setPhoneNumber(event.target.value)}
           placeholder="Telefon numarası"
           className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-gray-400"
         />
@@ -259,7 +265,7 @@ function ServiceCard({ item }: CardProps) {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <select
             value={contactType}
-            onChange={(e) => setContactType(e.target.value as ContactType)}
+            onChange={(event) => setContactType(event.target.value as ContactType)}
             className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-gray-400"
           >
             <option value="Telegram">Telegram</option>
@@ -271,7 +277,7 @@ function ServiceCard({ item }: CardProps) {
           <input
             type="text"
             value={contactValue}
-            onChange={(e) => setContactValue(e.target.value)}
+            onChange={(event) => setContactValue(event.target.value)}
             placeholder="İletişim bilgisi"
             className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-gray-400"
           />
@@ -279,7 +285,7 @@ function ServiceCard({ item }: CardProps) {
 
         <select
           value={paymentMethod}
-          onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+          onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)}
           className="w-full rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-gray-400"
         >
           <option value="turkey_bank">Türkiye Banka Havalesi / EFT</option>
@@ -288,11 +294,65 @@ function ServiceCard({ item }: CardProps) {
 
         <textarea
           value={orderNote}
-          onChange={(e) => setOrderNote(e.target.value)}
+          onChange={(event) => setOrderNote(event.target.value)}
           placeholder="Sipariş notu / özel istek"
           rows={3}
           className="w-full resize-none rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-gray-400"
         />
+
+        <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-gray-200 bg-gray-50 p-4">
+          <input
+            type="checkbox"
+            checked={paymentTermsAccepted}
+            onChange={(event) => setPaymentTermsAccepted(event.target.checked)}
+            className="mt-1 h-4 w-4 shrink-0 accent-slate-900"
+          />
+
+          <span className="text-sm leading-6 text-gray-700">
+            <a
+              href="/kullanim-sartlari"
+              target="_blank"
+              rel="noreferrer"
+              className="font-semibold text-slate-950 underline underline-offset-4"
+            >
+              Kullanım şartlarını
+            </a>
+            ,{" "}
+            <a
+              href="/gizlilik-politikasi"
+              target="_blank"
+              rel="noreferrer"
+              className="font-semibold text-slate-950 underline underline-offset-4"
+            >
+              gizlilik politikasını
+            </a>
+            ,{" "}
+            <a
+              href="/iade-politikasi"
+              target="_blank"
+              rel="noreferrer"
+              className="font-semibold text-slate-950 underline underline-offset-4"
+            >
+              iade koşullarını
+            </a>{" "}
+            ve{" "}
+            <a
+              href="/mesafeli-satis-sozlesmesi"
+              target="_blank"
+              rel="noreferrer"
+              className="font-semibold text-slate-950 underline underline-offset-4"
+            >
+              mesafeli satış sözleşmesini
+            </a>{" "}
+            okudum, kabul ediyorum.
+          </span>
+        </label>
+
+        {!paymentTermsAccepted && (
+          <p className="text-xs font-medium text-amber-600">
+            Sipariş vermek için sözleşme ve politika onayını işaretlemelisin.
+          </p>
+        )}
 
         <div className="rounded-2xl bg-slate-950 px-4 py-4 text-white">
           <p className="text-xs text-slate-300">Toplam Satış Fiyatı</p>

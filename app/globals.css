@@ -1,17 +1,20 @@
 @import "tailwindcss";
 
 :root {
-  --background: #050812;
+  --background: #020202;
   --foreground: #ffffff;
 
-  --mt-bg: #050812;
-  --mt-panel: rgba(18, 24, 38, 0.96);
+  --mt-bg: #020202;
+  --mt-panel: rgba(15, 18, 24, 0.88);
+  --mt-panel-soft: rgba(255, 255, 255, 0.045);
+  --mt-panel-hover: rgba(255, 255, 255, 0.075);
   --mt-border: rgba(255, 255, 255, 0.1);
   --mt-border-strong: rgba(255, 255, 255, 0.16);
-  --mt-text-soft: rgba(255, 255, 255, 0.68);
-  --mt-emerald: #34d399;
-  --mt-sky: #38bdf8;
-  --mt-amber: #fbbf24;
+  --mt-text-soft: rgba(255, 255, 255, 0.62);
+  --mt-text-muted: rgba(255, 255, 255, 0.42);
+  --mt-accent: rgba(235, 245, 250, 0.92);
+  --mt-accent-soft: rgba(235, 245, 250, 0.075);
+  --mt-danger: rgba(255, 115, 140, 0.88);
 }
 
 @theme inline {
@@ -28,10 +31,7 @@ html {
 
 body {
   min-height: 100vh;
-  background:
-    radial-gradient(circle at top left, rgba(16, 185, 129, 0.12), transparent 34rem),
-    radial-gradient(circle at top right, rgba(56, 189, 248, 0.1), transparent 30rem),
-    #050812;
+  background: #020202;
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
   text-rendering: optimizeLegibility;
@@ -39,13 +39,13 @@ body {
 }
 
 ::selection {
-  background: rgba(52, 211, 153, 0.35);
+  background: rgba(255, 255, 255, 0.24);
   color: white;
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(52, 211, 153, 0.42) rgba(255, 255, 255, 0.06);
+  scrollbar-color: rgba(255, 255, 255, 0.28) rgba(255, 255, 255, 0.055);
 }
 
 *::-webkit-scrollbar {
@@ -61,18 +61,18 @@ body {
 *::-webkit-scrollbar-thumb {
   background: linear-gradient(
     180deg,
-    rgba(52, 211, 153, 0.7),
-    rgba(56, 189, 248, 0.45)
+    rgba(255, 255, 255, 0.42),
+    rgba(255, 255, 255, 0.18)
   );
   border-radius: 999px;
-  border: 2px solid rgba(5, 8, 18, 0.9);
+  border: 2px solid rgba(5, 5, 5, 0.9);
 }
 
 *::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(
     180deg,
-    rgba(52, 211, 153, 0.9),
-    rgba(56, 189, 248, 0.65)
+    rgba(255, 255, 255, 0.58),
+    rgba(255, 255, 255, 0.25)
   );
 }
 
@@ -109,18 +109,20 @@ textarea {
     box-shadow 180ms ease;
 }
 
-input:focus,
-select:focus,
-textarea:focus {
-  box-shadow:
-    0 0 0 1px rgba(52, 211, 153, 0.42),
-    0 0 0 5px rgba(52, 211, 153, 0.08);
-}
-
 input::placeholder,
 textarea::placeholder {
   color: rgba(255, 255, 255, 0.28);
 }
+
+input:focus,
+select:focus,
+textarea:focus {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.18),
+    0 0 0 5px rgba(255, 255, 255, 0.035);
+}
+
+/* ANIMATIONS */
 
 @keyframes mtFadeUp {
   from {
@@ -147,42 +149,545 @@ textarea::placeholder {
   }
 }
 
-main > div {
-  animation: mtFadeUp 420ms ease both;
+@keyframes mtStarTwinkle {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.95;
+    transform: scale(1.35);
+  }
 }
 
-.fixed.inset-0 > div {
-  animation: mtFadeUp 220ms ease both;
+@keyframes mtStarFloat {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-6px);
+  }
 }
 
+@keyframes mtAuthGlow {
+  0%,
+  100% {
+    opacity: 0.42;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.64;
+    transform: scale(1.05);
+  }
+}
+
+/* PREMIUM COMMON PAGE */
+
+.mt-premium-page {
+  min-height: 100dvh;
+  position: relative;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.07), transparent 34rem),
+    radial-gradient(circle at 18% 24%, rgba(140, 160, 180, 0.08), transparent 28rem),
+    radial-gradient(circle at 82% 70%, rgba(255, 255, 255, 0.045), transparent 30rem),
+    linear-gradient(180deg, #020202 0%, #050608 48%, #000000 100%);
+  color: white;
+}
+
+.mt-premium-page::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.82), transparent 18%, rgba(0, 0, 0, 0.92)),
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.04), transparent 42rem);
+}
+
+.mt-premium-page::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.012;
+  background-image:
+    linear-gradient(to right, white 1px, transparent 1px),
+    linear-gradient(to bottom, white 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+.mt-premium-inner {
+  position: relative;
+  z-index: 1;
+}
+
+.mt-top-fade {
+  pointer-events: none;
+  position: fixed;
+  inset-inline: 0;
+  top: 0;
+  z-index: 0;
+  height: 180px;
+  background: linear-gradient(to bottom, black, rgba(0, 0, 0, 0));
+}
+
+.mt-bottom-fade {
+  pointer-events: none;
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 0;
+  height: 260px;
+  background: linear-gradient(to top, black, rgba(0, 0, 0, 0));
+}
+
+.mt-title-glow-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.mt-title-glow-wrap::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 54%;
+  width: 92%;
+  height: 80px;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.13);
+  filter: blur(54px);
+  animation: mtSoftPulse 9s ease-in-out infinite;
+}
+
+.mt-title-glow-text {
+  position: relative;
+  text-shadow:
+    0 0 18px rgba(255, 255, 255, 0.12),
+    0 0 42px rgba(255, 255, 255, 0.06);
+}
+
+/* PREMIUM CARDS */
+
+.rounded-\[36px\],
 .rounded-\[34px\],
 .rounded-\[32px\],
+.rounded-\[30px\],
 .rounded-\[28px\] {
   box-shadow:
-    0 18px 80px rgba(0, 0, 0, 0.28),
+    0 24px 90px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+/* COLOR NORMALIZER FOR PREMIUM PAGES */
+
+.mt-premium-page .bg-emerald-400,
+.mt-premium-page .bg-emerald-500,
+.mt-premium-page .bg-sky-400,
+.mt-premium-page .bg-sky-500,
+.mt-premium-page .bg-amber-300,
+.mt-premium-page .bg-amber-400,
+.mt-premium-page .bg-lime-400,
+.mt-premium-page .bg-cyan-400 {
+  background: rgba(255, 255, 255, 0.96) !important;
+  color: #050505 !important;
+  box-shadow: 0 18px 55px rgba(255, 255, 255, 0.08) !important;
+}
+
+.mt-premium-page .bg-emerald-400\/10,
+.mt-premium-page .bg-emerald-400\/12,
+.mt-premium-page .bg-emerald-400\/15,
+.mt-premium-page .bg-emerald-500\/10,
+.mt-premium-page .bg-emerald-500\/15,
+.mt-premium-page .bg-sky-400\/10,
+.mt-premium-page .bg-sky-400\/15,
+.mt-premium-page .bg-sky-500\/10,
+.mt-premium-page .bg-sky-500\/15,
+.mt-premium-page .bg-amber-400\/10,
+.mt-premium-page .bg-amber-400\/15,
+.mt-premium-page .bg-lime-400\/10,
+.mt-premium-page .bg-violet-500\/10,
+.mt-premium-page .bg-cyan-400\/10,
+.mt-premium-page .bg-cyan-400\/20,
+.mt-premium-page .bg-rose-500\/10,
+.mt-premium-page .bg-rose-400\/10 {
+  background: rgba(255, 255, 255, 0.055) !important;
+}
+
+.mt-premium-page .text-emerald-100,
+.mt-premium-page .text-emerald-200,
+.mt-premium-page .text-emerald-300,
+.mt-premium-page .text-sky-100,
+.mt-premium-page .text-sky-200,
+.mt-premium-page .text-sky-300,
+.mt-premium-page .text-amber-100,
+.mt-premium-page .text-amber-200,
+.mt-premium-page .text-amber-300,
+.mt-premium-page .text-lime-200,
+.mt-premium-page .text-cyan-100,
+.mt-premium-page .text-cyan-200,
+.mt-premium-page .text-cyan-300 {
+  color: rgba(245, 247, 250, 0.88) !important;
+}
+
+.mt-premium-page .border-emerald-300,
+.mt-premium-page .border-emerald-400,
+.mt-premium-page .border-emerald-400\/15,
+.mt-premium-page .border-emerald-400\/20,
+.mt-premium-page .border-emerald-400\/25,
+.mt-premium-page .border-emerald-400\/30,
+.mt-premium-page .border-emerald-400\/35,
+.mt-premium-page .border-emerald-400\/40,
+.mt-premium-page .border-emerald-400\/50,
+.mt-premium-page .border-emerald-400\/70,
+.mt-premium-page .border-emerald-400\/80,
+.mt-premium-page .border-sky-300,
+.mt-premium-page .border-sky-400,
+.mt-premium-page .border-sky-400\/20,
+.mt-premium-page .border-sky-400\/40,
+.mt-premium-page .border-amber-300,
+.mt-premium-page .border-amber-400\/20,
+.mt-premium-page .border-amber-400\/40,
+.mt-premium-page .border-cyan-100\/25,
+.mt-premium-page .border-cyan-100\/30,
+.mt-premium-page .border-rose-400\/20,
+.mt-premium-page .border-rose-400\/25,
+.mt-premium-page .border-rose-500\/30 {
+  border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+.mt-premium-page .bg-gradient-to-r,
+.mt-premium-page .bg-gradient-to-br {
+  background-image: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.074),
+    rgba(255, 255, 255, 0.028)
+  ) !important;
+}
+
+.mt-premium-page button.bg-white,
+.mt-premium-page a.bg-white,
+.mt-premium-page .bg-white.text-black {
+  background: rgba(255, 255, 255, 0.96) !important;
+  color: #050505 !important;
+}
+
+.mt-premium-page span.bg-emerald-400,
+.mt-premium-page span.bg-sky-400,
+.mt-premium-page span.bg-amber-300,
+.mt-premium-page span.bg-cyan-400 {
+  background: rgba(255, 255, 255, 0.96) !important;
+  color: #050505 !important;
+}
+
+.mt-premium-page .bg-\[\#121826\]\/90,
+.mt-premium-page .bg-\[\#121826\]\/95,
+.mt-premium-page .bg-\[\#101621\]\/88 {
+  background: rgba(15, 18, 24, 0.88) !important;
+}
+
+.mt-premium-page input:focus,
+.mt-premium-page select:focus,
+.mt-premium-page textarea:focus {
+  border-color: rgba(255, 255, 255, 0.26) !important;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 0 0 5px rgba(255, 255, 255, 0.035) !important;
+}
+
+.mt-premium-page .text-rose-300,
+.mt-premium-page .text-rose-100 {
+  color: rgba(255, 185, 198, 0.9) !important;
+}
+
+.mt-premium-page .bg-rose-500\/10,
+.mt-premium-page .bg-rose-400\/10 {
+  background: rgba(255, 90, 120, 0.08) !important;
+}
+
+.mt-premium-page .border-rose-500\/30,
+.mt-premium-page .border-rose-400\/25,
+.mt-premium-page .border-rose-400\/20 {
+  border-color: rgba(255, 140, 160, 0.22) !important;
+}
+
+/* AUTH PAGE */
+
+.mt-auth-page {
+  min-height: 100dvh;
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 14% 18%, rgba(255, 255, 255, 0.065), transparent 28rem),
+    radial-gradient(circle at 88% 80%, rgba(120, 160, 190, 0.08), transparent 32rem),
+    linear-gradient(135deg, #020202 0%, #05070d 50%, #08111c 100%);
+  color: white;
+}
+
+.mt-auth-page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.62), transparent 26%, rgba(0, 0, 0, 0.82)),
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.045), transparent 38rem);
+}
+
+.mt-auth-page::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.014;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, white 1px, transparent 1px),
+    linear-gradient(to bottom, white 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+.mt-auth-shell {
+  position: relative;
+  z-index: 1;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.mt-auth-card {
+  width: min(100%, 980px);
+  min-height: 650px;
+  display: grid;
+  grid-template-columns: 0.95fr 1.05fr;
+  overflow: hidden;
+  border-radius: 36px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(13, 18, 29, 0.84);
+  box-shadow:
+    0 34px 140px rgba(0, 0, 0, 0.58),
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(24px);
 }
 
-.rounded-\[34px\]:hover,
-.rounded-\[32px\]:hover,
-.rounded-\[28px\]:hover {
-  border-color: rgba(255, 255, 255, 0.14);
+.mt-auth-left {
+  position: relative;
+  overflow: hidden;
+  padding: 36px;
+  border-right: 1px solid rgba(255, 255, 255, 0.09);
+  background:
+    radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.08), transparent 18rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.015));
 }
 
-.bg-emerald-400,
-.bg-emerald-500 {
-  box-shadow: 0 12px 34px rgba(52, 211, 153, 0.16);
+.mt-auth-left::before {
+  content: "";
+  position: absolute;
+  right: -120px;
+  bottom: -120px;
+  width: 320px;
+  height: 320px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.055);
+  filter: blur(80px);
+  animation: mtAuthGlow 9s ease-in-out infinite;
 }
 
-.bg-sky-500 {
-  box-shadow: 0 12px 34px rgba(56, 189, 248, 0.16);
+.mt-auth-left-content {
+  position: relative;
+  z-index: 1;
+}
+
+.mt-auth-right {
+  position: relative;
+  padding: 36px;
+  background:
+    radial-gradient(circle at 90% 88%, rgba(120, 160, 190, 0.075), transparent 20rem),
+    rgba(7, 10, 18, 0.34);
+}
+
+.mt-auth-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.mt-auth-logo-mark {
+  width: 48px;
+  height: 48px;
+  border-radius: 17px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.96);
+  color: #050505;
+  font-weight: 900;
+  box-shadow: 0 18px 55px rgba(255, 255, 255, 0.08);
+}
+
+.mt-auth-eyebrow {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.52);
+}
+
+.mt-auth-title {
+  margin-top: 18px;
+  font-size: clamp(34px, 4vw, 54px);
+  line-height: 0.98;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+  color: white;
+}
+
+.mt-auth-text {
+  margin-top: 18px;
+  color: rgba(255, 255, 255, 0.62);
+  line-height: 1.8;
+  font-size: 14px;
+}
+
+.mt-auth-benefit {
+  margin-top: 22px;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.035);
+  padding: 22px;
+}
+
+.mt-auth-benefit-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.055);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.mt-auth-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 5px;
+  border-radius: 19px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(0, 0, 0, 0.26);
+}
+
+.mt-auth-tab {
+  border-radius: 15px;
+  padding: 12px 16px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.mt-auth-tab-active {
+  background: rgba(255, 255, 255, 0.96);
+  color: #050505;
+  box-shadow: 0 14px 38px rgba(255, 255, 255, 0.08);
+}
+
+.mt-auth-label {
+  margin-bottom: 8px;
+  display: block;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.mt-auth-field {
+  width: 100%;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.055);
+  padding: 15px 16px;
+  color: white;
+  outline: none;
+}
+
+.mt-auth-field:focus {
+  border-color: rgba(255, 255, 255, 0.26);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 0 0 5px rgba(255, 255, 255, 0.035);
+}
+
+.mt-auth-primary {
+  width: 100%;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.96);
+  padding: 15px 18px;
+  font-weight: 950;
+  color: #050505;
+  box-shadow: 0 18px 55px rgba(255, 255, 255, 0.08);
+}
+
+.mt-auth-primary:hover {
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.mt-auth-secondary {
+  width: 100%;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.045);
+  padding: 15px 18px;
+  font-weight: 850;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.mt-auth-message {
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.055);
+  padding: 13px 15px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.mt-auth-error {
+  border-color: rgba(255, 140, 160, 0.24);
+  background: rgba(255, 90, 120, 0.08);
+  color: rgba(255, 205, 214, 0.92);
+}
+
+.mt-auth-success {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+@media (max-width: 860px) {
+  .mt-auth-card {
+    grid-template-columns: 1fr;
+  }
+
+  .mt-auth-left {
+    border-right: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+  }
 }
 
 @media (max-width: 640px) {
   body {
-    background:
-      radial-gradient(circle at top, rgba(52, 211, 153, 0.1), transparent 24rem),
-      #050812;
+    background: #020202;
   }
 
   main {
@@ -195,6 +700,19 @@ main > div {
   textarea {
     font-size: 16px;
   }
+
+  .mt-auth-shell {
+    padding: 14px;
+  }
+
+  .mt-auth-left,
+  .mt-auth-right {
+    padding: 24px;
+  }
+
+  .mt-auth-card {
+    border-radius: 28px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -206,4 +724,186 @@ main > div {
     scroll-behavior: auto !important;
     transition-duration: 0.001ms !important;
   }
+}
+
+/* ANALIZ FORM PREMIUM OVERRIDE */
+/* Sadece /analiz içindeki AnalysisForm'u etkiler. Paketler'e dokunmaz. */
+
+.mt-analysis-form-scope {
+  color: white;
+}
+
+.mt-analysis-form-scope > * {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.055), transparent 28rem),
+    linear-gradient(145deg, rgba(15, 18, 24, 0.94), rgba(6, 7, 10, 0.96)) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow:
+    0 28px 105px rgba(0, 0, 0, 0.46),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+}
+
+.mt-analysis-form-scope [class*="bg-emerald"],
+.mt-analysis-form-scope [class*="bg-sky"],
+.mt-analysis-form-scope [class*="bg-cyan"],
+.mt-analysis-form-scope [class*="bg-blue"],
+.mt-analysis-form-scope [class*="bg-indigo"],
+.mt-analysis-form-scope [class*="bg-violet"],
+.mt-analysis-form-scope [class*="bg-amber"],
+.mt-analysis-form-scope [class*="bg-lime"] {
+  background: rgba(255, 255, 255, 0.055) !important;
+}
+
+.mt-analysis-form-scope [class*="text-emerald"],
+.mt-analysis-form-scope [class*="text-sky"],
+.mt-analysis-form-scope [class*="text-cyan"],
+.mt-analysis-form-scope [class*="text-blue"],
+.mt-analysis-form-scope [class*="text-indigo"],
+.mt-analysis-form-scope [class*="text-violet"],
+.mt-analysis-form-scope [class*="text-amber"],
+.mt-analysis-form-scope [class*="text-lime"] {
+  color: rgba(245, 247, 250, 0.88) !important;
+}
+
+.mt-analysis-form-scope [class*="border-emerald"],
+.mt-analysis-form-scope [class*="border-sky"],
+.mt-analysis-form-scope [class*="border-cyan"],
+.mt-analysis-form-scope [class*="border-blue"],
+.mt-analysis-form-scope [class*="border-indigo"],
+.mt-analysis-form-scope [class*="border-violet"],
+.mt-analysis-form-scope [class*="border-amber"],
+.mt-analysis-form-scope [class*="border-lime"] {
+  border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+.mt-analysis-form-scope button,
+.mt-analysis-form-scope a {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+.mt-analysis-form-scope button[class*="bg-white"],
+.mt-analysis-form-scope a[class*="bg-white"],
+.mt-analysis-form-scope button[class*="bg-emerald"],
+.mt-analysis-form-scope button[class*="bg-sky"],
+.mt-analysis-form-scope button[class*="bg-blue"],
+.mt-analysis-form-scope a[class*="bg-emerald"],
+.mt-analysis-form-scope a[class*="bg-sky"],
+.mt-analysis-form-scope a[class*="bg-blue"] {
+  background: rgba(255, 255, 255, 0.96) !important;
+  color: #050505 !important;
+  box-shadow: 0 18px 55px rgba(255, 255, 255, 0.08) !important;
+}
+
+.mt-analysis-form-scope button:not([class*="bg-white"]):not([class*="bg-emerald"]):not([class*="bg-sky"]):not([class*="bg-blue"]) {
+  background: rgba(255, 255, 255, 0.045) !important;
+  color: rgba(255, 255, 255, 0.78) !important;
+}
+
+.mt-analysis-form-scope input,
+.mt-analysis-form-scope select,
+.mt-analysis-form-scope textarea {
+  background: rgba(255, 255, 255, 0.055) !important;
+  border-color: rgba(255, 255, 255, 0.11) !important;
+  color: white !important;
+}
+
+.mt-analysis-form-scope input:focus,
+.mt-analysis-form-scope select:focus,
+.mt-analysis-form-scope textarea:focus {
+  border-color: rgba(255, 255, 255, 0.26) !important;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 0 0 5px rgba(255, 255, 255, 0.035) !important;
+}
+
+.mt-analysis-form-scope input::placeholder,
+.mt-analysis-form-scope textarea::placeholder {
+  color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.mt-analysis-form-scope [class*="shadow"] {
+  box-shadow:
+    0 20px 70px rgba(0, 0, 0, 0.36),
+    inset 0 1px 0 rgba(255, 255, 255, 0.035) !important;
+}
+
+/* LOGIN / REGISTER EXTRA PREMIUM BACKGROUND */
+/* Giriş ve üye ol ekranını biraz daha siyah-beyaz, elit ve dolu gösterir. */
+
+.mt-auth-page {
+  background:
+    radial-gradient(circle at 12% 16%, rgba(255, 255, 255, 0.07), transparent 25rem),
+    radial-gradient(circle at 88% 76%, rgba(255, 255, 255, 0.055), transparent 28rem),
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.045), transparent 34rem),
+    linear-gradient(135deg, #010101 0%, #050609 48%, #07101a 100%) !important;
+}
+
+.mt-auth-page::after {
+  opacity: 0.018 !important;
+  background-size: 42px 42px !important;
+}
+
+.mt-auth-shell::before {
+  content: "";
+  position: fixed;
+  left: 7%;
+  top: 18%;
+  width: 220px;
+  height: 220px;
+  border-radius: 999px;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.045);
+  filter: blur(70px);
+}
+
+.mt-auth-shell::after {
+  content: "";
+  position: fixed;
+  right: 8%;
+  bottom: 16%;
+  width: 260px;
+  height: 260px;
+  border-radius: 999px;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.04);
+  filter: blur(80px);
+}
+
+.mt-auth-card {
+  background:
+    linear-gradient(135deg, rgba(17, 20, 28, 0.9), rgba(5, 7, 12, 0.92)),
+    rgba(10, 12, 18, 0.9) !important;
+  border-color: rgba(255, 255, 255, 0.115) !important;
+}
+
+.mt-auth-left {
+  background:
+    radial-gradient(circle at 20% 15%, rgba(255, 255, 255, 0.075), transparent 17rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.014)) !important;
+}
+
+.mt-auth-right {
+  background:
+    radial-gradient(circle at 100% 100%, rgba(255, 255, 255, 0.048), transparent 20rem),
+    rgba(5, 7, 12, 0.28) !important;
+}
+
+.mt-auth-logo-mark {
+  background: rgba(255, 255, 255, 0.96) !important;
+  color: #050505 !important;
+}
+
+.mt-auth-benefit-icon {
+  color: rgba(255, 255, 255, 0.9) !important;
+  background: rgba(255, 255, 255, 0.055) !important;
+}
+
+.mt-auth-primary,
+.mt-auth-tab-active {
+  background: rgba(255, 255, 255, 0.96) !important;
+  color: #050505 !important;
+}
+
+.mt-auth-field {
+  background: rgba(255, 255, 255, 0.052) !important;
 }

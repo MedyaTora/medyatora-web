@@ -1,495 +1,276 @@
-import AnalysisForm from "./components/analysis-form";
-import UserMenu from "./components/auth/UserMenu";
-import { CONTACT, getWhatsappLink } from "@/lib/contact";
-import type { IconType } from "react-icons";
+import Link from "next/link";
 import {
   FaArrowRight,
   FaBoxesStacked,
   FaChartLine,
-  FaFileInvoice,
-  FaGift,
-  FaShieldHalved,
-  FaTelegram,
   FaUserCheck,
   FaWhatsapp,
 } from "react-icons/fa6";
 
-const topHighlights: {
-  title: string;
-  icon: IconType;
-}[] = [
-  {
-    title: "KDV + vergiler dahil",
-    icon: FaFileInvoice,
-  },
-  {
-    title: "Sipariş numarası ile takip",
-    icon: FaUserCheck,
-  },
-  {
-    title: "WhatsApp / Telegram destek",
-    icon: FaWhatsapp,
-  },
-  {
-    title: "Bilgiler yalnızca işlem için kullanılır",
-    icon: FaShieldHalved,
-  },
-];
-
-const quickCards: {
-  title: string;
-  description: string;
-  href: string;
-  cta: string;
-  icon: IconType;
-  variant?: "primary" | "default";
-}[] = [
-  {
-    title: "Profesyonel Analiz",
-    description:
-      "Hesabının içerik, reklam, güven ve dönüşüm problemlerini analiz ettir.",
-    href: "#analysis",
-    cta: "Analize Başla",
-    icon: FaChartLine,
-    variant: "primary",
-  },
-  {
-    title: "SMMTora",
-    description:
-      "Platform bazlı sosyal medya destek hizmetlerini tek panelden incele.",
-    href: "/smmtora",
-    cta: "SMMTora’ya Git",
-    icon: FaBoxesStacked,
-  },
-  {
-    title: "Hızlı Paketler",
-    description:
-      "Hazır paketlerle hızlı sipariş vermek isteyen kullanıcılar için sade akış.",
-    href: "/paketler",
-    cta: "Paketleri İncele",
-    icon: FaBoxesStacked,
-  },
-];
-
-function HighlightCard({
-  title,
-  icon: Icon,
+function LuxuryMonogram({
+  size = 100,
+  className = "",
 }: {
-  title: string;
-  icon: IconType;
+  size?: number;
+  className?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur">
-      <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-black/20 text-lg text-emerald-300">
-        <Icon />
-      </div>
-
-      <p className="text-sm font-medium leading-6 text-white/85">{title}</p>
-    </div>
-  );
-}
-
-function QuickCard({
-  title,
-  description,
-  href,
-  cta,
-  icon: Icon,
-  variant = "default",
-}: {
-  title: string;
-  description: string;
-  href: string;
-  cta: string;
-  icon: IconType;
-  variant?: "primary" | "default";
-}) {
-  const isPrimary = variant === "primary";
-
-  return (
-    <a
-      href={href}
-      className={`group rounded-[28px] border p-6 transition hover:-translate-y-1 ${
-        isPrimary
-          ? "border-emerald-400/20 bg-emerald-400/10 hover:bg-emerald-400/15"
-          : "border-white/10 bg-white/[0.04] hover:bg-white/[0.08]"
-      }`}
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 100 100"
+      fill="currentColor"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      aria-hidden="true"
     >
-      <div
-        className={`mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border text-xl ${
-          isPrimary
-            ? "border-emerald-400/20 bg-black/20 text-emerald-300"
-            : "border-white/10 bg-black/20 text-white"
-        }`}
-      >
-        <Icon />
-      </div>
-
-      <h3 className="mb-3 text-2xl font-bold text-white md:text-3xl">
-        {title}
-      </h3>
-
-      <p className="mb-6 text-sm leading-6 text-white/65">{description}</p>
-
-      <span
-        className={`inline-flex items-center gap-2 text-sm font-semibold ${
-          isPrimary ? "text-emerald-300" : "text-white"
-        }`}
-      >
-        {cta}
-        <FaArrowRight className="transition group-hover:translate-x-1" />
-      </span>
-    </a>
+      <rect x="14" y="20" width="8" height="60" />
+      <rect x="78" y="20" width="8" height="60" />
+      <polygon points="22,20 32,20 50,56 68,20 78,20 50,76" />
+      <path d="M 39 30 L 61 30 L 58 36 L 52 36 L 52 48 L 48 48 L 48 36 L 42 36 Z" />
+    </svg>
   );
 }
 
-function MembershipBox() {
+function MinimalStars() {
+  const stars: {
+    top: string;
+    left?: string;
+    right?: string;
+    size: number;
+    delay: string;
+    duration: string;
+  }[] = [
+    { top: "18%", left: "22%", size: 3, delay: "0s", duration: "5.5s" },
+    { top: "26%", right: "18%", size: 4, delay: "1.2s", duration: "6.5s" },
+    { top: "62%", left: "14%", size: 2.5, delay: "0.8s", duration: "5.8s" },
+    { top: "70%", right: "20%", size: 3.5, delay: "1.8s", duration: "7s" },
+  ];
+
   return (
-    <div className="rounded-[32px] border border-emerald-400/20 bg-gradient-to-br from-emerald-400/12 to-white/[0.04] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.28)] backdrop-blur md:p-8">
-      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-emerald-400/20 bg-black/20 text-xl text-emerald-300">
-        <FaGift />
-      </div>
-
-      <p className="mb-3 text-sm uppercase tracking-[0.2em] text-emerald-300">
-        Yeni üyelik avantajı
-      </p>
-
-      <h2 className="mb-3 text-3xl font-bold text-white">
-        Hesabını oluştur, ücretsiz analiz hakkı kazan.
-      </h2>
-
-      <p className="leading-7 text-white/70">
-        MedyaTora hesabı ile ücretsiz analiz hakkını, TL / USD / RUB bakiye
-        durumunu ve sipariş geçmişini tek yerden takip edebilirsin. E-posta
-        adresini doğrulayan üyeler 1 defaya mahsus ücretsiz profesyonel analiz
-        hakkı kazanır.
-      </p>
-
-      <div className="mt-5 grid gap-3 md:grid-cols-2">
-        <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-          <p className="text-sm font-bold text-white">Ücretsiz analiz hakkı</p>
-
-          <p className="mt-2 text-sm leading-6 text-white/60">
-            E-posta doğrulaması tamamlanan üyeye 1 adet ücretsiz profesyonel
-            analiz hakkı tanımlanır.
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-          <p className="text-sm font-bold text-white">
-            Çoklu para birimi bakiyesi
-          </p>
-
-          <p className="mt-2 text-sm leading-6 text-white/60">
-            TL, USD ve RUB bakiyeleri ayrı takip edilir. Sipariş ödemelerinde
-            seçili para birimine göre bakiye kullanılabilir.
-          </p>
-        </div>
-      </div>
+    <div className="pointer-events-none fixed inset-0 z-[2] overflow-hidden">
+      {stars.map((star, index) => (
+        <span
+          key={index}
+          className="absolute rounded-full bg-white"
+          style={{
+            top: star.top,
+            left: star.left,
+            right: star.right,
+            width: `${star.size}px`,
+            height: `${star.size}px`,
+            opacity: 0.7,
+            boxShadow:
+              "0 0 10px rgba(255,255,255,0.85), 0 0 18px rgba(255,255,255,0.28)",
+            animation: `mtStarFloat ${star.duration} ease-in-out infinite, mtStarTwinkle 3.2s ease-in-out infinite`,
+            animationDelay: star.delay,
+          }}
+        />
+      ))}
     </div>
   );
 }
+
+const actionCards = [
+  {
+    title: "Analize Başla",
+    description:
+      "Hesabının neden ilerlemediğini, reklamlarının neden dönüşmediğini ve içeriklerinin neden keşfete düşmediğini analiz ettir.",
+    href: "/analiz",
+    eyebrow: "Profesyonel analiz",
+    icon: FaChartLine,
+    primary: true,
+  },
+  {
+    title: "Takipçi Al",
+    description:
+      "Instagram, TikTok, YouTube ve X için hazır paketleri hızlıca incele ve sipariş oluştur.",
+    href: "/paketler",
+    eyebrow: "Hızlı paketler",
+    icon: FaUserCheck,
+    primary: false,
+  },
+  {
+    title: "SMMTora’ya Git",
+    description:
+      "Geniş servis listesine, platform filtrelerine ve detaylı hizmet seçeneklerine ulaş.",
+    href: "/smmtora",
+    eyebrow: "Geniş servis paneli",
+    icon: FaBoxesStacked,
+    primary: false,
+  },
+];
+
+const trustItems = [
+  "KDV + vergiler dahil",
+  "Sipariş numarası ile takip",
+  "WhatsApp / Telegram destek",
+  "Güvenli işlem akışı",
+];
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#1a2440_0%,#0a1020_45%,#04070f_100%)] text-white">
-      <section className="relative overflow-hidden">
-        <div className="pointer-events-none absolute left-1/2 top-0 h-[360px] w-[360px] -translate-x-1/2 rounded-full bg-emerald-400/10 blur-[100px]" />
-        <div className="pointer-events-none absolute right-0 top-24 h-[300px] w-[300px] rounded-full bg-sky-500/10 blur-[100px]" />
-        <div className="pointer-events-none absolute bottom-0 left-0 h-[260px] w-[260px] rounded-full bg-violet-500/10 blur-[100px]" />
+    <main className="mt-premium-page">
+      <div className="mt-top-fade" />
+      <div className="mt-bottom-fade" />
 
-        <div className="relative mx-auto max-w-6xl px-6 py-5">
-          <header className="flex flex-col gap-4 rounded-[28px] border border-white/10 bg-white/[0.035] p-4 backdrop-blur md:flex-row md:items-center md:justify-between">
-            <a href="/" className="inline-flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-400 font-black text-black">
-                MT
+      <MinimalStars />
+
+      <section className="mt-premium-inner mx-auto flex min-h-[100dvh] w-full max-w-7xl flex-col px-4 py-5 sm:px-6 lg:px-8">
+        <header className="flex items-center justify-between gap-4 border-b border-white/5 pb-5">
+          <Link href="/" className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center text-white drop-shadow-[0_0_18px_rgba(255,255,255,0.16)]">
+              <LuxuryMonogram size={34} />
+            </div>
+
+            <div className="min-w-0">
+              <p className="text-xs font-black uppercase tracking-[0.34em] text-white sm:text-base sm:tracking-[0.42em]">
+                MedyaTora
+              </p>
+
+              <p className="mt-1 hidden text-[9px] uppercase tracking-[0.3em] text-white/35 sm:block">
+                Private Digital Authority
+              </p>
+            </div>
+          </Link>
+
+          <div className="flex shrink-0 items-center gap-2">
+            <Link
+              href="/giris"
+              className="rounded-none border border-white/10 bg-white/[0.03] px-3 py-2.5 text-[9px] font-bold uppercase tracking-[0.18em] text-white/70 transition hover:border-white/30 hover:bg-white/[0.07] hover:text-white sm:px-5 sm:text-[10px] sm:tracking-[0.24em]"
+            >
+              Giriş
+            </Link>
+
+            <Link
+              href="/giris?mode=register"
+              className="rounded-none border border-white/10 bg-white/[0.03] px-3 py-2.5 text-[9px] font-bold uppercase tracking-[0.18em] text-white/70 transition hover:border-white/30 hover:bg-white/[0.07] hover:text-white sm:px-5 sm:text-[10px] sm:tracking-[0.24em]"
+            >
+              Üye Ol
+            </Link>
+
+            <Link
+              href="/portal"
+              className="rounded-none border border-white/15 bg-white/[0.04] px-3 py-2.5 text-[9px] font-bold uppercase tracking-[0.18em] text-white transition hover:border-white/35 hover:bg-white/[0.08] sm:px-5 sm:text-[10px] sm:tracking-[0.24em]"
+            >
+              Portal
+            </Link>
+          </div>
+        </header>
+
+        <div className="flex flex-1 items-center py-8 sm:py-14 lg:py-16">
+          <div className="mx-auto w-full max-w-6xl">
+            <div className="mx-auto max-w-4xl text-center">
+              <div className="mx-auto mb-6 inline-flex border border-white/10 bg-white/[0.045] px-5 py-2 text-[9px] font-black uppercase tracking-[0.3em] text-white/55 shadow-[0_12px_45px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:text-xs sm:tracking-[0.38em]">
+                Premium sosyal medya sistemi
               </div>
 
-              <div>
-                <div className="text-lg font-black tracking-tight text-white">
+              <div className="mx-auto mb-7 flex h-20 w-20 items-center justify-center text-white drop-shadow-[0_0_38px_rgba(255,255,255,0.18)] sm:h-28 sm:w-28">
+                <LuxuryMonogram size={86} className="sm:hidden" />
+                <LuxuryMonogram size={122} className="hidden sm:block" />
+              </div>
+
+              <div className="mt-title-glow-wrap mx-auto">
+                <h1 className="mt-title-glow-text mx-auto max-w-full text-center text-[34px] font-light uppercase leading-none tracking-[0.22em] text-white sm:text-6xl sm:tracking-[0.3em] md:text-7xl lg:text-8xl">
                   MedyaTora
-                </div>
-                <div className="text-xs text-white/45">
-                  Sosyal medya destek sistemi
-                </div>
-              </div>
-            </a>
-
-            <nav className="flex flex-wrap items-center gap-3 text-sm font-semibold text-white/70">
-              <a href="#analysis" className="transition hover:text-white">
-                Analiz
-              </a>
-
-              <a href="/smmtora" className="transition hover:text-white">
-                SMMTora
-              </a>
-
-              <a href="/paketler" className="transition hover:text-white">
-                Paketler
-              </a>
-
-              <a href={CONTACT.telegram} className="transition hover:text-white">
-                Destek
-              </a>
-            </nav>
-
-            <UserMenu />
-          </header>
-        </div>
-
-        <div className="relative mx-auto max-w-6xl px-6 py-12 md:py-16">
-          <div className="grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr]">
-            <div className="max-w-3xl">
-              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-xs font-semibold text-emerald-300">
-                <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                MedyaTora sosyal medya danışmanlığına hoş geldiniz
+                </h1>
               </div>
 
-              <h1 className="mb-5 text-4xl font-bold leading-tight tracking-tight md:text-6xl">
-                Hesabını analiz et, güven veren bir sosyal medya görünümü
-                oluştur.
-              </h1>
-
-              <p className="mb-8 max-w-2xl text-lg leading-8 text-white/70 md:text-xl">
-                MedyaTora ile sosyal medya hesabının eksiklerini görebilir,
-                platform bazlı hizmetleri inceleyebilir ve ihtiyaç duyduğun
-                destekleri tek yerden yönetebilirsin.
+              <p className="mx-auto mt-5 max-w-2xl text-xs font-medium uppercase leading-7 tracking-[0.16em] text-white/52 sm:mt-7 sm:text-sm sm:tracking-[0.22em]">
+                Sosyal medya hesabın için analiz, hazır paketler ve gelişmiş
+                servis paneli.
               </p>
 
-              <div className="flex flex-col gap-4 sm:flex-row">
-                <a
-                  href="#analysis"
-                  className="rounded-2xl bg-emerald-400 px-6 py-3 text-center font-semibold text-black transition hover:bg-emerald-300"
-                >
-                  Analize Başla
-                </a>
-
-                <a
-                  href="/smmtora"
-                  className="rounded-2xl bg-white px-6 py-3 text-center font-semibold text-black transition hover:bg-white/90"
-                >
-                  SMMTora’ya Git
-                </a>
-
-                <a
-                  href="/paketler"
-                  className="rounded-2xl border border-white/20 px-6 py-3 text-center font-semibold text-white transition hover:bg-white/10"
-                >
-                  Hızlı Paketler
-                </a>
-              </div>
-            </div>
-
-            <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur md:p-8">
-              <p className="mb-4 text-sm uppercase tracking-[0.2em] text-white/45">
-                Hızlı geçiş
+              <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-white/55 sm:text-base">
+                Daha güven veren, daha profesyonel ve daha sade bir dijital
+                görünüm için tek giriş noktası.
               </p>
 
-              <div className="space-y-4">
-                <a
-                  href="#analysis"
-                  className="block rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-5 transition hover:bg-emerald-400/15"
-                >
-                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-emerald-400/20 bg-black/20 text-xl text-emerald-300">
-                    <FaChartLine />
-                  </div>
+              <div className="mx-auto mt-8 grid max-w-5xl gap-4 md:mt-10 md:grid-cols-3">
+                {actionCards.map((card) => {
+                  const Icon = card.icon;
 
-                  <h3 className="text-xl font-bold">Profesyonel Analiz</h3>
+                  return (
+                    <Link
+                      key={card.title}
+                      href={card.href}
+                      className={`group relative overflow-hidden rounded-[28px] border p-5 text-left shadow-[0_24px_90px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition duration-300 hover:-translate-y-1 sm:p-6 ${
+                        card.primary
+                          ? "border-white/20 bg-white/[0.11] hover:bg-white/[0.15]"
+                          : "border-white/12 bg-white/[0.07] hover:border-white/22 hover:bg-white/[0.11]"
+                      }`}
+                    >
+                      <div className="pointer-events-none absolute -right-16 -top-16 h-36 w-36 rounded-full bg-white/[0.07] blur-3xl transition group-hover:scale-125" />
 
-                  <p className="mt-2 text-sm leading-6 text-white/65">
-                    Keşfet, reklam, profil güveni ve satış dönüşümü problemleri
-                    için.
-                  </p>
-                </a>
+                      <div className="relative">
+                        <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/12 bg-black/30 text-lg text-white">
+                          <Icon />
+                        </div>
 
-                <a
-                  href="/smmtora"
-                  className="block rounded-2xl border border-white/10 bg-black/25 p-5 transition hover:bg-black/35"
-                >
-                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-sky-400/20 bg-sky-400/10 text-xl text-sky-300">
-                    <FaBoxesStacked />
-                  </div>
+                        <p className="mb-2 text-[10px] font-black uppercase tracking-[0.24em] text-white/42">
+                          {card.eyebrow}
+                        </p>
 
-                  <h3 className="text-xl font-bold">SMMTora</h3>
+                        <h2 className="text-2xl font-black tracking-tight text-white">
+                          {card.title}
+                        </h2>
 
-                  <p className="mt-2 text-sm leading-6 text-white/65">
-                    Platform bazlı sosyal medya destek hizmetleri için.
-                  </p>
-                </a>
+                        <p className="mt-3 text-sm leading-6 text-white/58 md:min-h-[108px]">
+                          {card.description}
+                        </p>
 
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <a
-                    href={getWhatsappLink()}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm font-medium text-white/80 transition hover:bg-white/[0.08]"
+                        <div className="mt-5 inline-flex items-center gap-2 text-sm font-black text-white">
+                          Devam Et
+                          <FaArrowRight className="transition group-hover:translate-x-1" />
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+
+              <div className="mx-auto mt-8 grid max-w-4xl gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                {trustItems.map((item) => (
+                  <div
+                    key={item}
+                    className="border border-white/10 bg-white/[0.04] px-4 py-3 text-center text-xs font-semibold text-white/52 backdrop-blur-xl"
                   >
-                    <div className="mb-2 text-emerald-300">
-                      <FaWhatsapp />
-                    </div>
-                    WhatsApp
-                  </a>
-
-                  <a
-                    href={CONTACT.telegram}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm font-medium text-white/80 transition hover:bg-white/[0.08]"
-                  >
-                    <div className="mb-2 text-sky-300">
-                      <FaTelegram />
-                    </div>
-                    Telegram
-                  </a>
-                </div>
+                    {item}
+                  </div>
+                ))}
               </div>
             </div>
           </div>
         </div>
-      </section>
 
-      <section className="mx-auto max-w-6xl px-6 pb-10">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {topHighlights.map((item) => (
-            <HighlightCard
-              key={item.title}
-              title={item.title}
-              icon={item.icon}
-            />
-          ))}
-        </div>
-      </section>
+        <footer className="flex flex-col items-center justify-between gap-3 border-t border-white/8 py-4 text-xs text-white/35 sm:flex-row">
+          <p>© MedyaTora</p>
 
-      <section className="mx-auto max-w-6xl px-6 pb-14">
-        <MembershipBox />
-      </section>
-
-      <section className="mx-auto max-w-6xl px-6 pb-14">
-        <div className="grid gap-5 md:grid-cols-3">
-          {quickCards.map((card) => (
-            <QuickCard
-              key={card.title}
-              title={card.title}
-              description={card.description}
-              href={card.href}
-              cta={card.cta}
-              icon={card.icon}
-              variant={card.variant}
-            />
-          ))}
-        </div>
-      </section>
-
-      <section
-        id="analysis"
-        className="mx-auto max-w-4xl scroll-mt-8 px-6 pb-20"
-      >
-        <div className="mb-6 overflow-hidden rounded-[32px] border border-white/10 bg-gradient-to-br from-white/[0.075] via-white/[0.035] to-emerald-400/[0.06] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.28)] md:p-8">
-          <div className="mb-4 inline-flex rounded-full border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-emerald-300">
-            Profesyonel hesap analizi
-          </div>
-
-          <h2 className="text-3xl font-black tracking-tight text-white md:text-4xl">
-            Hesabının neden ilerlemediğini birlikte netleştirelim.
-          </h2>
-
-          <p className="mt-4 text-sm leading-7 text-white/70 md:text-base">
-            İçerikleriniz keşfete düşmüyorsa, reklam vermenize rağmen satış
-            veya talep alamıyorsanız, profilinize giren kişiler takip etmiyor
-            ya da mesajlar satın almaya dönüşmüyorsa; hesabınızı içerik
-            kalitesi, hedef kitle, profil güveni, reklam dönüşümü ve platform
-            algoritmasına uyum açısından inceliyoruz.
-          </p>
-
-          <div className="mt-5 grid gap-3 md:grid-cols-3">
-            <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4">
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-200/70">
-                Ücretsiz hak
-              </p>
-
-              <p className="mt-2 text-sm leading-6 text-white/75">
-                E-posta adresini doğrulayan üyeler 1 defaya mahsus ücretsiz
-                analiz hakkı kazanır.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-sky-400/20 bg-sky-400/10 p-4">
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-sky-200/70">
-                Platformlar
-              </p>
-
-              <p className="mt-2 text-sm leading-6 text-white/75">
-                Analiz şu an Instagram, TikTok, YouTube ve X / Twitter
-                hesapları için hazırlanır.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-white/40">
-                Standart ücret
-              </p>
-
-              <p className="mt-2 text-xl font-black text-white">1.000 TL</p>
-
-              <p className="mt-1 text-xs leading-5 text-white/45">
-                Ödeme adımında seçilen para birimine göre güncellenir.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <AnalysisForm />
-      </section>
-
-      <footer className="border-t border-white/10 px-6 py-10">
-        <div className="mx-auto flex max-w-6xl flex-col gap-4 text-sm text-white/50 md:flex-row md:items-center md:justify-between">
-          <div>
-            <div className="font-semibold text-white">© MedyaTora</div>
-            <div>Sosyal medya destek sistemi</div>
-          </div>
-
-          <div className="flex flex-wrap gap-4">
-            <a href="#analysis" className="transition hover:text-white">
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            <Link href="/analiz" className="transition hover:text-white/70">
               Analiz
-            </a>
+            </Link>
 
-            <a href="/paketler" className="transition hover:text-white">
+            <Link href="/paketler" className="transition hover:text-white/70">
               Paketler
-            </a>
+            </Link>
 
-            <a href="/smmtora" className="transition hover:text-white">
+            <Link href="/smmtora" className="transition hover:text-white/70">
               SMMTora
-            </a>
+            </Link>
 
             <a
-              href={getWhatsappLink()}
+              href="https://wa.me/905530739292"
               target="_blank"
               rel="noopener noreferrer"
-              className="transition hover:text-white"
+              className="inline-flex items-center gap-1 transition hover:text-white/70"
             >
+              <FaWhatsapp />
               WhatsApp
             </a>
-
-            <a
-              href={CONTACT.telegram}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="transition hover:text-white"
-            >
-              Telegram
-            </a>
-
-            <a
-              href={CONTACT.instagram}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="transition hover:text-white"
-            >
-              Instagram
-            </a>
           </div>
-        </div>
-      </footer>
+        </footer>
+      </section>
     </main>
   );
 }

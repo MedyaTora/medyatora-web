@@ -13,8 +13,9 @@ import {
   FaUserCheck,
   FaWhatsapp,
   FaYoutube,
+  FaTiktok,
+  FaXTwitter,
 } from "react-icons/fa6";
-import { FaTiktok, FaXTwitter } from "react-icons/fa6";
 
 type PlatformSlug = "instagram" | "tiktok" | "youtube" | "x" | "telegram";
 type ContactType = "Telegram" | "WhatsApp" | "Instagram" | "E-posta" | "";
@@ -430,7 +431,8 @@ const highlights: {
   },
   {
     title: "Günlük Yüksek Limit",
-    description: "Minimum 100, günlük maksimum 5.000.000 adede kadar işlem alınabilir.",
+    description:
+      "Minimum 100, günlük maksimum 5.000.000 adede kadar işlem alınabilir.",
     icon: FaChartLine,
   },
   {
@@ -639,6 +641,11 @@ export default function PaketlerPage() {
     setPaymentTermsAccepted(false);
   }
 
+  function closeCheckoutModal() {
+    setCheckoutOpen(false);
+    resetCheckoutForm();
+  }
+
   async function submitPackageOrder() {
     if (!isCheckoutValid) return;
 
@@ -698,12 +705,17 @@ export default function PaketlerPage() {
       setLoading(false);
     }
   }
+
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#172033_0%,#080b12_50%,#030408_100%)] text-white">
-      <section className="relative overflow-hidden">
-        <div className="pointer-events-none absolute left-1/2 top-0 h-[380px] w-[380px] -translate-x-1/2 rounded-full bg-emerald-400/10 blur-[100px]" />
-        <div className="pointer-events-none absolute right-0 top-32 h-[320px] w-[320px] rounded-full bg-sky-500/10 blur-[100px]" />
-        <div className="pointer-events-none absolute bottom-0 left-0 h-[280px] w-[280px] rounded-full bg-violet-500/10 blur-[100px]" />
+    <main className="mt-premium-page">
+      <div className="mt-top-fade" />
+      <div className="mt-bottom-fade" />
+  
+      <div className="mt-premium-inner">
+        <section className="relative overflow-hidden">
+
+          
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_34%),linear-gradient(to_bottom,rgba(255,255,255,0.02),transparent_28%,transparent_72%,rgba(255,255,255,0.02))]" />
 
         <div className="relative mx-auto max-w-6xl px-6 py-10 md:py-16">
           <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
@@ -782,7 +794,8 @@ export default function PaketlerPage() {
                 </h3>
 
                 <p className="mb-5 text-sm leading-6 text-white/65">
-                  {selectedPackageType.title} paketi · {formatNumber(quantity)} adet
+                  {selectedPackageType.title} paketi ·{" "}
+                  {formatNumber(quantity)} adet
                 </p>
 
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -816,7 +829,8 @@ export default function PaketlerPage() {
                 </div>
 
                 <p className="mt-5 text-xs leading-5 text-white/45">
-                  KDV + vergiler dahildir. Paketler, hızlı sipariş vermek isteyen kullanıcılar için hazırlanmıştır.
+                  KDV + vergiler dahildir. Paketler, hızlı sipariş vermek
+                  isteyen kullanıcılar için hazırlanmıştır.
                 </p>
               </div>
             </div>
@@ -1073,7 +1087,8 @@ export default function PaketlerPage() {
               </p>
 
               <p className="mt-2 text-xs leading-5 text-white/45">
-                KDV + vergiler dahildir. Ödeme sonrası sipariş kontrol edilerek işleme alınır.
+                KDV + vergiler dahildir. Ödeme sonrası sipariş kontrol edilerek
+                işleme alınır.
               </p>
             </div>
 
@@ -1083,6 +1098,7 @@ export default function PaketlerPage() {
                 disabled={!canOpenCheckout}
                 onClick={() => {
                   setError("");
+                  setPaymentTermsAccepted(false);
                   setCheckoutOpen(true);
                 }}
                 className="rounded-2xl bg-white px-6 py-3 text-center text-sm font-black text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
@@ -1198,6 +1214,7 @@ export default function PaketlerPage() {
           </div>
         </div>
       </footer>
+    </div>
 
       {checkoutOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-3 backdrop-blur-sm sm:p-4">
@@ -1213,7 +1230,7 @@ export default function PaketlerPage() {
 
               <button
                 type="button"
-                onClick={() => setCheckoutOpen(false)}
+                onClick={closeCheckoutModal}
                 className="rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-bold text-white/75 transition hover:bg-white/10 hover:text-white"
               >
                 Kapat
@@ -1273,7 +1290,8 @@ export default function PaketlerPage() {
               <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.055] p-4">
                 <p className="text-sm font-bold text-white">Ödeme yöntemi</p>
                 <p className="mt-1 text-sm leading-6 text-white/60">
-                  Paketler şu an TL üzerinden satılır. Bakiye ödemesi yalnızca TL bakiyeden düşer.
+                  Paketler şu an TL üzerinden satılır. Bakiye ödemesi yalnızca
+                  TL bakiyeden düşer.
                 </p>
 
                 <div className="mt-4 grid gap-3 md:grid-cols-3">
@@ -1304,9 +1322,7 @@ export default function PaketlerPage() {
                         : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
                     }`}
                   >
-                    <p className="text-sm font-bold text-white">
-                      TL Bakiyesi
-                    </p>
+                    <p className="text-sm font-bold text-white">TL Bakiyesi</p>
                     <p className="mt-1 text-xs leading-5 text-white/55">
                       {authUser
                         ? `Mevcut TL bakiye: ${formatMoney(authUser.balance_tl)}`
@@ -1359,12 +1375,14 @@ export default function PaketlerPage() {
                   soyadı ile aynı olmalıdır. Eşleşmeyen ödemeler onaylanmaz.
                 </p>
 
-                <p className="mt-4 font-bold text-white">İade Koşulları</p>
+                <p className="mt-4 font-bold text-white">
+                  İade ve Sözleşme Onayı
+                </p>
 
                 <p className="mt-2 text-white/75">
                   İşlem başlamadan önce iade talep edebilirsiniz. İşlem
-                  başladıktan sonra iptal/iade yapılamaz. Bizden kaynaklı
-                  eksik işlem olursa eksik kalan kısım için iade yapılır.
+                  başladıktan sonra iptal/iade yapılamaz. Bizden kaynaklı eksik
+                  işlem olursa eksik kalan kısım için iade yapılabilir.
                 </p>
 
                 <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-black/20 p-3">
@@ -1374,13 +1392,55 @@ export default function PaketlerPage() {
                     onChange={(event) =>
                       setPaymentTermsAccepted(event.target.checked)
                     }
-                    className="mt-1 h-4 w-4 accent-emerald-400"
+                    className="mt-1 h-4 w-4 shrink-0 accent-emerald-400"
                   />
 
-                  <span className="text-sm font-semibold text-white">
-                    Okudum, ödeme güvenliği ve iade koşullarını kabul ediyorum.
+                  <span className="text-sm leading-6 text-white/80">
+                    <a
+                      href="/kullanim-sartlari"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-semibold text-emerald-300 underline underline-offset-4 hover:text-emerald-200"
+                    >
+                      Kullanım şartlarını
+                    </a>
+                    ,{" "}
+                    <a
+                      href="/gizlilik-politikasi"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-semibold text-emerald-300 underline underline-offset-4 hover:text-emerald-200"
+                    >
+                      gizlilik politikasını
+                    </a>
+                    ,{" "}
+                    <a
+                      href="/iade-politikasi"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-semibold text-emerald-300 underline underline-offset-4 hover:text-emerald-200"
+                    >
+                      iade koşullarını
+                    </a>{" "}
+                    ve{" "}
+                    <a
+                      href="/mesafeli-satis-sozlesmesi"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-semibold text-emerald-300 underline underline-offset-4 hover:text-emerald-200"
+                    >
+                      mesafeli satış sözleşmesini
+                    </a>{" "}
+                    okudum, kabul ediyorum.
                   </span>
                 </label>
+
+                {!paymentTermsAccepted && (
+                  <p className="mt-3 text-xs leading-5 text-amber-100/80">
+                    Siparişi oluşturmak için sözleşme ve politika onayını
+                    işaretlemelisin.
+                  </p>
+                )}
               </div>
 
               <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.055] p-4">
@@ -1502,7 +1562,8 @@ export default function PaketlerPage() {
                   </p>
 
                   <p className="mt-2 text-sm leading-6 text-white/60">
-                    Ödeme yaptıktan sonra dekontu WhatsApp veya Telegram üzerinden gönder.
+                    Ödeme yaptıktan sonra dekontu WhatsApp veya Telegram
+                    üzerinden gönder.
                   </p>
 
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">

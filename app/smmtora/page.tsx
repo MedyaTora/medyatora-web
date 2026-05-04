@@ -1403,24 +1403,14 @@ export default function SmmToraPage() {
   };
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(52,211,153,0.18)_0%,transparent_30%),radial-gradient(circle_at_top_right,rgba(56,189,248,0.18)_0%,transparent_32%),radial-gradient(circle_at_50%_0%,rgba(99,102,241,0.16)_0%,transparent_38%),linear-gradient(180deg,#101a32_0%,#0b1020_42%,#070b16_100%)] px-4 py-6 text-white sm:px-6">
-    <div className="pointer-events-none absolute inset-0 -z-10">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#1c2740_0%,#0c1326_35%,#060914_70%,#03050d_100%)]" />
-
-      <div className="absolute left-[-120px] top-[-80px] h-[320px] w-[320px] rounded-full bg-emerald-500/12 blur-3xl" />
-      <div className="absolute right-[-100px] top-[120px] h-[280px] w-[280px] rounded-full bg-sky-500/12 blur-3xl" />
-      <div className="absolute bottom-[-120px] left-[18%] h-[260px] w-[260px] rounded-full bg-cyan-400/10 blur-3xl" />
-      <div className="absolute bottom-[-100px] right-[12%] h-[300px] w-[300px] rounded-full bg-indigo-500/10 blur-3xl" />
-
-      <div className="absolute inset-0 opacity-[0.05] [background-image:linear-gradient(to_right,white_1px,transparent_1px),linear-gradient(to_bottom,white_1px,transparent_1px)] [background-size:36px_36px]" />
-
-      <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.03),transparent_22%,transparent_78%,rgba(255,255,255,0.02))]" />
-    </div>
+    <main className="mt-premium-page px-4 py-6 text-white sm:px-6">
+<div className="mt-top-fade" />
+<div className="mt-bottom-fade" />
 
     <ServiceTermsModal />
 
-    <div className="mx-auto max-w-7xl space-y-5">
-      <header className="flex flex-col gap-4 rounded-[28px] border border-white/10 bg-[#121826]/90 p-4 shadow-[0_18px_70px_rgba(0,0,0,0.28)] ring-1 ring-white/[0.025] backdrop-blur-xl md:flex-row md:items-center md:justify-between">
+    <div className="mt-premium-inner mx-auto max-w-7xl space-y-5">
+    <header className="flex flex-col gap-4 rounded-[28px] border border-white/10 bg-white/[0.055] p-4 shadow-[0_24px_90px_rgba(0,0,0,0.42)] ring-1 ring-white/[0.025] backdrop-blur-2xl md:flex-row md:items-center md:justify-between">
         <a href="/" className="inline-flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-400 font-black text-black">
             MT
@@ -1440,9 +1430,9 @@ export default function SmmToraPage() {
           <a href="/" className="transition hover:text-white">
             Ana Sayfa
           </a>
-          <a href="/#analysis" className="transition hover:text-white">
-            Analiz
-          </a>
+          <a href="/analiz" className="transition hover:text-white">
+              Analiz
+           </a>
           <a href="/paketler" className="transition hover:text-white">
             Paketler
           </a>
@@ -1451,7 +1441,7 @@ export default function SmmToraPage() {
         <UserMenu />
       </header>
 
-      <section className="relative overflow-hidden rounded-[34px] border border-white/10 bg-[#121826]/90 p-5 shadow-[0_24px_100px_rgba(0,0,0,0.42)] ring-1 ring-white/[0.03] backdrop-blur-xl sm:p-6">
+      <section className="relative overflow-hidden rounded-[34px] border border-white/10 bg-white/[0.06] p-5 shadow-[0_28px_110px_rgba(0,0,0,0.48)] ring-1 ring-white/[0.03] backdrop-blur-2xl sm:p-6">
         <div className="pointer-events-none absolute -right-32 -top-32 h-72 w-72 rounded-full bg-emerald-400/10 blur-3xl" />
         <div className="pointer-events-none absolute -left-24 bottom-0 h-64 w-64 rounded-full bg-sky-400/10 blur-3xl" />
 
