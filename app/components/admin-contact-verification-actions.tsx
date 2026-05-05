@@ -86,7 +86,7 @@ export default function AdminContactVerificationActions({ requestId }: Props) {
           type="button"
           onClick={() => submit("approve")}
           disabled={Boolean(loadingAction)}
-          className="rounded-xl bg-emerald-400 px-4 py-2 text-xs font-black text-black transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-xl border border-emerald-300/35 bg-emerald-300/90 px-4 py-2 text-xs font-black text-black shadow-[0_10px_28px_rgba(52,211,153,0.16)] transition hover:-translate-y-0.5 hover:bg-emerald-200 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
         >
           {loadingAction === "approve"
             ? getLoadingLabel("approve")
@@ -97,7 +97,7 @@ export default function AdminContactVerificationActions({ requestId }: Props) {
           type="button"
           onClick={() => submit("reject")}
           disabled={Boolean(loadingAction)}
-          className="rounded-xl border border-rose-400/25 bg-rose-400/10 px-4 py-2 text-xs font-black text-rose-200 transition hover:bg-rose-400/15 disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-xl border border-rose-300/35 bg-rose-300/90 px-4 py-2 text-xs font-black text-black shadow-[0_10px_28px_rgba(251,113,133,0.12)] transition hover:-translate-y-0.5 hover:bg-rose-200 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
         >
           {loadingAction === "reject"
             ? getLoadingLabel("reject")
@@ -106,13 +106,13 @@ export default function AdminContactVerificationActions({ requestId }: Props) {
       </div>
 
       {message && (
-        <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-xs font-bold text-emerald-200">
+        <div className="rounded-xl border border-emerald-300/25 bg-emerald-300/12 px-3 py-2 text-xs font-bold text-emerald-100">
           {message}
         </div>
       )}
 
       {error && (
-        <div className="rounded-xl border border-rose-400/20 bg-rose-400/10 px-3 py-2 text-xs font-bold text-rose-200">
+        <div className="rounded-xl border border-rose-300/25 bg-rose-300/12 px-3 py-2 text-xs font-bold text-rose-100">
           {error}
         </div>
       )}

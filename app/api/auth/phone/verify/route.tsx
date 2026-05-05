@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import { getCurrentUser } from "@/lib/auth/current-user";
-import { getMysqlPool } from "@/lib/mysql";
+import { getMysqlPool, hasMysqlConfig } from "@/lib/mysql";
 import {
   hashPhoneVerificationCode,
   isValidNormalizedPhone,
@@ -11,45 +11,81 @@ import {
   PHONE_VERIFICATION_MAX_ATTEMPTS,
 } from "@/lib/auth/phone";
 
+type Channel = "whatsapp" | "telegram";
+type CountryCode = "TR" | "RU";
+
 type ActiveCodeRow = RowDataPacket & {
   id: number;
+  user_id: number;
+  phone_number: string;
+  channel: Channel;
+  country_code: CountryCode;
   attempts: number;
+  request_count: number;
   code_hash: string;
+  expires_at: Date | string;
+  used_at: Date | string | null;
+  blocked_at: Date | string | null;
+  verified_at: Date | string | null;
+  status: "pending" | "verified" | "expired" | "blocked";
 };
 
 type UserForUpdateRow = RowDataPacket & {
   id: number;
   email: string;
   phone_number: string | null;
-  phone_verified: number;
+  phone_verified: number | boolean;
   balance_usd: string | number;
-  welcome_bonus_claimed: number;
+  whatsapp_verified_at: Date | string | null;
+  telegram_verified_at: Date | string | null;
+  contact_bonus_granted_at: Date | string | null;
 };
 
 type OtherPhoneUserRow = RowDataPacket & {
   id: number;
 };
 
+const WRONG_CODE_BLOCK_LIMIT = Math.min(3, PHONE_VERIFICATION_MAX_ATTEMPTS);
+
 function getClientIp(request: NextRequest) {
   const forwardedFor = request.headers.get("x-forwarded-for");
 
   if (forwardedFor) {
-    return forwardedFor.split(",")[0]?.trim() || null;
+    return forwardedFor.split(",")[0]?.trim().slice(0, 80) || null;
   }
 
-  return (
+  const realIp =
     request.headers.get("x-real-ip") ||
     request.headers.get("cf-connecting-ip") ||
-    null
-  );
+    null;
+
+  return realIp ? realIp.trim().slice(0, 80) : null;
 }
 
 function normalizeCode(value: unknown) {
   return String(value || "").replace(/\D/g, "").slice(0, 6);
 }
 
+function normalizeChannel(value: unknown): Channel | null {
+  const channel = String(value || "").trim().toLowerCase();
+
+  if (channel === "whatsapp") return "whatsapp";
+  if (channel === "telegram") return "telegram";
+
+  return null;
+}
+
+function normalizeCountryCode(value: unknown): CountryCode | null {
+  const country = String(value || "").trim().toUpperCase();
+
+  if (country === "TR") return "TR";
+  if (country === "RU") return "RU";
+
+  return null;
+}
+
 function roundMoney(value: number) {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
+  return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
 }
 
 function isDuplicateKeyError(error: unknown) {
@@ -61,32 +97,100 @@ function isDuplicateKeyError(error: unknown) {
   );
 }
 
+function getChannelVerifiedColumn(channel: Channel) {
+  if (channel === "telegram") return "telegram_verified_at";
+  return "whatsapp_verified_at";
+}
+
+function getChannelLabel(channel: Channel) {
+  if (channel === "telegram") return "Telegram";
+  return "WhatsApp";
+}
+
 export async function POST(request: NextRequest) {
   const currentUser = await getCurrentUser();
 
   if (!currentUser) {
     return NextResponse.json(
-      { ok: false, error: "Telefon doğrulamak için giriş yapmalısın." },
+      {
+        ok: false,
+        success: false,
+        error: "Telefon doğrulamak için giriş yapmalısın.",
+      },
       { status: 401 }
     );
   }
 
-  try {
-    const body = await request.json();
+  if (!hasMysqlConfig()) {
+    return NextResponse.json(
+      {
+        ok: false,
+        success: false,
+        error: "MySQL bağlantısı bulunamadı.",
+      },
+      { status: 503 }
+    );
+  }
 
-    const phoneNumber = normalizePhoneNumber(body.phone_number);
-    const code = normalizeCode(body.code);
+  try {
+    const body = await request.json().catch(() => null);
+
+    const phoneNumber = normalizePhoneNumber(body?.phone_number);
+    const code = normalizeCode(body?.code);
+    const channel = normalizeChannel(body?.channel) || "whatsapp";
+    const countryCode = normalizeCountryCode(body?.country_code);
 
     if (!isValidNormalizedPhone(phoneNumber)) {
       return NextResponse.json(
-        { ok: false, error: "Geçerli bir telefon numarası gir." },
+        {
+          ok: false,
+          success: false,
+          error: "Geçerli bir telefon numarası gir.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!countryCode) {
+      return NextResponse.json(
+        {
+          ok: false,
+          success: false,
+          error: "Geçerli ülke seçimi gerekli. TR veya RU seçilmelidir.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (countryCode === "TR" && !phoneNumber.startsWith("+90")) {
+      return NextResponse.json(
+        {
+          ok: false,
+          success: false,
+          error: "TR için telefon numarası +90 ile başlamalıdır.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (countryCode === "RU" && !phoneNumber.startsWith("+7")) {
+      return NextResponse.json(
+        {
+          ok: false,
+          success: false,
+          error: "RU için telefon numarası +7 ile başlamalıdır.",
+        },
         { status: 400 }
       );
     }
 
     if (code.length !== 6) {
       return NextResponse.json(
-        { ok: false, error: "6 haneli doğrulama kodunu gir." },
+        {
+          ok: false,
+          success: false,
+          error: "6 haneli doğrulama kodunu gir.",
+        },
         { status: 400 }
       );
     }
@@ -95,16 +199,32 @@ export async function POST(request: NextRequest) {
 
     const [activeCodeRows] = await pool.query<ActiveCodeRow[]>(
       `
-      SELECT id, attempts, code_hash
+      SELECT
+        id,
+        user_id,
+        phone_number,
+        channel,
+        country_code,
+        attempts,
+        request_count,
+        code_hash,
+        expires_at,
+        used_at,
+        blocked_at,
+        verified_at,
+        status
       FROM phone_verification_codes
       WHERE user_id = ?
         AND phone_number = ?
+        AND channel = ?
+        AND country_code = ?
         AND used_at IS NULL
-        AND expires_at > NOW()
+        AND blocked_at IS NULL
+        AND status = 'pending'
       ORDER BY id DESC
       LIMIT 1
       `,
-      [currentUser.id, phoneNumber]
+      [currentUser.id, phoneNumber, channel, countryCode]
     );
 
     const activeCode = activeCodeRows[0];
@@ -113,18 +233,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           ok: false,
-          error:
-            "Aktif doğrulama kodu bulunamadı veya kodun süresi doldu. Lütfen yeni kod iste.",
+          success: false,
+          error: "Aktif doğrulama kodu bulunamadı. Lütfen yeni kod iste.",
         },
         { status: 400 }
       );
     }
 
-    if (Number(activeCode.attempts || 0) >= PHONE_VERIFICATION_MAX_ATTEMPTS) {
+    const expiresAt = new Date(activeCode.expires_at).getTime();
+
+    if (!expiresAt || Number.isNaN(expiresAt) || expiresAt <= Date.now()) {
       await pool.query(
         `
         UPDATE phone_verification_codes
-        SET used_at = NOW()
+        SET status = 'expired'
         WHERE id = ?
         LIMIT 1
         `,
@@ -134,7 +256,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           ok: false,
-          error: "Çok fazla hatalı deneme yapıldı. Lütfen yeni kod iste.",
+          success: false,
+          error: "Doğrulama kodunun süresi doldu. Lütfen yeni kod iste.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (Number(activeCode.attempts || 0) >= WRONG_CODE_BLOCK_LIMIT) {
+      await pool.query(
+        `
+        UPDATE phone_verification_codes
+        SET
+          status = 'blocked',
+          blocked_at = COALESCE(blocked_at, NOW()),
+          used_at = COALESCE(used_at, NOW())
+        WHERE id = ?
+        LIMIT 1
+        `,
+        [activeCode.id]
+      );
+
+      return NextResponse.json(
+        {
+          ok: false,
+          success: false,
+          error:
+            "Bu kod için hatalı deneme hakkın doldu. Lütfen yeni doğrulama kodu iste.",
         },
         { status: 429 }
       );
@@ -148,12 +296,21 @@ export async function POST(request: NextRequest) {
 
     if (expectedHash !== activeCode.code_hash) {
       const nextAttempts = Number(activeCode.attempts || 0) + 1;
+      const shouldBlock = nextAttempts >= WRONG_CODE_BLOCK_LIMIT;
 
       await pool.query(
         `
         UPDATE phone_verification_codes
         SET
           attempts = attempts + 1,
+          status = CASE
+            WHEN attempts + 1 >= ? THEN 'blocked'
+            ELSE status
+          END,
+          blocked_at = CASE
+            WHEN attempts + 1 >= ? THEN NOW()
+            ELSE blocked_at
+          END,
           used_at = CASE
             WHEN attempts + 1 >= ? THEN NOW()
             ELSE used_at
@@ -161,25 +318,34 @@ export async function POST(request: NextRequest) {
         WHERE id = ?
         LIMIT 1
         `,
-        [PHONE_VERIFICATION_MAX_ATTEMPTS, activeCode.id]
+        [
+          WRONG_CODE_BLOCK_LIMIT,
+          WRONG_CODE_BLOCK_LIMIT,
+          WRONG_CODE_BLOCK_LIMIT,
+          activeCode.id,
+        ]
       );
 
       return NextResponse.json(
         {
           ok: false,
-          error:
-            nextAttempts >= PHONE_VERIFICATION_MAX_ATTEMPTS
-              ? "Kod çok fazla hatalı girildi. Lütfen yeni kod iste."
-              : `Doğrulama kodu hatalı. Kalan deneme hakkı: ${
-                  PHONE_VERIFICATION_MAX_ATTEMPTS - nextAttempts
-                }`,
+          success: false,
+          error: shouldBlock
+            ? "Kod 3 kez hatalı girildi. Bu kod artık kullanılamaz."
+            : `Doğrulama kodu hatalı. Kalan deneme hakkı: ${
+                WRONG_CODE_BLOCK_LIMIT - nextAttempts
+              }`,
+          attempts: nextAttempts,
+          remainingAttempts: Math.max(WRONG_CODE_BLOCK_LIMIT - nextAttempts, 0),
+          blocked: shouldBlock,
         },
-        { status: 400 }
+        { status: shouldBlock ? 429 : 400 }
       );
     }
 
     const connection = await pool.getConnection();
     const ipAddress = getClientIp(request);
+    const verifiedColumn = getChannelVerifiedColumn(channel);
 
     try {
       await connection.beginTransaction();
@@ -192,7 +358,9 @@ export async function POST(request: NextRequest) {
           phone_number,
           phone_verified,
           balance_usd,
-          welcome_bonus_claimed
+          whatsapp_verified_at,
+          telegram_verified_at,
+          contact_bonus_granted_at
         FROM users
         WHERE id = ?
         LIMIT 1
@@ -225,6 +393,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             ok: false,
+            success: false,
             error:
               "Bu telefon numarası daha önce başka bir hesapta doğrulanmış. Lütfen mevcut hesabınla giriş yap.",
           },
@@ -235,7 +404,10 @@ export async function POST(request: NextRequest) {
       await connection.execute(
         `
         UPDATE phone_verification_codes
-        SET used_at = NOW()
+        SET
+          used_at = NOW(),
+          verified_at = NOW(),
+          status = 'verified'
         WHERE id = ?
         LIMIT 1
         `,
@@ -247,7 +419,8 @@ export async function POST(request: NextRequest) {
         UPDATE users
         SET
           phone_number = ?,
-          phone_verified = 1
+          phone_verified = 1,
+          ${verifiedColumn} = COALESCE(${verifiedColumn}, NOW())
         WHERE id = ?
         LIMIT 1
         `,
@@ -256,10 +429,13 @@ export async function POST(request: NextRequest) {
 
       let bonusGranted = false;
       let bonusAmountUsd = 0;
+
       const balanceBefore = roundMoney(Number(user.balance_usd || 0));
       let balanceAfter = balanceBefore;
 
-      if (!Boolean(user.welcome_bonus_claimed)) {
+      const alreadyHasContactBonus = Boolean(user.contact_bonus_granted_at);
+
+      if (!alreadyHasContactBonus) {
         const [bonusInsertResult] = await connection.execute<ResultSetHeader>(
           `
           INSERT IGNORE INTO user_bonus_claims (
@@ -292,7 +468,7 @@ export async function POST(request: NextRequest) {
             UPDATE users
             SET
               balance_usd = ?,
-              welcome_bonus_claimed = 1
+              contact_bonus_granted_at = NOW()
             WHERE id = ?
             LIMIT 1
             `,
@@ -317,7 +493,7 @@ export async function POST(request: NextRequest) {
             `,
             [
               currentUser.id,
-              "welcome_bonus",
+              "contact_verification_bonus",
               "USD",
               bonusAmountUsd,
               balanceBefore,
@@ -325,7 +501,7 @@ export async function POST(request: NextRequest) {
               bonusAmountUsd,
               balanceBefore,
               balanceAfter,
-              "Telefon doğrulama başlangıç bonusu",
+              `${getChannelLabel(channel)} telefon doğrulama bonusu`,
             ]
           );
         }
@@ -335,15 +511,26 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         ok: true,
+        success: true,
         message: bonusGranted
-          ? "Telefon numaran doğrulandı ve 1 USD başlangıç bonusu tanımlandı."
-          : "Telefon numaran doğrulandı.",
+          ? `${getChannelLabel(
+              channel
+            )} telefon doğrulaman tamamlandı ve 1 USD bonus tanımlandı.`
+          : `${getChannelLabel(channel)} telefon doğrulaman tamamlandı.`,
         phoneNumber,
         maskedPhoneNumber: maskPhoneNumber(phoneNumber),
         phoneVerified: true,
+        channel,
+        channelLabel: getChannelLabel(channel),
+        countryCode,
         bonusGranted,
         bonusAmountUsd,
         balanceUsd: bonusGranted ? balanceAfter : balanceBefore,
+        contactBonusGranted: bonusGranted || alreadyHasContactBonus,
+        whatsappVerified:
+          channel === "whatsapp" || Boolean(user.whatsapp_verified_at),
+        telegramVerified:
+          channel === "telegram" || Boolean(user.telegram_verified_at),
       });
     } catch (dbError) {
       await connection.rollback();
@@ -352,6 +539,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             ok: false,
+            success: false,
             error:
               "Bu telefon numarası veya bonus hakkı daha önce kullanılmış. Tekrar bonus alınamaz.",
           },
@@ -364,6 +552,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           ok: false,
+          success: false,
           error: "Telefon doğrulama kaydedilemedi.",
         },
         { status: 500 }
@@ -377,6 +566,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         ok: false,
+        success: false,
         error: "Telefon doğrulanamadı.",
       },
       { status: 500 }

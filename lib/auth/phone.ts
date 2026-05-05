@@ -1,32 +1,54 @@
 import crypto from "crypto";
 
-export const PHONE_BONUS_TYPE = "welcome_phone_verify";
-export const PHONE_VERIFICATION_CODE_TTL_MINUTES = 10;
+export const PHONE_BONUS_TYPE = "contact_verification_bonus";
 export const PHONE_VERIFICATION_MAX_ATTEMPTS = 5;
 
-function onlyDigits(value: string) {
-  return String(value || "").replace(/\D/g, "");
+type HashPhoneVerificationCodeParams = {
+  userId: number | string;
+  phoneNumber: string;
+  code: string;
+};
+
+function getPhoneVerificationSecret() {
+  return (
+    process.env.PHONE_VERIFICATION_SECRET ||
+    process.env.ADMIN_SECRET ||
+    process.env.NEXTAUTH_SECRET ||
+    "medyatora-local-phone-secret"
+  );
 }
 
 export function normalizePhoneNumber(value: unknown) {
   const raw = String(value || "").trim();
 
-  if (!raw) {
-    return "";
+  if (!raw) return "";
+
+  const hasPlus = raw.startsWith("+");
+  const digits = raw.replace(/\D/g, "");
+
+  if (!digits) return "";
+
+  if (hasPlus) {
+    if (digits.startsWith("90")) {
+      return `+90${digits.slice(2)}`;
+    }
+
+    if (digits.startsWith("7")) {
+      return `+7${digits.slice(1)}`;
+    }
+
+    return `+${digits}`;
   }
 
-  const digits = onlyDigits(raw);
-
-  if (!digits) {
-    return "";
+  if (digits.startsWith("90")) {
+    return `+90${digits.slice(2)}`;
   }
 
-  // Türkiye formatları:
-  // 05530739292   -> +905530739292
-  // 5530739292    -> +905530739292
-  // 905530739292  -> +905530739292
-  // +905530739292 -> +905530739292
-  if (digits.length === 11 && digits.startsWith("0")) {
+  if (digits.startsWith("7")) {
+    return `+7${digits.slice(1)}`;
+  }
+
+  if (digits.startsWith("0") && digits.length === 11) {
     return `+90${digits.slice(1)}`;
   }
 
@@ -34,72 +56,79 @@ export function normalizePhoneNumber(value: unknown) {
     return `+90${digits}`;
   }
 
-  if (digits.length === 12 && digits.startsWith("90")) {
-    return `+${digits}`;
+  if (digits.length === 10 && digits.startsWith("9")) {
+    return `+7${digits}`;
   }
 
-  // Rusya / uluslararası basit destek:
-  // +79991234567 gibi gelenleri korur.
-  if (raw.startsWith("+") && digits.length >= 10 && digits.length <= 15) {
-    return `+${digits}`;
+  return `+${digits}`;
+}
+
+export function isValidNormalizedPhone(phoneNumber: string) {
+  const value = normalizePhoneNumber(phoneNumber);
+
+  if (value.startsWith("+90")) {
+    const digits = value.replace(/\D/g, "");
+    return digits.length === 12 && digits.startsWith("90");
   }
 
-  // Kullanıcı + koymadan uluslararası yazdıysa:
-  // 79991234567 -> +79991234567
-  if (digits.length >= 10 && digits.length <= 15) {
-    return `+${digits}`;
+  if (value.startsWith("+7")) {
+    const digits = value.replace(/\D/g, "");
+    return digits.length === 11 && digits.startsWith("7");
   }
 
-  return "";
+  return false;
 }
 
-export function isValidNormalizedPhone(phone: string) {
-  return /^\+[1-9]\d{9,14}$/.test(phone);
-}
+export function maskPhoneNumber(phoneNumber: string) {
+  const value = normalizePhoneNumber(phoneNumber);
 
-export function maskPhoneNumber(phone: string) {
-  const normalized = normalizePhoneNumber(phone);
+  if (!value) return "";
 
-  if (!normalized) {
-    return "";
+  if (value.startsWith("+90")) {
+    const local = value.slice(3);
+
+    if (local.length < 10) return value;
+
+    return `+90 ${local.slice(0, 3)} *** ** ${local.slice(-2)}`;
   }
 
-  const first = normalized.slice(0, 5);
-  const last = normalized.slice(-4);
+  if (value.startsWith("+7")) {
+    const local = value.slice(2);
 
-  return `${first}***${last}`;
-}
+    if (local.length < 10) return value;
 
-export function createPhoneVerificationCode() {
-  return String(Math.floor(100000 + Math.random() * 900000));
-}
+    return `+7 ${local.slice(0, 3)} *** ** ${local.slice(-2)}`;
+  }
 
-function getOtpSecret() {
-  return (
-    process.env.PHONE_OTP_SECRET ||
-    process.env.ADMIN_SECRET ||
-    process.env.MYSQL_PASSWORD ||
-    "medyatora-local-phone-secret"
-  );
+  const visibleStart = value.slice(0, 4);
+  const visibleEnd = value.slice(-2);
+
+  return `${visibleStart} *** ** ${visibleEnd}`;
 }
 
 export function hashPhoneVerificationCode({
   userId,
   phoneNumber,
   code,
-}: {
-  userId: number;
-  phoneNumber: string;
-  code: string;
-}) {
+}: HashPhoneVerificationCodeParams) {
+  const normalizedPhone = normalizePhoneNumber(phoneNumber);
+  const normalizedCode = String(code || "").replace(/\D/g, "").slice(0, 6);
+
   return crypto
-    .createHash("sha256")
-    .update(`${getOtpSecret()}|${userId}|${phoneNumber}|${code}`)
+    .createHmac("sha256", getPhoneVerificationSecret())
+    .update(`${userId}:${normalizedPhone}:${normalizedCode}`)
     .digest("hex");
 }
 
-export function getPhoneVerificationExpiryDate() {
-  const expiresAt = new Date();
-  expiresAt.setMinutes(expiresAt.getMinutes() + PHONE_VERIFICATION_CODE_TTL_MINUTES);
-  return expiresAt;
+export function createPhoneVerificationCode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+export function getPhoneCountryCode(phoneNumber: string): "TR" | "RU" | null {
+  const value = normalizePhoneNumber(phoneNumber);
+
+  if (value.startsWith("+90")) return "TR";
+  if (value.startsWith("+7")) return "RU";
+
+  return null;
 }

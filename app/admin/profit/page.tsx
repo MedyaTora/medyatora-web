@@ -26,10 +26,29 @@ type ProfitOrderRow = {
   status: string | null;
 };
 
+type BonusExpenseRow = {
+  id: number;
+  created_at: string;
+  transaction_type: string | null;
+  currency: CurrencyCode | null;
+  amount: number;
+  amount_usd: number;
+  description: string | null;
+  user_id: number | null;
+};
+
 type SearchParams = {
   month?: string;
   currency?: string;
 };
+
+const BONUS_TRANSACTION_TYPES = [
+  "bonus",
+  "welcome_bonus",
+  "welcome_google_bonus",
+  "contact_verification_bonus",
+  "email_verification_bonus",
+];
 
 function ErrorScreen({ message }: { message: string }) {
   return (
@@ -53,7 +72,12 @@ function getMonthRange(monthValue: string) {
   const year = Number(yearRaw);
   const month = Number(monthRaw);
 
-  if (!Number.isFinite(year) || !Number.isFinite(month) || month < 1 || month > 12) {
+  if (
+    !Number.isFinite(year) ||
+    !Number.isFinite(month) ||
+    month < 1 ||
+    month > 12
+  ) {
     const fallback = getCurrentMonthValue();
     return getMonthRange(fallback);
   }
@@ -105,14 +129,37 @@ function formatMoney(value: number, currency?: string | null) {
 }
 
 function getNetSale(order: ProfitOrderRow) {
-  return Math.max(0, safeNumber(order.total_price) - safeNumber(order.refunded_total));
+  return Math.max(
+    0,
+    safeNumber(order.total_price) - safeNumber(order.refunded_total)
+  );
 }
 
 function calculateProfit(order: ProfitOrderRow) {
   return getNetSale(order) - safeNumber(order.total_cost_price);
 }
 
-function getCurrencyTotals(orders: ProfitOrderRow[]) {
+function getBonusExpenseAmount(row: BonusExpenseRow) {
+  const amount = safeNumber(row.amount);
+
+  if (amount > 0) return amount;
+
+  return Math.abs(amount);
+}
+
+function getBonusTypeLabel(type: string | null | undefined) {
+  const map: Record<string, string> = {
+    bonus: "Manuel / Eski Bonus",
+    welcome_bonus: "Hoş Geldin Bonusu",
+    welcome_google_bonus: "Google Kayıt Bonusu",
+    contact_verification_bonus: "İletişim Doğrulama Bonusu",
+    email_verification_bonus: "E-posta Doğrulama Bonusu",
+  };
+
+  return map[type || ""] || type || "-";
+}
+
+function getCurrencyTotals(orders: ProfitOrderRow[], bonuses: BonusExpenseRow[]) {
   const totals = new Map<
     string,
     {
@@ -121,8 +168,11 @@ function getCurrencyTotals(orders: ProfitOrderRow[]) {
       refunded: number;
       netSale: number;
       cost: number;
-      profit: number;
+      orderProfit: number;
+      bonusExpense: number;
+      netProfit: number;
       count: number;
+      bonusCount: number;
     }
   >();
 
@@ -134,21 +184,50 @@ function getCurrencyTotals(orders: ProfitOrderRow[]) {
       refunded: 0,
       netSale: 0,
       cost: 0,
-      profit: 0,
+      orderProfit: 0,
+      bonusExpense: 0,
+      netProfit: 0,
       count: 0,
+      bonusCount: 0,
     };
 
     const grossSale = safeNumber(order.total_price);
     const refunded = safeNumber(order.refunded_total);
     const netSale = Math.max(0, grossSale - refunded);
     const cost = safeNumber(order.total_cost_price);
+    const orderProfit = netSale - cost;
 
     current.grossSale += grossSale;
     current.refunded += refunded;
     current.netSale += netSale;
     current.cost += cost;
-    current.profit += netSale - cost;
+    current.orderProfit += orderProfit;
     current.count += 1;
+    current.netProfit = current.orderProfit - current.bonusExpense;
+
+    totals.set(currency, current);
+  }
+
+  for (const bonus of bonuses) {
+    const currency = normalizeCurrency(bonus.currency);
+    const current = totals.get(currency) || {
+      currency,
+      grossSale: 0,
+      refunded: 0,
+      netSale: 0,
+      cost: 0,
+      orderProfit: 0,
+      bonusExpense: 0,
+      netProfit: 0,
+      count: 0,
+      bonusCount: 0,
+    };
+
+    const bonusExpense = getBonusExpenseAmount(bonus);
+
+    current.bonusExpense += bonusExpense;
+    current.bonusCount += 1;
+    current.netProfit = current.orderProfit - current.bonusExpense;
 
     totals.set(currency, current);
   }
@@ -217,18 +296,24 @@ export default async function ProfitPage({
   }
 
   let orders: ProfitOrderRow[] = [];
+  let bonusExpenses: BonusExpenseRow[] = [];
 
   try {
-    const sqlParams: unknown[] = [startIso, endIso];
+    const orderSqlParams: unknown[] = [startIso, endIso];
+    const bonusSqlParams: unknown[] = [startIso, endIso, ...BONUS_TRANSACTION_TYPES];
 
-    let currencyCondition = "";
+    let orderCurrencyCondition = "";
+    let bonusCurrencyCondition = "";
 
     if (selectedCurrency !== "all") {
-      currencyCondition = "AND o.currency = ?";
-      sqlParams.push(selectedCurrency);
+      orderCurrencyCondition = "AND o.currency = ?";
+      orderSqlParams.push(selectedCurrency);
+
+      bonusCurrencyCondition = "AND bt.currency = ?";
+      bonusSqlParams.push(selectedCurrency);
     }
 
-    const [rows] = await pool.query(
+    const [orderRows] = await pool.query(
       `
       SELECT
         o.id,
@@ -261,13 +346,13 @@ export default async function ProfitPage({
       WHERE o.status IN ('completed', 'partial_refunded')
         AND o.created_at >= ?
         AND o.created_at < ?
-        ${currencyCondition}
+        ${orderCurrencyCondition}
       ORDER BY o.created_at DESC
       `,
-      sqlParams
+      orderSqlParams
     );
 
-    orders = (rows as any[]).map((row) => ({
+    orders = (orderRows as any[]).map((row) => ({
       id: Number(row.id),
       created_at: toDateValue(row.created_at),
       order_number: row.order_number,
@@ -289,21 +374,61 @@ export default async function ProfitPage({
       currency: normalizeCurrency(row.currency),
       status: row.status,
     }));
+
+    const [bonusRows] = await pool.query(
+      `
+      SELECT
+        bt.id,
+        bt.created_at,
+        bt.transaction_type,
+        bt.currency,
+        bt.amount,
+        bt.amount_usd,
+        bt.description,
+        bt.user_id
+      FROM balance_transactions bt
+      WHERE bt.created_at >= ?
+        AND bt.created_at < ?
+      AND bt.transaction_type IN (?, ?, ?, ?, ?)
+        ${bonusCurrencyCondition}
+      ORDER BY bt.created_at DESC
+      `,
+      bonusSqlParams
+    );
+
+    bonusExpenses = (bonusRows as any[]).map((row) => ({
+      id: Number(row.id),
+      created_at: toDateValue(row.created_at),
+      transaction_type: row.transaction_type,
+      currency: normalizeCurrency(row.currency),
+      amount: Number(row.amount || 0),
+      amount_usd: Number(row.amount_usd || 0),
+      description: row.description,
+      user_id: row.user_id === null ? null : Number(row.user_id),
+    }));
   } catch (error) {
     return (
       <ErrorScreen
-        message={error instanceof Error ? error.message : "MySQL kâr verileri alınamadı."}
+        message={
+          error instanceof Error ? error.message : "MySQL kâr verileri alınamadı."
+        }
       />
     );
   }
 
-  const currencyTotals = getCurrencyTotals(orders);
+  const currencyTotals = getCurrencyTotals(orders, bonusExpenses);
 
   const availableCurrencies = Array.from(
-    new Set(orders.map((order) => order.currency).filter(Boolean) as string[])
+    new Set(
+      [
+        ...orders.map((order) => order.currency),
+        ...bonusExpenses.map((bonus) => bonus.currency),
+      ].filter(Boolean) as string[]
+    )
   ).sort();
 
   const totalOrderCount = orders.length;
+  const totalBonusCount = bonusExpenses.length;
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#171717_0%,#090909_55%,#050505_100%)] p-4 text-white md:p-8">
@@ -325,10 +450,10 @@ export default async function ProfitPage({
               </h1>
 
               <p className="mt-2 max-w-2xl text-sm leading-6 text-white/55">
-                Tamamlanan ve kısmi tamamlanan siparişler kâr hesabına dahil edilir.
-                İade edilen tutarlar brüt satıştan düşülerek net satış ve net kâr
-                hesaplanır. İptal edilen, tam iade edilen ve bekleyen siparişler bu
-                ekranda hesaplanmaz.
+                Tamamlanan ve kısmi tamamlanan siparişler kâr hesabına dahil
+                edilir. İade edilen tutarlar brüt satıştan düşülür. Kullanıcıya
+                verilen bonuslar ise gelir değil, bonus maliyeti olarak net
+                kârdan düşülür.
               </p>
             </div>
 
@@ -425,29 +550,32 @@ export default async function ProfitPage({
             accent="sky"
           />
 
+          <StatCard
+            title="Bonus Gideri Kaydı"
+            value={totalBonusCount}
+            subtitle="Hoş geldin / Google / iletişim / e-posta bonusları"
+            accent="amber"
+          />
+
           {currencyTotals.length === 0 ? (
             <>
               <StatCard title="Brüt Satış" value="0" accent="emerald" />
-              <StatCard title="Toplam İade" value="0" accent="amber" />
               <StatCard title="Net Kâr" value="0" accent="white" />
             </>
           ) : (
-            currencyTotals.slice(0, 3).map((total) => (
+            currencyTotals.slice(0, 2).map((total) => (
               <StatCard
                 key={total.currency}
                 title={`${total.currency} Net Kâr`}
-                value={formatMoney(total.profit, total.currency)}
-                subtitle={`Brüt: ${formatMoney(
-                  total.grossSale,
+                value={formatMoney(total.netProfit, total.currency)}
+                subtitle={`Sipariş Kârı: ${formatMoney(
+                  total.orderProfit,
                   total.currency
-                )} • İade: ${formatMoney(
-                  total.refunded,
+                )} • Bonus Gideri: ${formatMoney(
+                  total.bonusExpense,
                   total.currency
-                )} • Net: ${formatMoney(
-                  total.netSale,
-                  total.currency
-                )} • Alış: ${formatMoney(total.cost, total.currency)}`}
-                accent={total.profit >= 0 ? "emerald" : "rose"}
+                )}`}
+                accent={total.netProfit >= 0 ? "emerald" : "rose"}
               />
             ))
           )}
@@ -455,14 +583,16 @@ export default async function ProfitPage({
 
         <section className="rounded-[28px] border border-white/10 bg-white/[0.03] p-5 md:p-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="text-2xl font-bold tracking-tight">Para Birimi Toplamları</h2>
+            <h2 className="text-2xl font-bold tracking-tight">
+              Para Birimi Toplamları
+            </h2>
             <span className="text-sm text-white/45">
               {currencyTotals.length} para birimi
             </span>
           </div>
 
           <div className="mt-5 overflow-x-auto">
-            <table className="w-full min-w-[980px] border-separate border-spacing-y-2 text-left text-sm">
+            <table className="w-full min-w-[1180px] border-separate border-spacing-y-2 text-left text-sm">
               <thead className="text-xs uppercase tracking-wide text-white/40">
                 <tr>
                   <th className="px-3 py-2">Para Birimi</th>
@@ -471,6 +601,8 @@ export default async function ProfitPage({
                   <th className="px-3 py-2">Toplam İade</th>
                   <th className="px-3 py-2">Net Satış</th>
                   <th className="px-3 py-2">Toplam Alış</th>
+                  <th className="px-3 py-2">Sipariş Kârı</th>
+                  <th className="px-3 py-2">Bonus Gideri</th>
                   <th className="px-3 py-2">Net Kâr</th>
                 </tr>
               </thead>
@@ -479,10 +611,10 @@ export default async function ProfitPage({
                 {currencyTotals.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={9}
                       className="rounded-2xl bg-black/20 px-3 py-5 text-white/45"
                     >
-                      Bu ay için tamamlanan veya kısmi tamamlanan sipariş bulunamadı.
+                      Bu ay için tamamlanan sipariş veya bonus gideri bulunamadı.
                     </td>
                   </tr>
                 ) : (
@@ -511,11 +643,94 @@ export default async function ProfitPage({
                       </td>
 
                       <td
-                        className={`rounded-r-2xl px-3 py-3 font-bold ${
-                          total.profit >= 0 ? "text-emerald-300" : "text-rose-300"
+                        className={`px-3 py-3 font-bold ${
+                          total.orderProfit >= 0
+                            ? "text-emerald-300"
+                            : "text-rose-300"
                         }`}
                       >
-                        {formatMoney(total.profit, total.currency)}
+                        {formatMoney(total.orderProfit, total.currency)}
+                      </td>
+
+                      <td className="px-3 py-3 font-bold text-rose-300">
+                        -{formatMoney(total.bonusExpense, total.currency)}
+                      </td>
+
+                      <td
+                        className={`rounded-r-2xl px-3 py-3 font-bold ${
+                          total.netProfit >= 0
+                            ? "text-emerald-300"
+                            : "text-rose-300"
+                        }`}
+                      >
+                        {formatMoney(total.netProfit, total.currency)}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section className="rounded-[28px] border border-white/10 bg-white/[0.03] p-5 md:p-6">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-2xl font-bold tracking-tight">
+              Bonus Giderleri
+            </h2>
+            <span className="text-sm text-white/45">
+              {bonusExpenses.length} kayıt
+            </span>
+          </div>
+
+          <div className="mt-5 overflow-x-auto">
+            <table className="w-full min-w-[920px] border-separate border-spacing-y-2 text-left text-sm">
+              <thead className="text-xs uppercase tracking-wide text-white/40">
+                <tr>
+                  <th className="px-3 py-2">Tarih</th>
+                  <th className="px-3 py-2">Tür</th>
+                  <th className="px-3 py-2">Kullanıcı ID</th>
+                  <th className="px-3 py-2">Açıklama</th>
+                  <th className="px-3 py-2">Para Birimi</th>
+                  <th className="px-3 py-2">Gider</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {bonusExpenses.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="rounded-2xl bg-black/20 px-3 py-5 text-white/45"
+                    >
+                      Bu ay için bonus gideri bulunamadı.
+                    </td>
+                  </tr>
+                ) : (
+                  bonusExpenses.map((bonus) => (
+                    <tr key={bonus.id} className="bg-black/20">
+                      <td className="rounded-l-2xl px-3 py-3 text-white/60">
+                        {formatDate(bonus.created_at)}
+                      </td>
+
+                      <td className="px-3 py-3 font-semibold text-white">
+                        {getBonusTypeLabel(bonus.transaction_type)}
+                      </td>
+
+                      <td className="px-3 py-3 text-white/70">
+                        {bonus.user_id ?? "-"}
+                      </td>
+
+                      <td className="max-w-[420px] px-3 py-3 text-white/60">
+                        {bonus.description || "-"}
+                      </td>
+
+                      <td className="px-3 py-3 text-white/70">
+                        {normalizeCurrency(bonus.currency)}
+                      </td>
+
+                      <td className="rounded-r-2xl px-3 py-3 font-bold text-rose-300">
+                        -{formatMoney(getBonusExpenseAmount(bonus), bonus.currency)}
                       </td>
                     </tr>
                   ))
@@ -550,7 +765,7 @@ export default async function ProfitPage({
                   <th className="px-3 py-2">İade</th>
                   <th className="px-3 py-2">Net Satış</th>
                   <th className="px-3 py-2">Alış</th>
-                  <th className="px-3 py-2">Net Kâr</th>
+                  <th className="px-3 py-2">Sipariş Kârı</th>
                   <th className="px-3 py-2">Detay</th>
                 </tr>
               </thead>
@@ -562,7 +777,8 @@ export default async function ProfitPage({
                       colSpan={15}
                       className="rounded-2xl bg-black/20 px-3 py-5 text-white/45"
                     >
-                      Bu filtreye uygun tamamlanan veya kısmi tamamlanan sipariş bulunamadı.
+                      Bu filtreye uygun tamamlanan veya kısmi tamamlanan sipariş
+                      bulunamadı.
                     </td>
                   </tr>
                 ) : (
@@ -609,11 +825,17 @@ export default async function ProfitPage({
                         </td>
 
                         <td className="px-3 py-3 text-white/70">
-                          {formatMoney(safeNumber(order.total_price), order.currency)}
+                          {formatMoney(
+                            safeNumber(order.total_price),
+                            order.currency
+                          )}
                         </td>
 
                         <td className="px-3 py-3 text-amber-300">
-                          {formatMoney(safeNumber(order.refunded_total), order.currency)}
+                          {formatMoney(
+                            safeNumber(order.refunded_total),
+                            order.currency
+                          )}
                         </td>
 
                         <td className="px-3 py-3 text-sky-300">
@@ -621,7 +843,10 @@ export default async function ProfitPage({
                         </td>
 
                         <td className="px-3 py-3 text-white/70">
-                          {formatMoney(safeNumber(order.total_cost_price), order.currency)}
+                          {formatMoney(
+                            safeNumber(order.total_cost_price),
+                            order.currency
+                          )}
                         </td>
 
                         <td

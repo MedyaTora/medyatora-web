@@ -91,23 +91,6 @@ type AccountText = {
   contactBonus: string;
   granted: string;
   contactBonusDesc: string;
-  emailVerification: string;
-  registeredEmail: string;
-  whatsappVerification: string;
-  phoneNotAdded: string;
-  telegramVerification: string;
-  telegramWebhookPending: string;
-  verified: string;
-  pending: string;
-  gain: string;
-  completed: string;
-  codeSend: string;
-  whatsappVerify: string;
-  telegramVerify: string;
-  nextStageNote: string;
-  freeAnalysisReward: string;
-  usdBonusReward: string;
-  noRepeatBonusReward: string;
   totalOrders: string;
   totalOrdersDesc: string;
   activeProcess: string;
@@ -185,24 +168,6 @@ const texts: Record<LocaleCode, AccountText> = {
     granted: "Tanımlandı",
     contactBonusDesc:
       "WhatsApp veya Telegram doğrulamasından biri yeterlidir. Bonus yalnızca 1 kez verilir.",
-    emailVerification: "E-posta doğrulama",
-    registeredEmail: "Kayıtlı e-posta",
-    whatsappVerification: "WhatsApp doğrulama",
-    phoneNotAdded: "Telefon numarası henüz eklenmedi.",
-    telegramVerification: "Telegram doğrulama",
-    telegramWebhookPending: "Telegram bot doğrulaması webhook aşamasında bağlanacak.",
-    verified: "Doğrulandı",
-    pending: "Bekliyor",
-    gain: "Kazanım",
-    completed: "Tamamlandı",
-    codeSend: "Kod Gönder",
-    whatsappVerify: "WhatsApp ile Doğrula",
-    telegramVerify: "Telegram ile Doğrula",
-    nextStageNote:
-      "Kod gönderme ve doğrulama route’ları bir sonraki aşamada bağlanacak. Bu alan deploy öncesi arayüz olarak hazırlandı.",
-    freeAnalysisReward: "1 ücretsiz analiz hakkı",
-    usdBonusReward: "1 USD bakiye bonusu",
-    noRepeatBonusReward: "WhatsApp doğrulandıysa tekrar bonus verilmez",
     totalOrders: "Toplam sipariş",
     totalOrdersDesc: "Ana ekranda son 5 sipariş görünür.",
     activeProcess: "Aktif işlem",
@@ -302,24 +267,6 @@ const texts: Record<LocaleCode, AccountText> = {
     granted: "Granted",
     contactBonusDesc:
       "One WhatsApp or Telegram verification is enough. The bonus is given only once.",
-    emailVerification: "Email verification",
-    registeredEmail: "Registered email",
-    whatsappVerification: "WhatsApp verification",
-    phoneNotAdded: "Phone number has not been added yet.",
-    telegramVerification: "Telegram verification",
-    telegramWebhookPending: "Telegram bot verification will be connected in the webhook stage.",
-    verified: "Verified",
-    pending: "Pending",
-    gain: "Reward",
-    completed: "Completed",
-    codeSend: "Send Code",
-    whatsappVerify: "Verify with WhatsApp",
-    telegramVerify: "Verify with Telegram",
-    nextStageNote:
-      "Code sending and verification routes will be connected in the next stage. This area was prepared as a pre-deploy interface.",
-    freeAnalysisReward: "1 free analysis right",
-    usdBonusReward: "1 USD balance bonus",
-    noRepeatBonusReward: "No extra bonus is given if WhatsApp is already verified",
     totalOrders: "Total orders",
     totalOrdersDesc: "The latest 5 orders appear on the main account screen.",
     activeProcess: "Active process",
@@ -419,24 +366,6 @@ const texts: Record<LocaleCode, AccountText> = {
     granted: "Назначен",
     contactBonusDesc:
       "Достаточно одной верификации WhatsApp или Telegram. Бонус выдаётся только один раз.",
-    emailVerification: "Подтверждение e-mail",
-    registeredEmail: "Зарегистрированный e-mail",
-    whatsappVerification: "Подтверждение WhatsApp",
-    phoneNotAdded: "Номер телефона ещё не добавлен.",
-    telegramVerification: "Подтверждение Telegram",
-    telegramWebhookPending: "Подтверждение через Telegram-бот будет подключено на этапе webhook.",
-    verified: "Подтверждено",
-    pending: "Ожидает",
-    gain: "Бонус",
-    completed: "Завершено",
-    codeSend: "Отправить код",
-    whatsappVerify: "Подтвердить через WhatsApp",
-    telegramVerify: "Подтвердить через Telegram",
-    nextStageNote:
-      "Маршруты отправки кода и подтверждения будут подключены на следующем этапе. Этот блок подготовлен как интерфейс перед deploy.",
-    freeAnalysisReward: "1 бесплатный анализ",
-    usdBonusReward: "1 USD бонус на баланс",
-    noRepeatBonusReward: "Если WhatsApp уже подтверждён, повторный бонус не выдаётся",
     totalOrders: "Всего заказов",
     totalOrdersDesc: "На главном экране аккаунта видны последние 5 заказов.",
     activeProcess: "Активный процесс",
@@ -445,7 +374,8 @@ const texts: Record<LocaleCode, AccountText> = {
     pendingCount: "Ожидает",
     balanceMovements: "Операции по балансу",
     latestBalanceTransactions: "Последние операции по балансу",
-    latestFiveBalanceDesc: "Здесь показываются только последние 5 операций по балансу.",
+    latestFiveBalanceDesc:
+      "Здесь показываются только последние 5 операций по балансу.",
     noBalanceTransaction: "Операций по балансу пока нет.",
     noBalanceTransactionDesc:
       "Пополнения, оплаты заказов или возвраты появятся здесь после выполнения.",
@@ -530,12 +460,16 @@ function normalizeLocale(value: unknown): LocaleCode | null {
 
 async function getServerLocale(): Promise<LocaleCode> {
   const cookieStore = await cookies();
-  const cookieLocale = normalizeLocale(cookieStore.get("medyatora_locale")?.value);
+  const cookieLocale = normalizeLocale(
+    cookieStore.get("medyatora_locale")?.value
+  );
 
   if (cookieLocale) return cookieLocale;
 
   const headersList = await headers();
-  const acceptLanguage = String(headersList.get("accept-language") || "").toLowerCase();
+  const acceptLanguage = String(
+    headersList.get("accept-language") || ""
+  ).toLowerCase();
 
   if (acceptLanguage.startsWith("tr")) return "tr";
   if (acceptLanguage.startsWith("ru")) return "ru";
@@ -589,7 +523,10 @@ function getStatusClass(status: string) {
   );
 }
 
-function getTransactionTypeLabel(type: string | null | undefined, t: AccountText) {
+function getTransactionTypeLabel(
+  type: string | null | undefined,
+  t: AccountText
+) {
   if (!type) return "-";
   return t.transactionTypeLabels[type] || type;
 }
@@ -601,71 +538,6 @@ function getTransactionAmountClass(value: string | number) {
   if (numberValue < 0) return "text-[#f2c7d1]";
 
   return "text-white/70";
-}
-
-function VerificationCard({
-  title,
-  description,
-  status,
-  reward,
-  actionLabel,
-  t,
-}: {
-  title: string;
-  description: string;
-  status: "verified" | "pending";
-  reward: string;
-  actionLabel: string;
-  t: AccountText;
-}) {
-  const verified = status === "verified";
-
-  return (
-    <div className="rounded-3xl border border-white/10 bg-white/[0.045] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-white/40">
-            {title}
-          </p>
-
-          <p className="mt-3 text-sm leading-6 text-white/58">
-            {description}
-          </p>
-        </div>
-
-        <span
-          className={`shrink-0 rounded-full border px-3 py-1 text-[11px] font-black ${
-            verified
-              ? "border-white/18 bg-white/[0.08] text-white"
-              : "border-[#6b5b2a]/60 bg-[#211d11]/70 text-[#e7d9a4]"
-          }`}
-        >
-          {verified ? t.verified : t.pending}
-        </span>
-      </div>
-
-      <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-4">
-        <p className="text-xs font-black uppercase tracking-[0.16em] text-white/38">
-          {t.gain}
-        </p>
-        <p className="mt-2 text-sm font-bold text-white">{reward}</p>
-      </div>
-
-      <button
-        type="button"
-        disabled
-        className="mt-4 w-full cursor-not-allowed rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-3 text-sm font-black text-white/42"
-      >
-        {verified ? t.completed : actionLabel}
-      </button>
-
-      {!verified && (
-        <p className="mt-3 text-xs leading-5 text-white/38">
-          {t.nextStageNote}
-        </p>
-      )}
-    </div>
-  );
 }
 
 export default async function AccountPage() {
@@ -788,28 +660,24 @@ export default async function AccountPage() {
   const totalAnalysisRequests = Number(
     analysisStats?.total_analysis_requests || 0
   );
+
   const pendingAnalysisRequests = Number(
     analysisStats?.pending_analysis_requests || 0
   );
 
-  const anyUser = user as any;
-
-  const emailVerified = Boolean(
-    anyUser.email_verified || anyUser.email_verified_at
-  );
-
-  const contactVerified = Boolean(
-    anyUser.phone_verified ||
-      anyUser.whatsapp_verified_at ||
-      anyUser.telegram_verified_at
-  );
+  const userWithExtraFields = user as typeof user & {
+    free_analysis_granted_at?: string | null;
+    contact_bonus_granted_at?: string | null;
+    whatsapp_verified_at?: string | null;
+    telegram_verified_at?: string | null;
+  };
 
   const freeAnalysisGranted = Boolean(
-    anyUser.free_analysis_granted_at || !user.free_analysis_used
+    userWithExtraFields.free_analysis_granted_at || !user.free_analysis_used
   );
 
   const contactBonusGranted = Boolean(
-    anyUser.contact_bonus_granted_at || user.welcome_bonus_claimed
+    userWithExtraFields.contact_bonus_granted_at
   );
 
   return (
@@ -834,19 +702,31 @@ export default async function AccountPage() {
 
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-end">
             <nav className="flex flex-wrap items-center gap-2 text-sm font-semibold text-white/70">
-              <Link href="/" className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-2 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white">
+              <Link
+                href="/"
+                className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-2 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white"
+              >
                 {t.home}
               </Link>
 
-              <Link href="/analiz" className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-2 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white">
+              <Link
+                href="/analiz"
+                className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-2 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white"
+              >
                 {t.analysis}
               </Link>
 
-              <Link href="/paketler" className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-2 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white">
+              <Link
+                href="/paketler"
+                className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-2 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white"
+              >
                 {t.packages}
               </Link>
 
-              <Link href="/smmtora" className="rounded-full border border-white/12 bg-white px-3 py-2 font-black text-black transition hover:bg-white/90">
+              <Link
+                href="/smmtora"
+                className="rounded-full border border-white/12 bg-white px-3 py-2 font-black text-black transition hover:bg-white/90"
+              >
                 SMMTora
               </Link>
             </nav>
@@ -875,11 +755,17 @@ export default async function AccountPage() {
                 </p>
 
                 <div className="mt-6 flex flex-wrap gap-3">
-                  <Link href="/smmtora" className="rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:-translate-y-0.5 hover:bg-white/90">
+                  <Link
+                    href="/smmtora"
+                    className="rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:-translate-y-0.5 hover:bg-white/90"
+                  >
                     {t.createNewOrder}
                   </Link>
 
-                  <Link href="/analiz" className="rounded-2xl border border-white/10 bg-white/[0.05] px-5 py-3 text-sm font-bold text-white/80 transition hover:-translate-y-0.5 hover:bg-white/[0.1] hover:text-white">
+                  <Link
+                    href="/analiz"
+                    className="rounded-2xl border border-white/10 bg-white/[0.05] px-5 py-3 text-sm font-bold text-white/80 transition hover:-translate-y-0.5 hover:bg-white/[0.1] hover:text-white"
+                  >
                     {t.leaveAnalysisRequest}
                   </Link>
                 </div>
@@ -897,7 +783,10 @@ export default async function AccountPage() {
                       </p>
                     </div>
 
-                    <Link href="/smmtora" className="inline-flex shrink-0 items-center justify-center rounded-2xl bg-white px-4 py-2 text-xs font-black text-black transition hover:-translate-y-0.5 hover:bg-white/90">
+                    <Link
+                      href="/smmtora"
+                      className="inline-flex shrink-0 items-center justify-center rounded-2xl bg-white px-4 py-2 text-xs font-black text-black transition hover:-translate-y-0.5 hover:bg-white/90"
+                    >
                       {t.shopWithBalance}
                     </Link>
                   </div>
@@ -973,40 +862,13 @@ export default async function AccountPage() {
           </div>
         </section>
 
-        <section className="grid gap-4 lg:grid-cols-3">
-          <VerificationCard
-            title={t.emailVerification}
-            description={`${t.registeredEmail}: ${user.email}`}
-            status={emailVerified ? "verified" : "pending"}
-            reward={t.freeAnalysisReward}
-            actionLabel={t.codeSend}
-            t={t}
-          />
-
-          <VerificationCard
-            title={t.whatsappVerification}
-            description={user.phone_number || t.phoneNotAdded}
-            status={contactVerified ? "verified" : "pending"}
-            reward={t.usdBonusReward}
-            actionLabel={t.whatsappVerify}
-            t={t}
-          />
-
-          <VerificationCard
-            title={t.telegramVerification}
-            description={t.telegramWebhookPending}
-            status={contactVerified ? "verified" : "pending"}
-            reward={t.noRepeatBonusReward}
-            actionLabel={t.telegramVerify}
-            t={t}
-          />
-        </section>
-
         <ContactVerificationCard
           initialPhoneNumber={user.phone_number}
-          initialWhatsappVerifiedAt={user.whatsapp_verified_at}
-          initialTelegramVerifiedAt={user.telegram_verified_at}
-          initialContactBonusGrantedAt={user.contact_bonus_granted_at}
+          initialWhatsappVerifiedAt={userWithExtraFields.whatsapp_verified_at}
+          initialTelegramVerifiedAt={userWithExtraFields.telegram_verified_at}
+          initialContactBonusGrantedAt={
+            userWithExtraFields.contact_bonus_granted_at
+          }
         />
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -1015,9 +877,7 @@ export default async function AccountPage() {
               {t.totalOrders}
             </p>
             <p className="mt-3 text-3xl font-black text-white">{totalOrders}</p>
-            <p className="mt-2 text-sm text-white/45">
-              {t.totalOrdersDesc}
-            </p>
+            <p className="mt-2 text-sm text-white/45">{t.totalOrdersDesc}</p>
           </div>
 
           <div className="rounded-[28px] border border-white/10 bg-[#080a0d]/92 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.26)]">
@@ -1076,12 +936,18 @@ export default async function AccountPage() {
           ) : (
             <div className="grid gap-3">
               {balanceTransactions.map((transaction) => (
-                <div key={transaction.id} className="rounded-3xl border border-white/10 bg-white/[0.045] p-4 transition hover:bg-white/[0.07]">
+                <div
+                  key={transaction.id}
+                  className="rounded-3xl border border-white/10 bg-white/[0.045] p-4 transition hover:bg-white/[0.07]"
+                >
                   <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-sm font-black text-white md:text-base">
-                          {getTransactionTypeLabel(transaction.transaction_type, t)}
+                          {getTransactionTypeLabel(
+                            transaction.transaction_type,
+                            t
+                          )}
                         </p>
 
                         <span className="inline-flex rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs font-bold text-white/55">
@@ -1100,11 +966,22 @@ export default async function AccountPage() {
 
                     <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-right">
                       <p className="text-xs text-white/40">{t.amount}</p>
-                      <p className={`mt-1 text-lg font-black ${getTransactionAmountClass(transaction.amount)}`}>
-                        {formatSignedMoney(transaction.amount, transaction.currency)}
+                      <p
+                        className={`mt-1 text-lg font-black ${getTransactionAmountClass(
+                          transaction.amount
+                        )}`}
+                      >
+                        {formatSignedMoney(
+                          transaction.amount,
+                          transaction.currency
+                        )}
                       </p>
                       <p className="mt-1 text-xs text-white/40">
-                        {t.finalBalance}: {formatMoney(transaction.balance_after, transaction.currency)}
+                        {t.finalBalance}:{" "}
+                        {formatMoney(
+                          transaction.balance_after,
+                          transaction.currency
+                        )}
                       </p>
                     </div>
                   </div>
@@ -1128,7 +1005,10 @@ export default async function AccountPage() {
               </p>
             </div>
 
-            <Link href="/analiz" className="rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-bold text-white transition hover:bg-white/[0.1]">
+            <Link
+              href="/analiz"
+              className="rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-bold text-white transition hover:bg-white/[0.1]"
+            >
               {t.newAnalysisRequest}
             </Link>
           </div>
@@ -1141,14 +1021,20 @@ export default async function AccountPage() {
               <p className="mt-2 text-sm leading-6 text-white/55">
                 {t.noAnalysisRequestDesc}
               </p>
-              <Link href="/analiz" className="mt-5 inline-flex rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:-translate-y-0.5 hover:bg-white/90">
+              <Link
+                href="/analiz"
+                className="mt-5 inline-flex rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:-translate-y-0.5 hover:bg-white/90"
+              >
                 {t.analysisRequestButton}
               </Link>
             </div>
           ) : (
             <div className="grid gap-3">
               {analysisRequests.map((item) => (
-                <div key={item.id} className="rounded-3xl border border-white/10 bg-white/[0.045] p-5 transition hover:bg-white/[0.07]">
+                <div
+                  key={item.id}
+                  className="rounded-3xl border border-white/10 bg-white/[0.045] p-5 transition hover:bg-white/[0.07]"
+                >
                   <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
@@ -1156,7 +1042,11 @@ export default async function AccountPage() {
                           {t.analysis} #{item.id}
                         </p>
 
-                        <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${getStatusClass(item.status)}`}>
+                        <span
+                          className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${getStatusClass(
+                            item.status
+                          )}`}
+                        >
                           {getStatusLabel(item.status, t)}
                         </span>
 
@@ -1168,16 +1058,27 @@ export default async function AccountPage() {
                       </div>
 
                       <div className="mt-3 grid gap-1 text-sm text-white/55">
-                        <p>{t.userLabel}: {item.username || item.account_link || "-"}</p>
-                        <p>{t.accountType}: {item.account_type || "-"} · {t.content}: {item.content_type || "-"}</p>
-                        <p>{t.date}: {formatDate(item.created_at)}</p>
+                        <p>
+                          {t.userLabel}:{" "}
+                          {item.username || item.account_link || "-"}
+                        </p>
+                        <p>
+                          {t.accountType}: {item.account_type || "-"} ·{" "}
+                          {t.content}: {item.content_type || "-"}
+                        </p>
+                        <p>
+                          {t.date}: {formatDate(item.created_at)}
+                        </p>
                       </div>
                     </div>
 
                     <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-right">
                       <p className="text-xs text-white/40">{t.analysisPrice}</p>
                       <p className="mt-1 text-lg font-black text-white">
-                        {formatMoney(item.package_price, item.currency || "USD")}
+                        {formatMoney(
+                          item.package_price,
+                          item.currency || "USD"
+                        )}
                       </p>
                     </div>
                   </div>
@@ -1201,20 +1102,24 @@ export default async function AccountPage() {
               </p>
             </div>
 
-            <Link href="/hesabim/siparisler" className="rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-bold text-white transition hover:bg-white/[0.1]">
+            <Link
+              href="/hesabim/siparisler"
+              className="rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-bold text-white transition hover:bg-white/[0.1]"
+            >
               {t.viewAllOrders}
             </Link>
           </div>
 
           {orders.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-white/15 bg-white/[0.04] p-8 text-center">
-              <p className="text-lg font-bold text-white">
-                {t.noOrder}
-              </p>
+              <p className="text-lg font-bold text-white">{t.noOrder}</p>
               <p className="mt-2 text-sm leading-6 text-white/55">
                 {t.noOrderDesc}
               </p>
-              <Link href="/smmtora" className="mt-5 inline-flex rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:-translate-y-0.5 hover:bg-white/90">
+              <Link
+                href="/smmtora"
+                className="mt-5 inline-flex rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:-translate-y-0.5 hover:bg-white/90"
+              >
                 {t.firstOrderButton}
               </Link>
             </div>
@@ -1231,7 +1136,10 @@ export default async function AccountPage() {
 
               <div className="divide-y divide-white/10">
                 {orders.map((order) => (
-                  <div key={order.id} className="grid gap-4 px-4 py-4 transition hover:bg-white/[0.035] lg:grid-cols-[1.1fr_1.5fr_0.75fr_0.85fr_0.9fr_0.55fr] lg:items-center">
+                  <div
+                    key={order.id}
+                    className="grid gap-4 px-4 py-4 transition hover:bg-white/[0.035] lg:grid-cols-[1.1fr_1.5fr_0.75fr_0.85fr_0.9fr_0.55fr] lg:items-center"
+                  >
                     <div>
                       <p className="text-xs text-white/40">{t.orderNo}</p>
                       <p className="mt-1 font-bold text-white">
@@ -1247,7 +1155,8 @@ export default async function AccountPage() {
                         {order.service_title}
                       </p>
                       <p className="mt-1 text-xs text-white/45">
-                        {order.platform} / {order.category} · {Number(order.quantity).toLocaleString("tr-TR")}
+                        {order.platform} / {order.category} ·{" "}
+                        {Number(order.quantity).toLocaleString("tr-TR")}
                       </p>
                     </div>
 
@@ -1258,7 +1167,11 @@ export default async function AccountPage() {
                     </div>
 
                     <div>
-                      <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${getStatusClass(order.status)}`}>
+                      <span
+                        className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${getStatusClass(
+                          order.status
+                        )}`}
+                      >
                         {getStatusLabel(order.status, t)}
                       </span>
                     </div>
@@ -1270,7 +1183,10 @@ export default async function AccountPage() {
                     </div>
 
                     <div>
-                      <Link href={`/hesabim/siparisler/${order.order_number}`} className="inline-flex rounded-2xl bg-white px-4 py-2 text-center text-xs font-black text-black transition hover:bg-white/90">
+                      <Link
+                        href={`/hesabim/siparisler/${order.order_number}`}
+                        className="inline-flex rounded-2xl bg-white px-4 py-2 text-center text-xs font-black text-black transition hover:bg-white/90"
+                      >
                         {t.detail}
                       </Link>
                     </div>
