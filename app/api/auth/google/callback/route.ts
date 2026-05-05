@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
@@ -35,14 +37,18 @@ type UserRow = RowDataPacket & {
   is_active: number | boolean;
 };
 
-function getRedirectUrl(request: Request) {
-  const envRedirectUrl = process.env.GOOGLE_OAUTH_REDIRECT_URL;
+const PRODUCTION_GOOGLE_REDIRECT_URL =
+  "https://medyatora.store/api/auth/google/callback";
 
-  if (envRedirectUrl) {
-    return envRedirectUrl;
+function getRedirectUrl(request: Request) {
+  if (process.env.NODE_ENV === "production") {
+    return PRODUCTION_GOOGLE_REDIRECT_URL;
   }
 
-  return `${new URL(request.url).origin}/api/auth/google/callback`;
+  return (
+    process.env.GOOGLE_OAUTH_REDIRECT_URL ||
+    `${new URL(request.url).origin}/api/auth/google/callback`
+  );
 }
 
 function getClientIp(request: NextRequest) {

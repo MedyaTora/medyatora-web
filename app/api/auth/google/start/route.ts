@@ -1,32 +1,23 @@
 import crypto from "crypto";
 import { NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_OAUTH_STATE_COOKIE = "medyatora_google_oauth_state";
-
-function getBaseUrl(request: Request) {
-  const envRedirectUrl = process.env.GOOGLE_OAUTH_REDIRECT_URL;
-
-  if (envRedirectUrl) {
-    try {
-      const url = new URL(envRedirectUrl);
-      return `${url.protocol}//${url.host}`;
-    } catch {
-      // Env bozuksa request origin'e düşer.
-    }
-  }
-
-  return new URL(request.url).origin;
-}
+const PRODUCTION_GOOGLE_REDIRECT_URL =
+  "https://medyatora.store/api/auth/google/callback";
 
 function getRedirectUrl(request: Request) {
-  const envRedirectUrl = process.env.GOOGLE_OAUTH_REDIRECT_URL;
-
-  if (envRedirectUrl) {
-    return envRedirectUrl;
+  if (process.env.NODE_ENV === "production") {
+    return PRODUCTION_GOOGLE_REDIRECT_URL;
   }
 
-  return `${getBaseUrl(request)}/api/auth/google/callback`;
+  return (
+    process.env.GOOGLE_OAUTH_REDIRECT_URL ||
+    `${new URL(request.url).origin}/api/auth/google/callback`
+  );
 }
 
 function createState() {
@@ -49,7 +40,6 @@ export async function GET(request: Request) {
   }
 
   const state = createState();
-
   const authUrl = new URL(GOOGLE_AUTH_URL);
 
   authUrl.searchParams.set("client_id", clientId);
