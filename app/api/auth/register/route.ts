@@ -1,17 +1,18 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
+import { randomBytes } from "crypto";
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import { getMysqlPool } from "@/lib/mysql";
-import {
-  hashPassword,
-  isValidEmail,
-  normalizeEmail,
-  validatePassword,
-} from "@/lib/auth/password";
-import { createUserSession } from "@/lib/auth/session";
-import { getPublicUser } from "@/lib/auth/current-user";
+import { getPublicUser, type PreferredCurrency } from "@/lib/auth/current-user";
+import { AUTH_COOKIE_NAME, hashSessionToken } from "@/lib/auth/session";
 
-type ExistingUserRow = RowDataPacket & {
-  id: number;
+type RegisterBody = {
+  email?: string;
+  password?: string;
+  full_name?: string;
+  username?: string;
+  phone_number?: string;
+  preferred_currency?: string;
 };
 
 type CreatedUserRow = RowDataPacket & {
@@ -30,68 +31,83 @@ type CreatedUserRow = RowDataPacket & {
   welcome_bonus_claimed: number;
   is_active: number;
   is_admin: number;
+  whatsapp_verified_at: Date | string | null;
+  telegram_verified_at: Date | string | null;
+  contact_bonus_granted_at: Date | string | null;
 };
 
-function getClientIp(request: NextRequest) {
-  const forwardedFor = request.headers.get("x-forwarded-for");
+function createSessionToken() {
+  return randomBytes(32).toString("hex");
+}
+
+function normalizeEmail(value: unknown) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function normalizeOptionalText(value: unknown) {
+  const text = String(value || "").trim();
+  return text.length > 0 ? text : null;
+}
+
+function normalizePreferredCurrency(value: unknown): PreferredCurrency {
+  const currency = String(value || "").trim().toUpperCase();
+
+  if (currency === "USD") return "USD";
+  if (currency === "RUB") return "RUB";
+
+  return "TL";
+}
+
+function getClientIp(req: Request) {
+  const forwardedFor = req.headers.get("x-forwarded-for");
+  const realIp = req.headers.get("x-real-ip");
 
   if (forwardedFor) {
     return forwardedFor.split(",")[0]?.trim() || null;
   }
 
-  return (
-    request.headers.get("x-real-ip") ||
-    request.headers.get("cf-connecting-ip") ||
-    null
-  );
+  return realIp || null;
 }
 
-function cleanFullName(value: unknown) {
-  return String(value || "").trim().slice(0, 120);
+function toNullableIsoString(value: Date | string | null | undefined) {
+  if (!value) return null;
+
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  return String(value);
 }
 
-function normalizePreferredCurrency(value: string | null | undefined) {
-  const currency = value?.trim().toUpperCase();
-
-  if (currency === "USD") return "USD";
-  if (currency === "RUB") return "RUB";
-  return "TL";
-}
-
-export async function POST(request: NextRequest) {
+export async function POST(req: Request) {
   try {
-    const body = await request.json();
+    const body = (await req.json()) as RegisterBody;
 
     const email = normalizeEmail(body.email);
     const password = String(body.password || "");
-    const fullName = cleanFullName(body.full_name);
+    const fullName = normalizeOptionalText(body.full_name);
+    const username = normalizeOptionalText(body.username);
+    const phoneNumber = normalizeOptionalText(body.phone_number);
+    const preferredCurrency = normalizePreferredCurrency(body.preferred_currency);
+    const clientIp = getClientIp(req);
 
-    if (!isValidEmail(email)) {
+    if (!email || !email.includes("@")) {
       return NextResponse.json(
         { ok: false, error: "Geçerli bir e-posta adresi gir." },
         { status: 400 }
       );
     }
 
-    const passwordCheck = validatePassword(password);
-
-    if (!passwordCheck.valid) {
+    if (password.length < 8) {
       return NextResponse.json(
-        { ok: false, error: passwordCheck.errors[0] || "Şifre geçersiz." },
-        { status: 400 }
-      );
-    }
-
-    if (!fullName) {
-      return NextResponse.json(
-        { ok: false, error: "Ad soyad alanı zorunludur." },
+        { ok: false, error: "Şifre en az 8 karakter olmalı." },
         { status: 400 }
       );
     }
 
     const pool = getMysqlPool();
 
-    const [existingRows] = await pool.query<ExistingUserRow[]>(
+    const [existingUsers] = await pool.query<RowDataPacket[]>(
       `
       SELECT id
       FROM users
@@ -101,16 +117,52 @@ export async function POST(request: NextRequest) {
       [email]
     );
 
-    if (existingRows.length > 0) {
+    if (existingUsers.length > 0) {
       return NextResponse.json(
-        { ok: false, error: "Bu e-posta adresiyle zaten hesap var." },
+        { ok: false, error: "Bu e-posta ile kayıtlı bir hesap var." },
         { status: 409 }
       );
     }
 
-    const passwordHash = await hashPassword(password);
-    const ipAddress = getClientIp(request);
-    const userAgent = request.headers.get("user-agent");
+    if (username) {
+      const [existingUsernames] = await pool.query<RowDataPacket[]>(
+        `
+        SELECT id
+        FROM users
+        WHERE username = ?
+        LIMIT 1
+        `,
+        [username]
+      );
+
+      if (existingUsernames.length > 0) {
+        return NextResponse.json(
+          { ok: false, error: "Bu kullanıcı adı zaten kullanılıyor." },
+          { status: 409 }
+        );
+      }
+    }
+
+    if (phoneNumber) {
+      const [existingPhones] = await pool.query<RowDataPacket[]>(
+        `
+        SELECT id
+        FROM users
+        WHERE phone_number = ?
+        LIMIT 1
+        `,
+        [phoneNumber]
+      );
+
+      if (existingPhones.length > 0) {
+        return NextResponse.json(
+          { ok: false, error: "Bu telefon numarası zaten kullanılıyor." },
+          { status: 409 }
+        );
+      }
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12);
 
     const [insertResult] = await pool.query<ResultSetHeader>(
       `
@@ -118,24 +170,29 @@ export async function POST(request: NextRequest) {
         email,
         password_hash,
         full_name,
+        username,
+        phone_number,
+        preferred_currency,
         created_ip,
-        last_ip,
-        last_login_at
+        last_ip
       )
-      VALUES (?, ?, ?, ?, ?, NOW())
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `,
-      [email, passwordHash, fullName, ipAddress, ipAddress]
+      [
+        email,
+        passwordHash,
+        fullName,
+        username,
+        phoneNumber,
+        preferredCurrency,
+        clientIp,
+        clientIp,
+      ]
     );
 
-    const userId = Number(insertResult.insertId);
+    const userId = insertResult.insertId;
 
-    await createUserSession({
-      userId,
-      ipAddress,
-      userAgent,
-    });
-
-    const [createdRows] = await pool.query<CreatedUserRow[]>(
+    const [createdUserRows] = await pool.query<CreatedUserRow[]>(
       `
       SELECT
         id,
@@ -152,7 +209,10 @@ export async function POST(request: NextRequest) {
         free_analysis_used,
         welcome_bonus_claimed,
         is_active,
-        is_admin
+        is_admin,
+        whatsapp_verified_at,
+        telegram_verified_at,
+        contact_bonus_granted_at
       FROM users
       WHERE id = ?
       LIMIT 1
@@ -160,16 +220,49 @@ export async function POST(request: NextRequest) {
       [userId]
     );
 
-    const createdUser = createdRows[0];
+    const createdUser = createdUserRows[0];
 
     if (!createdUser) {
       return NextResponse.json(
-        { ok: false, error: "Kullanıcı oluşturuldu ama okunamadı." },
+        { ok: false, error: "Kullanıcı oluşturuldu ama tekrar okunamadı." },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({
+    const sessionToken = createSessionToken();
+    const sessionTokenHash = hashSessionToken(sessionToken);
+
+    await pool.query(
+      `
+      INSERT INTO user_sessions (
+        user_id,
+        session_token_hash,
+        ip_address,
+        user_agent,
+        expires_at
+      )
+      VALUES (?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 30 DAY))
+      `,
+      [
+        createdUser.id,
+        sessionTokenHash,
+        clientIp,
+        req.headers.get("user-agent") || null,
+      ]
+    );
+
+    await pool.query(
+      `
+      UPDATE users
+      SET last_login_at = NOW(),
+          last_ip = ?
+      WHERE id = ?
+      LIMIT 1
+      `,
+      [clientIp, createdUser.id]
+    );
+
+    const res = NextResponse.json({
       ok: true,
       user: getPublicUser({
         id: Number(createdUser.id),
@@ -189,13 +282,38 @@ export async function POST(request: NextRequest) {
         welcome_bonus_claimed: Boolean(createdUser.welcome_bonus_claimed),
         is_active: Boolean(createdUser.is_active),
         is_admin: Boolean(createdUser.is_admin),
+        whatsapp_verified_at: toNullableIsoString(
+          createdUser.whatsapp_verified_at
+        ),
+        telegram_verified_at: toNullableIsoString(
+          createdUser.telegram_verified_at
+        ),
+        contact_bonus_granted_at: toNullableIsoString(
+          createdUser.contact_bonus_granted_at
+        ),
       }),
     });
+
+    res.cookies.set(AUTH_COOKIE_NAME, sessionToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30,
+    });
+
+    return res;
   } catch (error) {
     console.error("REGISTER_ERROR", error);
 
     return NextResponse.json(
-      { ok: false, error: "Kayıt oluşturulamadı." },
+      {
+        ok: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Kayıt sırasında sunucu hatası oluştu.",
+      },
       { status: 500 }
     );
   }

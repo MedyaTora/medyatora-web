@@ -145,13 +145,19 @@ export async function POST(request: NextRequest) {
         welcome_bonus_claimed: Boolean(user.welcome_bonus_claimed),
         is_active: Boolean(user.is_active),
         is_admin: Boolean(user.is_admin),
+        whatsapp_verified_at: null,
+        telegram_verified_at: null,
+        contact_bonus_granted_at: null,
       }),
     });
   } catch (error) {
     console.error("LOGIN_ERROR", error);
 
     return NextResponse.json(
-      { ok: false, error: "Giriş yapılamadı." },
+      {
+        ok: false,
+        error: "Giriş yapılırken bir hata oluştu.",
+      },
       { status: 500 }
     );
   }

@@ -19,11 +19,11 @@ export type CurrentUser = {
   preferred_currency: PreferredCurrency;
   free_analysis_used: boolean;
   welcome_bonus_claimed: boolean;
+  is_active: boolean;
+  is_admin: boolean;
   whatsapp_verified_at: string | null;
   telegram_verified_at: string | null;
   contact_bonus_granted_at: string | null;
-  is_active: boolean;
-  is_admin: boolean;
 };
 
 type CurrentUserRow = RowDataPacket & {
@@ -40,11 +40,11 @@ type CurrentUserRow = RowDataPacket & {
   preferred_currency: string | null;
   free_analysis_used: number;
   welcome_bonus_claimed: number;
+  is_active: number;
+  is_admin: number;
   whatsapp_verified_at: Date | string | null;
   telegram_verified_at: Date | string | null;
   contact_bonus_granted_at: Date | string | null;
-  is_active: number;
-  is_admin: number;
 };
 
 function normalizePreferredCurrency(
@@ -54,11 +54,10 @@ function normalizePreferredCurrency(
 
   if (currency === "USD") return "USD";
   if (currency === "RUB") return "RUB";
-
   return "TL";
 }
 
-function normalizeNullableDate(value: Date | string | null | undefined) {
+function normalizeDateValue(value: Date | string | null | undefined) {
   if (!value) return null;
 
   if (value instanceof Date) {
@@ -95,11 +94,11 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
       users.preferred_currency,
       users.free_analysis_used,
       users.welcome_bonus_claimed,
+      users.is_active,
+      users.is_admin,
       users.whatsapp_verified_at,
       users.telegram_verified_at,
-      users.contact_bonus_granted_at,
-      users.is_active,
-      users.is_admin
+      users.contact_bonus_granted_at
     FROM user_sessions
     INNER JOIN users ON users.id = user_sessions.user_id
     WHERE user_sessions.session_token_hash = ?
@@ -141,13 +140,13 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     preferred_currency: normalizePreferredCurrency(user.preferred_currency),
     free_analysis_used: Boolean(user.free_analysis_used),
     welcome_bonus_claimed: Boolean(user.welcome_bonus_claimed),
-    whatsapp_verified_at: normalizeNullableDate(user.whatsapp_verified_at),
-    telegram_verified_at: normalizeNullableDate(user.telegram_verified_at),
-    contact_bonus_granted_at: normalizeNullableDate(
-      user.contact_bonus_granted_at
-    ),
     is_active: Boolean(user.is_active),
     is_admin: Boolean(user.is_admin),
+    whatsapp_verified_at: normalizeDateValue(user.whatsapp_verified_at),
+    telegram_verified_at: normalizeDateValue(user.telegram_verified_at),
+    contact_bonus_granted_at: normalizeDateValue(
+      user.contact_bonus_granted_at
+    ),
   };
 }
 
