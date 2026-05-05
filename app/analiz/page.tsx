@@ -1,5 +1,6 @@
 import Link from "next/link";
 import AnalysisForm from "@/app/components/analysis-form";
+import UserMenu from "@/app/components/auth/UserMenu";
 import {
   FaChartLine,
   FaInstagram,
@@ -50,35 +51,32 @@ export default function AnalizPage() {
   return (
     <main className="mt-premium-page">
       <div className="mt-premium-inner mx-auto max-w-6xl px-4 py-6 sm:px-6">
-        <header className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-[28px] border border-white/10 bg-white/[0.04] p-4 shadow-[0_18px_70px_rgba(0,0,0,0.28)] backdrop-blur-xl">
+        <header className="mb-6 flex flex-col gap-4 rounded-[28px] border border-white/10 bg-[#080a0d]/92 p-4 shadow-[0_18px_70px_rgba(0,0,0,0.36)] ring-1 ring-white/[0.025] backdrop-blur-xl lg:flex-row lg:items-center lg:justify-between">
           <Link
             href="/"
-            className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-white/70 transition hover:bg-white/[0.08] hover:text-white"
+            className="inline-flex w-fit items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-black text-white/72 transition hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
           >
             ← Ana Sayfa
           </Link>
 
-          <div className="flex flex-wrap gap-3">
-            <Link
-              href="/portal"
-              className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-white/70 transition hover:bg-white/[0.08] hover:text-white"
-            >
-              Portal
-            </Link>
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-end">
+            <nav className="flex flex-wrap gap-2">
+              <Link
+                href="/paketler"
+                className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-white/70 transition hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
+              >
+                Paketler
+              </Link>
 
-            <Link
-              href="/paketler"
-              className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-white/70 transition hover:bg-white/[0.08] hover:text-white"
-            >
-              Paketler
-            </Link>
+              <Link
+                href="/smmtora"
+                className="rounded-2xl border border-white/12 bg-white px-4 py-2.5 text-sm font-black text-black shadow-[0_14px_34px_rgba(255,255,255,0.08)] transition hover:bg-white/90"
+              >
+                SMMTora
+              </Link>
+            </nav>
 
-            <Link
-              href="/smmtora"
-              className="rounded-2xl border border-white/12 bg-white px-4 py-2.5 text-sm font-black text-black shadow-[0_14px_34px_rgba(255,255,255,0.08)] transition hover:bg-white/90"
-            >
-              SMMTora
-            </Link>
+            <UserMenu />
           </div>
         </header>
 

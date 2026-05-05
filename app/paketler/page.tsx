@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import UserMenu from "@/app/components/auth/UserMenu";
 import { CONTACT, getWhatsappLink } from "@/lib/contact";
 import type { IconType } from "react-icons";
 import {
@@ -103,8 +105,8 @@ const platforms: PlatformConfig[] = [
     title: "Instagram",
     description: "Takipçi, beğeni, Reels izlenme, yorum ve kaydetme paketleri.",
     icon: FaInstagram,
-    gradient: "from-pink-500/20 via-rose-500/10 to-orange-400/10",
-    glow: "bg-pink-500/20",
+    gradient: "from-white/[0.08] via-white/[0.035] to-white/[0.02]",
+    glow: "bg-white/[0.06]",
     categories: [
       {
         slug: "takipci",
@@ -148,8 +150,8 @@ const platforms: PlatformConfig[] = [
     title: "TikTok",
     description: "Takipçi, beğeni, izlenme, yorum ve paylaşım paketleri.",
     icon: FaTiktok,
-    gradient: "from-cyan-400/20 via-pink-500/10 to-white/5",
-    glow: "bg-cyan-400/20",
+    gradient: "from-white/[0.08] via-white/[0.035] to-white/[0.02]",
+    glow: "bg-white/[0.06]",
     categories: [
       {
         slug: "takipci",
@@ -193,8 +195,8 @@ const platforms: PlatformConfig[] = [
     title: "YouTube",
     description: "Abone, izlenme, beğeni, yorum ve Shorts paketleri.",
     icon: FaYoutube,
-    gradient: "from-red-500/20 via-rose-500/10 to-white/5",
-    glow: "bg-red-500/20",
+    gradient: "from-white/[0.08] via-white/[0.035] to-white/[0.02]",
+    glow: "bg-white/[0.06]",
     categories: [
       {
         slug: "abone",
@@ -233,8 +235,8 @@ const platforms: PlatformConfig[] = [
     title: "X / Twitter",
     description: "Takipçi, beğeni, görüntülenme, retweet ve yorum paketleri.",
     icon: FaXTwitter,
-    gradient: "from-white/15 via-sky-400/10 to-white/5",
-    glow: "bg-white/15",
+    gradient: "from-white/[0.08] via-white/[0.035] to-white/[0.02]",
+    glow: "bg-white/[0.06]",
     categories: [
       {
         slug: "takipci",
@@ -273,8 +275,8 @@ const platforms: PlatformConfig[] = [
     title: "Telegram",
     description: "Üye, gönderi izlenme, reaksiyon ve paylaşım paketleri.",
     icon: FaTelegram,
-    gradient: "from-sky-400/20 via-cyan-400/10 to-white/5",
-    glow: "bg-sky-400/20",
+    gradient: "from-white/[0.08] via-white/[0.035] to-white/[0.02]",
+    glow: "bg-white/[0.06]",
     categories: [
       {
         slug: "uye",
@@ -312,7 +314,7 @@ const packageTypes: PackageTypeConfig[] = [
     description: "Uygun fiyatlı, hızlı başlangıç yapmak isteyenler için.",
     badge: "Uygun Fiyat",
     colorClass:
-      "border-lime-400/40 bg-lime-400/10 text-lime-200 shadow-[0_18px_60px_rgba(163,230,53,0.08)]",
+      "border-white/24 bg-white/[0.095] text-white shadow-[0_18px_60px_rgba(0,0,0,0.22)]",
   },
   {
     slug: "global",
@@ -320,7 +322,7 @@ const packageTypes: PackageTypeConfig[] = [
     description: "Yabancı / global kitle ağırlıklı dengeli paket.",
     badge: "Global",
     colorClass:
-      "border-sky-400/40 bg-sky-400/10 text-sky-200 shadow-[0_18px_60px_rgba(56,189,248,0.08)]",
+      "border-white/24 bg-white/[0.095] text-white shadow-[0_18px_60px_rgba(0,0,0,0.22)]",
   },
   {
     slug: "turk",
@@ -328,7 +330,7 @@ const packageTypes: PackageTypeConfig[] = [
     description: "Türkiye odaklı daha kaliteli görünüm isteyenler için.",
     badge: "TR",
     colorClass:
-      "border-red-400/40 bg-red-400/10 text-red-200 shadow-[0_18px_60px_rgba(248,113,113,0.08)]",
+      "border-white/24 bg-white/[0.095] text-white shadow-[0_18px_60px_rgba(0,0,0,0.22)]",
   },
   {
     slug: "garantili",
@@ -336,7 +338,7 @@ const packageTypes: PackageTypeConfig[] = [
     description: "Düşüş riskine karşı daha güvenli paket seçeneği.",
     badge: "Garantili",
     colorClass:
-      "border-emerald-400/40 bg-emerald-400/10 text-emerald-200 shadow-[0_18px_60px_rgba(52,211,153,0.08)]",
+      "border-white/24 bg-white/[0.095] text-white shadow-[0_18px_60px_rgba(0,0,0,0.22)]",
   },
   {
     slug: "hizli",
@@ -344,7 +346,7 @@ const packageTypes: PackageTypeConfig[] = [
     description: "Daha hızlı başlangıç isteyen kullanıcılar için.",
     badge: "Hızlı",
     colorClass:
-      "border-amber-400/40 bg-amber-400/10 text-amber-200 shadow-[0_18px_60px_rgba(251,191,36,0.08)]",
+      "border-white/24 bg-white/[0.095] text-white shadow-[0_18px_60px_rgba(0,0,0,0.22)]",
   },
 ];
 
@@ -711,505 +713,516 @@ export default function PaketlerPage() {
       <div className="mt-premium-inner">
         <section className="relative overflow-hidden">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_34%),linear-gradient(to_bottom,rgba(255,255,255,0.02),transparent_28%,transparent_72%,rgba(255,255,255,0.02))]" />
-  
+
           <div className="relative mx-auto max-w-6xl px-6 py-10 md:py-16">
-            <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-            <a
-              href="/"
-              className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/75 transition hover:bg-white/[0.08] hover:text-white"
-            >
-              ← MedyaTora Ana Sayfa
-            </a>
-
-            <div className="flex flex-wrap gap-3">
-              <a
-                href="/smmtora"
-                className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2.5 text-sm font-medium text-emerald-300 transition hover:bg-emerald-400/15"
+            <header className="mb-8 flex flex-col gap-4 rounded-[28px] border border-white/10 bg-[#080a0d]/92 p-4 shadow-[0_18px_70px_rgba(0,0,0,0.36)] ring-1 ring-white/[0.025] backdrop-blur-xl lg:flex-row lg:items-center lg:justify-between">
+              <Link
+                href="/"
+                className="inline-flex w-fit items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-black text-white/72 transition hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
               >
-                Geniş Servis Listesi
-              </a>
+                ← MedyaTora Ana Sayfa
+              </Link>
 
-              <a
-                href={getWhatsappLink()}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/75 transition hover:bg-white/[0.08] hover:text-white"
-              >
-                WhatsApp Destek
-              </a>
-            </div>
-          </div>
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-end">
+                <nav className="flex flex-wrap gap-2">
+                  <Link
+                    href="/analiz"
+                    className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-white/70 transition hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
+                  >
+                    Analiz
+                  </Link>
 
-          <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
-            <div>
-              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-xs font-semibold text-emerald-300">
-                <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                Hızlı sosyal medya paketleri
+                  <Link
+                    href="/smmtora"
+                    className="rounded-2xl border border-white/12 bg-white px-4 py-2.5 text-sm font-black text-black shadow-[0_14px_34px_rgba(255,255,255,0.08)] transition hover:bg-white/90"
+                  >
+                    SMMTora
+                  </Link>
+
+                  <a
+                    href={getWhatsappLink()}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-white/70 transition hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
+                  >
+                    WhatsApp Destek
+                  </a>
+                </nav>
+
+                <UserMenu />
               </div>
+            </header>
 
-              <h1 className="mb-5 text-4xl font-bold leading-tight tracking-tight md:text-6xl">
-                Platformunu seç, paketini oluştur, hızlıca satın al.
-              </h1>
-
-              <p className="mb-8 max-w-2xl text-lg leading-8 text-white/70 md:text-xl">
-                Instagram, TikTok, YouTube, X ve Telegram için takipçi, beğeni,
-                izlenme ve etkileşim paketlerini hızlıca seç. Minimum 100,
-                günlük maksimum 5.000.000 adede kadar işlem alınabilir.
-              </p>
-
-              <div className="flex flex-col gap-4 sm:flex-row">
-                <a
-                  href="#package-builder"
-                  className="rounded-2xl bg-white px-6 py-3 text-center font-semibold text-black transition hover:bg-white/90"
-                >
-                  Paket Oluştur
-                </a>
-
-                <a
-                  href="/smmtora"
-                  className="rounded-2xl border border-white/20 px-6 py-3 text-center font-semibold text-white transition hover:bg-white/10"
-                >
-                  Tekli Servislere Git
-                </a>
-              </div>
-            </div>
-
-            <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur md:p-8">
-              <p className="mb-4 text-sm uppercase tracking-[0.2em] text-white/45">
-                Seçili paket özeti
-              </p>
-
-              <div className="rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-5">
-                <div className="mb-4 inline-flex rounded-full bg-white px-3 py-1 text-xs font-bold text-black">
-                  {selectedPackageType.badge}
+            <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
+              <div>
+                <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-white/72">
+                  <span className="h-1.5 w-1.5 rounded-full bg-white/80" />
+                  Hızlı sosyal medya paketleri
                 </div>
 
-                <h3 className="mb-3 text-2xl font-bold">
-                  {selectedPlatform.title} {selectedCategory.title}
-                </h3>
+                <h1 className="mb-5 text-4xl font-bold leading-tight tracking-tight md:text-6xl">
+                  Platformunu seç, paketini oluştur, hızlıca satın al.
+                </h1>
 
-                <p className="mb-5 text-sm leading-6 text-white/65">
-                  {selectedPackageType.title} paketi ·{" "}
-                  {formatNumber(quantity)} adet
+                <p className="mb-8 max-w-2xl text-lg leading-8 text-white/70 md:text-xl">
+                  Instagram, TikTok, YouTube, X ve Telegram için takipçi, beğeni,
+                  izlenme ve etkileşim paketlerini hızlıca seç. Minimum 100,
+                  günlük maksimum 5.000.000 adede kadar işlem alınabilir.
                 </p>
 
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
-                    <p className="text-xs text-white/40">Minimum</p>
-                    <p className="mt-1 font-black text-white">
-                      {formatNumber(MIN_QUANTITY)}
-                    </p>
-                  </div>
+                <div className="flex flex-col gap-4 sm:flex-row">
+                  <a
+                    href="#package-builder"
+                    className="rounded-2xl bg-white px-6 py-3 text-center font-semibold text-black transition hover:bg-white/90"
+                  >
+                    Paket Oluştur
+                  </a>
 
-                  <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
-                    <p className="text-xs text-white/40">Günlük Maksimum</p>
-                    <p className="mt-1 font-black text-white">
-                      {formatNumber(MAX_QUANTITY)}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
-                    <p className="text-xs text-white/40">Birim</p>
-                    <p className="mt-1 font-black text-white">
-                      {formatMoney(selectedPricePer1000)} / 1000
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3">
-                    <p className="text-xs text-emerald-100/70">Tahmini Tutar</p>
-                    <p className="mt-1 font-black text-emerald-200">
-                      {formatMoney(estimatedPrice)}
-                    </p>
-                  </div>
+                  <a
+                    href="/smmtora"
+                    className="rounded-2xl border border-white/20 px-6 py-3 text-center font-semibold text-white transition hover:bg-white/10"
+                  >
+                    Tekli Servislere Git
+                  </a>
                 </div>
-
-                <p className="mt-5 text-xs leading-5 text-white/45">
-                  KDV + vergiler dahildir. Paketler, hızlı sipariş vermek
-                  isteyen kullanıcılar için hazırlanmıştır.
-                </p>
               </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
-      <section
-        id="package-builder"
-        className="mx-auto max-w-6xl scroll-mt-8 px-6 pb-14"
-      >
-        <div className="mb-7">
-          <p className="mb-2 text-sm uppercase tracking-[0.2em] text-white/50">
-            Paket oluştur
-          </p>
+              <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur md:p-8">
+                <p className="mb-4 text-sm uppercase tracking-[0.2em] text-white/45">
+                  Seçili paket özeti
+                </p>
 
-          <h2 className="text-3xl font-bold md:text-4xl">
-            Önce platformunu seç
-          </h2>
-
-          <p className="mt-3 max-w-3xl leading-7 text-white/65">
-            Paket yapısı sade tutuldu. Platformu, kategoriyi ve paket türünü seç;
-            hedef kullanıcı adını yaz ve ödeme ekranına geç.
-          </p>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {platforms.map((platform) => {
-            const Icon = platform.icon;
-            const active = selectedPlatform.slug === platform.slug;
-
-            return (
-              <button
-                key={platform.slug}
-                type="button"
-                onClick={() => handlePlatformSelect(platform.slug)}
-                className={`group relative overflow-hidden rounded-[28px] border bg-gradient-to-br p-5 text-left transition hover:-translate-y-1 hover:shadow-[0_18px_60px_rgba(0,0,0,0.35)] ${
-                  active
-                    ? "border-emerald-400/70 from-emerald-400/20 to-white/[0.04]"
-                    : `border-white/10 ${platform.gradient} hover:border-white/20`
-                }`}
-              >
-                <div
-                  className={`pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full ${platform.glow} blur-3xl transition group-hover:scale-125`}
-                />
-
-                <div className="relative">
-                  <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/15 bg-black/30 text-white">
-                    <Icon className="h-7 w-7" />
+                <div className="rounded-3xl border border-white/10 bg-white/[0.055] p-5">
+                  <div className="mb-4 inline-flex rounded-full bg-white px-3 py-1 text-xs font-bold text-black">
+                    {selectedPackageType.badge}
                   </div>
 
-                  <h3 className="mb-2 text-xl font-bold">{platform.title}</h3>
+                  <h3 className="mb-3 text-2xl font-bold">
+                    {selectedPlatform.title} {selectedCategory.title}
+                  </h3>
 
-                  <p className="min-h-[72px] text-sm leading-6 text-white/65">
-                    {platform.description}
+                  <p className="mb-5 text-sm leading-6 text-white/65">
+                    {selectedPackageType.title} paketi ·{" "}
+                    {formatNumber(quantity)} adet
                   </p>
 
-                  {active ? (
-                    <span className="mt-4 inline-flex rounded-full bg-emerald-400 px-3 py-1 text-xs font-black text-black">
-                      Seçili
-                    </span>
-                  ) : (
-                    <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-white">
-                      Seç
-                      <FaArrowRight className="transition group-hover:translate-x-1" />
-                    </span>
-                  )}
-                </div>
-              </button>
-            );
-          })}
-        </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+                      <p className="text-xs text-white/40">Minimum</p>
+                      <p className="mt-1 font-black text-white">
+                        {formatNumber(MIN_QUANTITY)}
+                      </p>
+                    </div>
 
-        <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_0.85fr]">
-          <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-5 md:p-6">
+                    <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+                      <p className="text-xs text-white/40">Günlük Maksimum</p>
+                      <p className="mt-1 font-black text-white">
+                        {formatNumber(MAX_QUANTITY)}
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+                      <p className="text-xs text-white/40">Birim</p>
+                      <p className="mt-1 font-black text-white">
+                        {formatMoney(selectedPricePer1000)} / 1000
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl border border-white/12 bg-white/[0.065] px-4 py-3">
+                      <p className="text-xs text-white/45">Tahmini Tutar</p>
+                      <p className="mt-1 font-black text-white">
+                        {formatMoney(estimatedPrice)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="mt-5 text-xs leading-5 text-white/45">
+                    KDV + vergiler dahildir. Paketler, hızlı sipariş vermek
+                    isteyen kullanıcılar için hazırlanmıştır.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="package-builder"
+          className="mx-auto max-w-6xl scroll-mt-8 px-6 pb-14"
+        >
+          <div className="mb-7">
             <p className="mb-2 text-sm uppercase tracking-[0.2em] text-white/50">
-              Kategori seçimi
+              Paket oluştur
+            </p>
+
+            <h2 className="text-3xl font-bold md:text-4xl">
+              Önce platformunu seç
+            </h2>
+
+            <p className="mt-3 max-w-3xl leading-7 text-white/65">
+              Paket yapısı sade tutuldu. Platformu, kategoriyi ve paket türünü seç;
+              hedef kullanıcı adını yaz ve ödeme ekranına geç.
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            {platforms.map((platform) => {
+              const Icon = platform.icon;
+              const active = selectedPlatform.slug === platform.slug;
+
+              return (
+                <button
+                  key={platform.slug}
+                  type="button"
+                  onClick={() => handlePlatformSelect(platform.slug)}
+                  className={`group relative overflow-hidden rounded-[28px] border bg-gradient-to-br p-5 text-left transition hover:-translate-y-1 hover:shadow-[0_18px_60px_rgba(0,0,0,0.35)] ${
+                    active
+                      ? "border-white/28 from-white/[0.13] to-white/[0.045]"
+                      : `border-white/10 ${platform.gradient} hover:border-white/20`
+                  }`}
+                >
+                  <div
+                    className={`pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full ${platform.glow} blur-3xl transition group-hover:scale-125`}
+                  />
+
+                  <div className="relative">
+                    <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/15 bg-black/30 text-white">
+                      <Icon className="h-7 w-7" />
+                    </div>
+
+                    <h3 className="mb-2 text-xl font-bold">{platform.title}</h3>
+
+                    <p className="min-h-[72px] text-sm leading-6 text-white/65">
+                      {platform.description}
+                    </p>
+
+                    {active ? (
+                      <span className="mt-4 inline-flex rounded-full bg-white px-3 py-1 text-xs font-black text-black">
+                        Seçili
+                      </span>
+                    ) : (
+                      <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-white">
+                        Seç
+                        <FaArrowRight className="transition group-hover:translate-x-1" />
+                      </span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_0.85fr]">
+            <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-5 md:p-6">
+              <p className="mb-2 text-sm uppercase tracking-[0.2em] text-white/50">
+                Kategori seçimi
+              </p>
+
+              <h3 className="mb-4 text-2xl font-bold">
+                {selectedPlatform.title} için ne almak istiyorsun?
+              </h3>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                {selectedPlatform.categories.map((category) => {
+                  const active = selectedCategory.slug === category.slug;
+
+                  return (
+                    <button
+                      key={category.slug}
+                      type="button"
+                      onClick={() => setSelectedCategorySlug(category.slug)}
+                      className={`rounded-3xl border p-4 text-left transition hover:-translate-y-0.5 ${
+                        active
+                          ? "border-white/28 bg-white/[0.095]"
+                          : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
+                      }`}
+                    >
+                      <p className="font-black text-white">{category.title}</p>
+                      <p className="mt-2 text-sm leading-6 text-white/55">
+                        {category.description}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-5 md:p-6">
+              <p className="mb-2 text-sm uppercase tracking-[0.2em] text-white/50">
+                Miktar seçimi
+              </p>
+
+              <h3 className="mb-4 text-2xl font-bold">
+                Almak istediğin miktarı seç
+              </h3>
+
+              <input
+                value={String(quantity)}
+                onChange={(event) => handleQuantityInput(event.target.value)}
+                inputMode="numeric"
+                className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-lg font-black text-white outline-none transition focus:border-white/28"
+              />
+
+              <p className="mt-2 text-xs leading-5 text-white/45">
+                Minimum {formatNumber(MIN_QUANTITY)} · Günlük maksimum{" "}
+                {formatNumber(MAX_QUANTITY)}
+              </p>
+
+              <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-4">
+                {quickQuantities.map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => setQuantity(item)}
+                    className={`rounded-2xl border px-3 py-2 text-xs font-black transition hover:-translate-y-0.5 ${
+                      quantity === item
+                        ? "border-white bg-white text-black"
+                        : "border-white/10 bg-black/20 text-white/75 hover:bg-white/[0.06]"
+                    }`}
+                  >
+                    {formatNumber(item)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-5 rounded-[28px] border border-white/10 bg-white/[0.04] p-5 md:p-6">
+            <p className="mb-2 text-sm uppercase tracking-[0.2em] text-white/50">
+              Paket türü
             </p>
 
             <h3 className="mb-4 text-2xl font-bold">
-              {selectedPlatform.title} için ne almak istiyorsun?
+              Nasıl bir paket istiyorsun?
             </h3>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              {selectedPlatform.categories.map((category) => {
-                const active = selectedCategory.slug === category.slug;
+            <div className="grid gap-3 md:grid-cols-5">
+              {packageTypes.map((type) => {
+                const active = selectedPackageType.slug === type.slug;
 
                 return (
                   <button
-                    key={category.slug}
+                    key={type.slug}
                     type="button"
-                    onClick={() => setSelectedCategorySlug(category.slug)}
-                    className={`rounded-3xl border p-4 text-left transition hover:-translate-y-0.5 ${
+                    onClick={() => setSelectedPackageTypeSlug(type.slug)}
+                    className={`relative overflow-hidden rounded-3xl border p-4 text-left transition hover:-translate-y-0.5 ${
                       active
-                        ? "border-emerald-400/70 bg-emerald-400/10"
+                        ? type.colorClass
                         : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
                     }`}
                   >
-                    <p className="font-black text-white">{category.title}</p>
-                    <p className="mt-2 text-sm leading-6 text-white/55">
-                      {category.description}
-                    </p>
+                    <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-white/10 blur-3xl" />
+
+                    <div className="relative">
+                      <span className="mb-3 inline-flex rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-[10px] font-black uppercase tracking-wide text-white/55">
+                        {type.badge}
+                      </span>
+
+                      <p className="font-black text-white">{type.title}</p>
+
+                      <p className="mt-2 text-sm leading-6 text-white/55">
+                        {type.description}
+                      </p>
+
+                      <p
+                        className={`mt-3 text-sm font-black ${
+                          active ? "text-white" : "text-white/78"
+                        }`}
+                      >
+                        {formatMoney(getTypePricePer1000(type.slug))} / 1000
+                      </p>
+                    </div>
                   </button>
                 );
               })}
             </div>
           </div>
 
-          <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-5 md:p-6">
+          <div className="mt-5 rounded-[28px] border border-white/10 bg-white/[0.04] p-5 md:p-6">
             <p className="mb-2 text-sm uppercase tracking-[0.2em] text-white/50">
-              Miktar seçimi
+              Hedef bilgileri
             </p>
 
             <h3 className="mb-4 text-2xl font-bold">
-              Almak istediğin miktarı seç
+              Siparişin uygulanacağı hesabı yaz
             </h3>
 
-            <input
-              value={String(quantity)}
-              onChange={(event) => handleQuantityInput(event.target.value)}
-              inputMode="numeric"
-              className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-lg font-black text-white outline-none transition focus:border-emerald-400"
-            />
+            <div className="grid gap-3 md:grid-cols-2">
+              <input
+                value={targetUsername}
+                onChange={(event) => setTargetUsername(event.target.value)}
+                placeholder="Hedef kullanıcı adı / kanal adı"
+                className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none placeholder:text-white/35 transition focus:border-white/28"
+              />
 
-            <p className="mt-2 text-xs leading-5 text-white/45">
-              Minimum {formatNumber(MIN_QUANTITY)} · Günlük maksimum{" "}
-              {formatNumber(MAX_QUANTITY)}
-            </p>
-
-            <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-4">
-              {quickQuantities.map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  onClick={() => setQuantity(item)}
-                  className={`rounded-2xl border px-3 py-2 text-xs font-black transition hover:-translate-y-0.5 ${
-                    quantity === item
-                      ? "border-emerald-400 bg-emerald-400 text-black"
-                      : "border-white/10 bg-black/20 text-white/75 hover:bg-white/[0.06]"
-                  }`}
-                >
-                  {formatNumber(item)}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-5 rounded-[28px] border border-white/10 bg-white/[0.04] p-5 md:p-6">
-          <p className="mb-2 text-sm uppercase tracking-[0.2em] text-white/50">
-            Paket türü
-          </p>
-
-          <h3 className="mb-4 text-2xl font-bold">
-            Nasıl bir paket istiyorsun?
-          </h3>
-
-          <div className="grid gap-3 md:grid-cols-5">
-            {packageTypes.map((type) => {
-              const active = selectedPackageType.slug === type.slug;
-
-              return (
-                <button
-                  key={type.slug}
-                  type="button"
-                  onClick={() => setSelectedPackageTypeSlug(type.slug)}
-                  className={`relative overflow-hidden rounded-3xl border p-4 text-left transition hover:-translate-y-0.5 ${
-                    active
-                      ? type.colorClass
-                      : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
-                  }`}
-                >
-                  <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-white/10 blur-3xl" />
-
-                  <div className="relative">
-                    <span className="mb-3 inline-flex rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-[10px] font-black uppercase tracking-wide text-white/55">
-                      {type.badge}
-                    </span>
-
-                    <p className="font-black text-white">{type.title}</p>
-
-                    <p className="mt-2 text-sm leading-6 text-white/55">
-                      {type.description}
-                    </p>
-
-                    <p
-                      className={`mt-3 text-sm font-black ${
-                        active ? "text-white" : "text-emerald-300"
-                      }`}
-                    >
-                      {formatMoney(getTypePricePer1000(type.slug))} / 1000
-                    </p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="mt-5 rounded-[28px] border border-white/10 bg-white/[0.04] p-5 md:p-6">
-          <p className="mb-2 text-sm uppercase tracking-[0.2em] text-white/50">
-            Hedef bilgileri
-          </p>
-
-          <h3 className="mb-4 text-2xl font-bold">
-            Siparişin uygulanacağı hesabı yaz
-          </h3>
-
-          <div className="grid gap-3 md:grid-cols-2">
-            <input
-              value={targetUsername}
-              onChange={(event) => setTargetUsername(event.target.value)}
-              placeholder="Hedef kullanıcı adı / kanal adı"
-              className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none placeholder:text-white/35 transition focus:border-emerald-400"
-            />
-
-            <input
-              value={targetLink}
-              onChange={(event) => setTargetLink(event.target.value)}
-              placeholder="Hedef link"
-              className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none placeholder:text-white/35 transition focus:border-emerald-400"
-            />
-          </div>
-
-          <textarea
-            value={orderNote}
-            onChange={(event) => setOrderNote(event.target.value)}
-            placeholder="Sipariş notu"
-            className="mt-3 min-h-[90px] w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none placeholder:text-white/35 transition focus:border-emerald-400"
-          />
-        </div>
-
-        <div className="mt-5 rounded-[28px] border border-emerald-400/20 bg-emerald-400/10 p-5 md:p-6">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-200/70">
-                Sipariş özeti
-              </p>
-
-              <h3 className="mt-2 text-2xl font-black text-white">
-                {selectedPlatform.title} {selectedCategory.title} ·{" "}
-                {selectedPackageType.title}
-              </h3>
-
-              <p className="mt-2 text-sm leading-6 text-white/65">
-                Miktar:{" "}
-                <span className="font-black text-white">
-                  {formatNumber(quantity)}
-                </span>{" "}
-                · Tahmini tutar:{" "}
-                <span className="font-black text-emerald-200">
-                  {formatMoney(estimatedPrice)}
-                </span>
-              </p>
-
-              <p className="mt-2 text-xs leading-5 text-white/45">
-                KDV + vergiler dahildir. Ödeme sonrası sipariş kontrol edilerek
-                işleme alınır.
-              </p>
+              <input
+                value={targetLink}
+                onChange={(event) => setTargetLink(event.target.value)}
+                placeholder="Hedef link"
+                className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none placeholder:text-white/35 transition focus:border-white/28"
+              />
             </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <button
-                type="button"
-                disabled={!canOpenCheckout}
-                onClick={() => {
-                  setError("");
-                  setPaymentTermsAccepted(false);
-                  setCheckoutOpen(true);
-                }}
-                className="rounded-2xl bg-white px-6 py-3 text-center text-sm font-black text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
+            <textarea
+              value={orderNote}
+              onChange={(event) => setOrderNote(event.target.value)}
+              placeholder="Sipariş notu"
+              className="mt-3 min-h-[90px] w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none placeholder:text-white/35 transition focus:border-white/28"
+            />
+          </div>
+
+          <div className="mt-5 rounded-[28px] border border-white/12 bg-white/[0.055] p-5 md:p-6">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-white/45">
+                  Sipariş özeti
+                </p>
+
+                <h3 className="mt-2 text-2xl font-black text-white">
+                  {selectedPlatform.title} {selectedCategory.title} ·{" "}
+                  {selectedPackageType.title}
+                </h3>
+
+                <p className="mt-2 text-sm leading-6 text-white/65">
+                  Miktar:{" "}
+                  <span className="font-black text-white">
+                    {formatNumber(quantity)}
+                  </span>{" "}
+                  · Tahmini tutar:{" "}
+                  <span className="font-black text-white">
+                    {formatMoney(estimatedPrice)}
+                  </span>
+                </p>
+
+                <p className="mt-2 text-xs leading-5 text-white/45">
+                  KDV + vergiler dahildir. Ödeme sonrası sipariş kontrol edilerek
+                  işleme alınır.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <button
+                  type="button"
+                  disabled={!canOpenCheckout}
+                  onClick={() => {
+                    setError("");
+                    setPaymentTermsAccepted(false);
+                    setCheckoutOpen(true);
+                  }}
+                  className="rounded-2xl bg-white px-6 py-3 text-center text-sm font-black text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Paketi Satın Al
+                </button>
+
+                <a
+                  href={getWhatsappLink(
+                    `Merhaba, ${selectedPlatform.title} ${selectedCategory.title} paketi hakkında bilgi almak istiyorum. Paket türü: ${selectedPackageType.title}, miktar: ${formatNumber(
+                      quantity
+                    )}.`
+                  )}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/20 px-6 py-3 text-center text-sm font-bold text-white transition hover:bg-white/10"
+                >
+                  <FaWhatsapp />
+                  Destek Al
+                </a>
+              </div>
+            </div>
+
+            {!canOpenCheckout && (
+              <div className="mt-4 rounded-2xl border border-[#6b5b2a]/60 bg-[#211d11]/70 px-4 py-3 text-sm text-[#e7d9a4]">
+                Devam etmek için hedef kullanıcı adını yazmalısın.
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-6xl px-6 pb-14">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {highlights.map((item) => (
+              <div
+                key={item.title}
+                className="rounded-2xl border border-white/10 bg-white/[0.04] p-5"
               >
-                Paketi Satın Al
-              </button>
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-black/20 text-lg text-white/82">
+                  <item.icon />
+                </div>
+
+                <h3 className="mb-2 font-semibold">{item.title}</h3>
+                <p className="text-sm leading-6 text-white/65">
+                  {item.description}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-6xl px-6 pb-24">
+          <div className="flex flex-col gap-6 rounded-[28px] border border-white/10 bg-gradient-to-br from-white/[0.1] to-white/[0.03] p-8 md:p-10 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-2xl">
+              <p className="mb-3 text-sm uppercase tracking-[0.2em] text-white/50">
+                Geniş servis listesi
+              </p>
+
+              <h2 className="mb-3 text-3xl font-bold md:text-4xl">
+                Daha fazla medya ve servis için SMMTora’ya geç
+              </h2>
+
+              <p className="leading-7 text-white/70">
+                Burada hızlı paket akışı yer alır. Tüm servisleri, detaylı filtreleri
+                ve geniş platform listesini görmek için SMMTora alanını kullanabilirsin.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-4 sm:flex-row">
+              <a
+                href="/smmtora"
+                className="rounded-2xl bg-white px-6 py-3 text-center font-semibold text-black transition hover:bg-white/90"
+              >
+                SMMTora’ya Git
+              </a>
 
               <a
-                href={getWhatsappLink(
-                  `Merhaba, ${selectedPlatform.title} ${selectedCategory.title} paketi hakkında bilgi almak istiyorum. Paket türü: ${selectedPackageType.title}, miktar: ${formatNumber(
-                    quantity
-                  )}.`
-                )}
+                href={CONTACT.telegram}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/20 px-6 py-3 text-center text-sm font-bold text-white transition hover:bg-white/10"
+                className="rounded-2xl border border-white/20 px-6 py-3 text-center font-semibold text-white transition hover:bg-white/10"
               >
-                <FaWhatsapp />
-                Destek Al
+                Telegram Destek
               </a>
             </div>
           </div>
+        </section>
 
-          {!canOpenCheckout && (
-            <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
-              Devam etmek için hedef kullanıcı adını yazmalısın.
+        <footer className="border-t border-white/10 px-6 py-10">
+          <div className="mx-auto flex max-w-6xl flex-col gap-4 text-sm text-white/50 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div className="font-semibold text-white">© MedyaTora Paketler</div>
+              <div>Platforma göre hızlı sosyal medya paketleri</div>
             </div>
-          )}
-        </div>
-      </section>
 
-      <section className="mx-auto max-w-6xl px-6 pb-14">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {highlights.map((item) => (
-            <div
-              key={item.title}
-              className="rounded-2xl border border-white/10 bg-white/[0.04] p-5"
-            >
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-black/20 text-lg text-emerald-300">
-                <item.icon />
-              </div>
+            <div className="flex flex-wrap gap-4">
+              <a href="/" className="transition hover:text-white">
+                MedyaTora
+              </a>
 
-              <h3 className="mb-2 font-semibold">{item.title}</h3>
-              <p className="text-sm leading-6 text-white/65">
-                {item.description}
-              </p>
+              <a href="/smmtora" className="transition hover:text-white">
+                SMMTora
+              </a>
+
+              <a
+                href={CONTACT.instagram}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="transition hover:text-white"
+              >
+                Instagram
+              </a>
             </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-6 pb-24">
-        <div className="flex flex-col gap-6 rounded-[28px] border border-white/10 bg-gradient-to-br from-white/[0.1] to-white/[0.03] p-8 md:p-10 lg:flex-row lg:items-center lg:justify-between">
-          <div className="max-w-2xl">
-            <p className="mb-3 text-sm uppercase tracking-[0.2em] text-white/50">
-              Geniş servis listesi
-            </p>
-
-            <h2 className="mb-3 text-3xl font-bold md:text-4xl">
-              Daha fazla medya ve servis için SMMTora’ya geç
-            </h2>
-
-            <p className="leading-7 text-white/70">
-              Burada hızlı paket akışı yer alır. Tüm servisleri, detaylı filtreleri
-              ve geniş platform listesini görmek için SMMTora alanını kullanabilirsin.
-            </p>
           </div>
-
-          <div className="flex flex-col gap-4 sm:flex-row">
-            <a
-              href="/smmtora"
-              className="rounded-2xl bg-white px-6 py-3 text-center font-semibold text-black transition hover:bg-white/90"
-            >
-              SMMTora’ya Git
-            </a>
-
-            <a
-              href={CONTACT.telegram}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-2xl border border-white/20 px-6 py-3 text-center font-semibold text-white transition hover:bg-white/10"
-            >
-              Telegram Destek
-            </a>
-          </div>
-        </div>
-      </section>
-
-      <footer className="border-t border-white/10 px-6 py-10">
-        <div className="mx-auto flex max-w-6xl flex-col gap-4 text-sm text-white/50 md:flex-row md:items-center md:justify-between">
-          <div>
-            <div className="font-semibold text-white">© MedyaTora Paketler</div>
-            <div>Platforma göre hızlı sosyal medya paketleri</div>
-          </div>
-
-          <div className="flex flex-wrap gap-4">
-            <a href="/" className="transition hover:text-white">
-              MedyaTora
-            </a>
-
-            <a href="/smmtora" className="transition hover:text-white">
-              SMMTora
-            </a>
-
-            <a
-              href={CONTACT.instagram}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="transition hover:text-white"
-            >
-              Instagram
-            </a>
-          </div>
-        </div>
-      </footer>
-    </div>
+        </footer>
+      </div>
 
       {checkoutOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-3 backdrop-blur-sm sm:p-4">
@@ -1239,7 +1252,7 @@ export default function PaketlerPage() {
                     value={fullName}
                     onChange={(event) => setFullName(event.target.value)}
                     placeholder="Ödeme yapacak kişinin adı soyadı"
-                    className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 transition focus:border-emerald-400"
+                    className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 transition focus:border-white/28"
                   />
 
                   <p className="mt-2 text-xs leading-5 text-amber-100/80">
@@ -1254,7 +1267,7 @@ export default function PaketlerPage() {
                   }
                   placeholder="Telefon numarası"
                   inputMode="tel"
-                  className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 transition focus:border-emerald-400"
+                  className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 transition focus:border-white/28"
                 />
 
                 <select
@@ -1262,7 +1275,7 @@ export default function PaketlerPage() {
                   onChange={(event) =>
                     setContactType(event.target.value as ContactType)
                   }
-                  className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none transition focus:border-emerald-400"
+                  className="w-full rounded-2xl border border-white/10 bg-[#121826] px-4 py-3 text-white outline-none transition focus:border-white/28"
                 >
                   <option value="" className="bg-[#121826]">
                     İletişim türü seç
@@ -1278,7 +1291,7 @@ export default function PaketlerPage() {
                   value={contactValue}
                   onChange={(event) => setContactValue(event.target.value)}
                   placeholder="İletişim bilgisi"
-                  className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 transition focus:border-emerald-400"
+                  className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 transition focus:border-white/28"
                 />
               </div>
 
@@ -1295,7 +1308,7 @@ export default function PaketlerPage() {
                     onClick={() => setPaymentMethod("turkey_bank")}
                     className={`rounded-2xl border p-4 text-left transition ${
                       paymentMethod === "turkey_bank"
-                        ? "border-emerald-400 bg-emerald-400/10"
+                        ? "border-white/28 bg-white/[0.095]"
                         : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
                     }`}
                   >
@@ -1313,7 +1326,7 @@ export default function PaketlerPage() {
                     disabled={!authUser}
                     className={`rounded-2xl border p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-50 ${
                       paymentMethod === "balance"
-                        ? "border-emerald-400 bg-emerald-400/10"
+                        ? "border-white/28 bg-white/[0.095]"
                         : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
                     }`}
                   >
@@ -1330,7 +1343,7 @@ export default function PaketlerPage() {
                     onClick={() => setPaymentMethod("support")}
                     className={`rounded-2xl border p-4 text-left transition ${
                       paymentMethod === "support"
-                        ? "border-sky-400 bg-sky-400/10"
+                        ? "border-white/28 bg-white/[0.095]"
                         : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
                     }`}
                   >
@@ -1344,7 +1357,7 @@ export default function PaketlerPage() {
                 </div>
 
                 {paymentMethod === "turkey_bank" && (
-                  <div className="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm leading-6 text-emerald-50">
+                  <div className="mt-4 rounded-2xl border border-white/12 bg-white/[0.055] p-4 text-sm leading-6 text-white/72">
                     <p className="font-bold text-white">Banka bilgileri</p>
                     <p className="mt-2">
                       <span className="font-bold text-white">Alıcı:</span>{" "}
@@ -1362,10 +1375,10 @@ export default function PaketlerPage() {
                 )}
               </div>
 
-              <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm leading-6 text-amber-50">
+              <div className="mt-4 rounded-2xl border border-[#6b5b2a]/60 bg-[#211d11]/70 p-4 text-sm leading-6 text-[#e7d9a4]">
                 <p className="font-bold text-white">Ödeme Güvenliği</p>
 
-                <p className="mt-2 text-white/75">
+                <p className="mt-2">
                   Ödeme yapacak kişinin adı soyadı, dekonttaki gönderen adı
                   soyadı ile aynı olmalıdır. Eşleşmeyen ödemeler onaylanmaz.
                 </p>
@@ -1374,7 +1387,7 @@ export default function PaketlerPage() {
                   İade ve Sözleşme Onayı
                 </p>
 
-                <p className="mt-2 text-white/75">
+                <p className="mt-2">
                   İşlem başlamadan önce iade talep edebilirsiniz. İşlem
                   başladıktan sonra iptal/iade yapılamaz. Bizden kaynaklı eksik
                   işlem olursa eksik kalan kısım için iade yapılabilir.
@@ -1387,7 +1400,7 @@ export default function PaketlerPage() {
                     onChange={(event) =>
                       setPaymentTermsAccepted(event.target.checked)
                     }
-                    className="mt-1 h-4 w-4 shrink-0 accent-emerald-400"
+                    className="mt-1 h-4 w-4 shrink-0 accent-white"
                   />
 
                   <span className="text-sm leading-6 text-white/80">
@@ -1395,7 +1408,7 @@ export default function PaketlerPage() {
                       href="/kullanim-sartlari"
                       target="_blank"
                       rel="noreferrer"
-                      className="font-semibold text-emerald-300 underline underline-offset-4 hover:text-emerald-200"
+                      className="font-semibold text-white underline underline-offset-4 hover:text-white/80"
                     >
                       Kullanım şartlarını
                     </a>
@@ -1404,7 +1417,7 @@ export default function PaketlerPage() {
                       href="/gizlilik-politikasi"
                       target="_blank"
                       rel="noreferrer"
-                      className="font-semibold text-emerald-300 underline underline-offset-4 hover:text-emerald-200"
+                      className="font-semibold text-white underline underline-offset-4 hover:text-white/80"
                     >
                       gizlilik politikasını
                     </a>
@@ -1413,7 +1426,7 @@ export default function PaketlerPage() {
                       href="/iade-politikasi"
                       target="_blank"
                       rel="noreferrer"
-                      className="font-semibold text-emerald-300 underline underline-offset-4 hover:text-emerald-200"
+                      className="font-semibold text-white underline underline-offset-4 hover:text-white/80"
                     >
                       iade koşullarını
                     </a>{" "}
@@ -1422,7 +1435,7 @@ export default function PaketlerPage() {
                       href="/mesafeli-satis-sozlesmesi"
                       target="_blank"
                       rel="noreferrer"
-                      className="font-semibold text-emerald-300 underline underline-offset-4 hover:text-emerald-200"
+                      className="font-semibold text-white underline underline-offset-4 hover:text-white/80"
                     >
                       mesafeli satış sözleşmesini
                     </a>{" "}
@@ -1431,7 +1444,7 @@ export default function PaketlerPage() {
                 </label>
 
                 {!paymentTermsAccepted && (
-                  <p className="mt-3 text-xs leading-5 text-amber-100/80">
+                  <p className="mt-3 text-xs leading-5">
                     Siparişi oluşturmak için sözleşme ve politika onayını
                     işaretlemelisin.
                   </p>
@@ -1463,7 +1476,7 @@ export default function PaketlerPage() {
               </div>
 
               {error && (
-                <div className="mt-4 rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+                <div className="mt-4 rounded-2xl border border-[#6b2232] bg-[#31101b]/70 px-4 py-3 text-sm text-[#f2c7d1]">
                   {error}
                 </div>
               )}
@@ -1512,16 +1525,16 @@ export default function PaketlerPage() {
                 {createdPaymentInfo?.orderNumbers.map((number) => (
                   <div
                     key={number}
-                    className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4"
+                    className="rounded-2xl border border-white/12 bg-white/[0.055] p-4"
                   >
-                    <p className="text-sm text-emerald-200">Sipariş numarası</p>
+                    <p className="text-sm text-white/62">Sipariş numarası</p>
                     <p className="mt-1 text-lg font-bold text-white">{number}</p>
                   </div>
                 ))}
               </div>
 
               {createdPaymentInfo?.paymentMethod === "balance" ? (
-                <div className="mt-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4">
+                <div className="mt-5 rounded-2xl border border-white/12 bg-white/[0.055] p-4">
                   <p className="text-sm font-bold text-white">
                     Bakiye ile ödeme tamamlandı
                   </p>
@@ -1537,7 +1550,7 @@ export default function PaketlerPage() {
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
                     <a
                       href="/hesabim"
-                      className="rounded-2xl bg-emerald-400 px-5 py-3 text-center text-sm font-black text-black transition hover:bg-emerald-300"
+                      className="rounded-2xl bg-white px-5 py-3 text-center text-sm font-black text-black transition hover:bg-white/90"
                     >
                       Hesabıma Git
                     </a>
@@ -1566,7 +1579,7 @@ export default function PaketlerPage() {
                       href={buildTelegramLink(createdPaymentInfo)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="rounded-2xl bg-sky-500 px-5 py-3 text-center text-sm font-bold text-black transition hover:bg-sky-400"
+                      className="rounded-2xl border border-white/12 bg-white/[0.08] px-5 py-3 text-center text-sm font-bold text-white transition hover:bg-white/[0.12]"
                     >
                       Telegram’a Git
                     </a>
@@ -1579,7 +1592,7 @@ export default function PaketlerPage() {
                       }
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-5 py-3 text-center text-sm font-black text-black transition hover:from-emerald-300 hover:to-emerald-400"
+                      className="rounded-2xl bg-white px-5 py-3 text-center text-sm font-black text-black transition hover:bg-white/90"
                     >
                       WhatsApp’a Gönder
                     </a>

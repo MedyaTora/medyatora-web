@@ -6,6 +6,7 @@ import {
   FaUserCheck,
   FaWhatsapp,
 } from "react-icons/fa6";
+import UserMenu from "./components/auth/UserMenu";
 
 function LuxuryMonogram({
   size = 100,
@@ -117,7 +118,7 @@ export default function Home() {
       <MinimalStars />
 
       <section className="mt-premium-inner mx-auto flex min-h-[100dvh] w-full max-w-7xl flex-col px-4 py-5 sm:px-6 lg:px-8">
-        <header className="flex items-center justify-between gap-4 border-b border-white/5 pb-5">
+        <header className="flex flex-col gap-4 border-b border-white/5 pb-5 sm:flex-row sm:items-center sm:justify-between">
           <Link href="/" className="flex min-w-0 items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center text-white drop-shadow-[0_0_18px_rgba(255,255,255,0.16)]">
               <LuxuryMonogram size={34} />
@@ -134,27 +135,8 @@ export default function Home() {
             </div>
           </Link>
 
-          <div className="flex shrink-0 items-center gap-2">
-            <Link
-              href="/giris"
-              className="rounded-none border border-white/10 bg-white/[0.03] px-3 py-2.5 text-[9px] font-bold uppercase tracking-[0.18em] text-white/70 transition hover:border-white/30 hover:bg-white/[0.07] hover:text-white sm:px-5 sm:text-[10px] sm:tracking-[0.24em]"
-            >
-              Giriş
-            </Link>
-
-            <Link
-              href="/giris?mode=register"
-              className="rounded-none border border-white/10 bg-white/[0.03] px-3 py-2.5 text-[9px] font-bold uppercase tracking-[0.18em] text-white/70 transition hover:border-white/30 hover:bg-white/[0.07] hover:text-white sm:px-5 sm:text-[10px] sm:tracking-[0.24em]"
-            >
-              Üye Ol
-            </Link>
-
-            <Link
-              href="/portal"
-              className="rounded-none border border-white/15 bg-white/[0.04] px-3 py-2.5 text-[9px] font-bold uppercase tracking-[0.18em] text-white transition hover:border-white/35 hover:bg-white/[0.08] sm:px-5 sm:text-[10px] sm:tracking-[0.24em]"
-            >
-              Portal
-            </Link>
+          <div className="flex shrink-0 items-center justify-end">
+            <UserMenu />
           </div>
         </header>
 

@@ -99,7 +99,7 @@ const accountTypeOptions: OptionCard[] = [
     value: "Medya / Haber / Eğlence Kanalı",
     title: "Medya / Kanal",
     description:
-      "Film, haber, mizah, bilgi, içerik derleme, reels veya shorts temelli sayfalar için.",
+      "Film, haber, mizah, bilgi, içerik derleme, Reels veya Shorts temelli sayfalar için.",
   },
   {
     value: "Topluluk / Proje / Organizasyon",
@@ -285,7 +285,7 @@ function PremiumSelect({
     <select
       value={value}
       onChange={onChange}
-      className="w-full rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3.5 text-sm font-semibold text-white outline-none transition focus:border-white/25 focus:bg-white/[0.065]"
+      className="w-full rounded-2xl border border-white/10 bg-[#111318] px-4 py-3.5 text-sm font-semibold text-white outline-none transition focus:border-white/25 focus:bg-[#151820]"
     >
       {children}
     </select>
@@ -311,7 +311,7 @@ function ChoiceCard({
       onClick={onClick}
       className={`group relative overflow-hidden rounded-[26px] border p-5 text-left transition hover:-translate-y-0.5 ${
         active
-          ? "border-white/28 bg-[linear-gradient(180deg,rgba(255,255,255,0.13),rgba(255,255,255,0.08))] text-white shadow-[0_18px_40px_rgba(0,0,0,0.28)]"
+          ? "border-white/24 bg-white/[0.095] text-white shadow-[0_18px_40px_rgba(0,0,0,0.32)]"
           : "border-white/10 bg-white/[0.035] text-white hover:border-white/18 hover:bg-white/[0.055]"
       }`}
     >
@@ -319,7 +319,7 @@ function ChoiceCard({
         className={`mb-4 flex h-11 w-11 items-center justify-center rounded-2xl border text-base ${
           active
             ? "border-white/18 bg-black/45 text-white"
-            : "border-white/10 bg-black/25 text-white"
+            : "border-white/10 bg-black/25 text-white/82"
         }`}
       >
         {Icon ? <Icon /> : <FaCircleQuestion />}
@@ -327,7 +327,11 @@ function ChoiceCard({
 
       <h4 className="text-lg font-black">{title}</h4>
 
-      <p className={`mt-2 text-sm leading-6 ${active ? "text-white/72" : "text-white/58"}`}>
+      <p
+        className={`mt-2 text-sm leading-6 ${
+          active ? "text-white/74" : "text-white/58"
+        }`}
+      >
         {description}
       </p>
 
@@ -384,6 +388,14 @@ function MiniInfoCard({
   );
 }
 
+function safeJsonParse<T>(value: string): T | null {
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return null;
+  }
+}
+
 export default function AnalysisForm() {
   const router = useRouter();
 
@@ -429,7 +441,7 @@ export default function AnalysisForm() {
     }
 
     if (step === 2 && (!accountType || !mainGoal)) {
-      setError("Lütfen hesap tipini ve ana hedefinizi seçin.");
+      setError("Lütfen hesap tipini ve analizden beklentinizi seçin.");
       return;
     }
 
@@ -478,15 +490,15 @@ export default function AnalysisForm() {
       const analysisNote = [
         `Platform: ${selectedPlatformTitle}`,
         `Hesap tipi: ${accountType}`,
-        `Ana hedef: ${mainGoal}`,
-        `Hesap bilgisi: ${accountUsername}`,
-        accountLink ? `Hesap linki: ${accountLink}` : "",
+        `Analizde beklenen: ${mainGoal}`,
+        `Kullanıcı adı / hesap adı: ${accountUsername.trim()}`,
+        accountLink.trim() ? `Hesap linki: ${accountLink.trim()}` : "",
         `Mevcut durum: ${currentStatus}`,
         `İçerik yapısı: ${contentStyle}`,
         `Ana sorun: ${mainProblem}`,
-        extraNote ? `Ek not: ${extraNote}` : "",
+        extraNote.trim() ? `Ek not: ${extraNote.trim()}` : "",
         `Seçilen para birimi: ${selectedCurrency}`,
-        `Fiyat etiketi: ${currentPrice}`,
+        `Analiz fiyat etiketi: ${currentPrice}`,
       ]
         .filter(Boolean)
         .join("\n");
@@ -519,17 +531,27 @@ export default function AnalysisForm() {
         }),
       });
 
-      const data = await res.json();
+      const text = await res.text();
+      const data = safeJsonParse<{
+        success?: boolean;
+        error?: string;
+        requestId?: string | number;
+        analysisRequestId?: string | number;
+        analysis_request_id?: string | number;
+        id?: string | number;
+      }>(text);
 
-      if (!res.ok || data.success === false) {
-        throw new Error(data.error || "Analiz başvurusu oluşturulamadı.");
+      if (!res.ok || data?.success === false) {
+        throw new Error(
+          data?.error || "Analiz başvurusu oluşturulamadı."
+        );
       }
 
       const requestId =
-        data.requestId ||
-        data.analysisRequestId ||
-        data.analysis_request_id ||
-        data.id ||
+        data?.requestId ||
+        data?.analysisRequestId ||
+        data?.analysis_request_id ||
+        data?.id ||
         "";
 
       const params = new URLSearchParams({
@@ -565,7 +587,7 @@ export default function AnalysisForm() {
           <StepPill step={1} currentStep={step} label="Platform" />
           <StepPill step={2} currentStep={step} label="Hedef" />
           <StepPill step={3} currentStep={step} label="Detay" />
-          <StepPill step={4} currentStep={step} label="Tamamla" />
+          <StepPill step={4} currentStep={step} label="Onay" />
         </div>
 
         <div className="mb-7 grid gap-5 lg:grid-cols-[1fr_0.82fr]">
@@ -582,23 +604,22 @@ export default function AnalysisForm() {
             <p className="mt-4 max-w-3xl text-sm leading-7 text-white/64 md:text-base">
               Sosyal medya hesabınızın neden yeterli büyüme, güven veya dönüşüm
               sağlayamadığını profesyonel bakışla inceliyoruz. Profil görünümü,
-              içerik düzeni, ilk saniye etkisi, anlatım dili, hedef kitle uyumu,
-              reklam sonrası dönüşüm süreci ve genel hesap algısı birlikte
-              değerlendirilir.
+              içerik düzeni, ilk saniye etkisi, anlatım dili, hedef kitle uyumu
+              ve satışa giden akış birlikte değerlendirilir.
             </p>
 
             <div className="mt-6 grid gap-3 md:grid-cols-3">
               <MiniInfoCard
-                label="İnceleme odağı"
-                value="Hook, içerik yapısı, profil algısı ve dönüşüm akışı"
+                label="Odak"
+                value="Profil, içerik, güven ve dönüşüm"
               />
               <MiniInfoCard
                 label="Süreç"
-                value="Form tamamlanır, başvuru ekibe düşer, analiz manuel incelenir"
+                value="Form alınır, ekip inceler, analiz hazırlanır"
               />
               <MiniInfoCard
                 label="Sonuç"
-                value="Eksikler, iyileştirme alanları ve profesyonel geri bildirim paylaşılır"
+                value="Eksikler ve iyileştirme alanları paylaşılır"
               />
             </div>
           </div>
@@ -614,11 +635,10 @@ export default function AnalysisForm() {
 
             <div className="mt-4 space-y-3 text-sm leading-6 text-white/62">
               <p>• Profilinizin ilk bakışta ne kadar güven verdiğini</p>
-              <p>• İçeriklerinizin kullanıcıyı ilk saniyede ne kadar yakaladığını</p>
-              <p>• Video, görsel ve açıklama dilinizin hedef kitlenizle uyumunu</p>
+              <p>• İçeriklerinizin kullanıcıyı ilk saniyede yakalayıp yakalamadığını</p>
+              <p>• Video, görsel ve açıklama dilinizin hedef kitleyle uyumunu</p>
               <p>• Paylaşım düzeninizin büyüme açısından yeterli olup olmadığını</p>
               <p>• Reklam, DM, web sitesi veya satış akışında kopma yaşanan noktaları</p>
-              <p>• Gerekli görülürse hesabınız için uygun iyileştirme alanlarını</p>
             </div>
           </div>
         </div>
@@ -651,7 +671,7 @@ export default function AnalysisForm() {
         {step === 2 && (
           <>
             <p className="text-xs font-black uppercase tracking-[0.22em] text-white/42">
-              Hesap amacı
+              Hesap türü
             </p>
 
             <h3 className="mt-2 text-3xl font-black text-white">
@@ -678,11 +698,11 @@ export default function AnalysisForm() {
 
             <div className="mt-8">
               <p className="text-xs font-black uppercase tracking-[0.22em] text-white/42">
-                Ana hedef
+                Analizde ne bekliyorsunuz?
               </p>
 
               <h3 className="mt-2 text-3xl font-black text-white">
-                Bu analizden ne bekliyorsunuz?
+                Bu analizden asıl beklentiniz nedir?
               </h3>
 
               <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -703,7 +723,7 @@ export default function AnalysisForm() {
         {step === 3 && (
           <>
             <p className="text-xs font-black uppercase tracking-[0.22em] text-white/42">
-              Hesap detayları
+              Profil / hesap linki
             </p>
 
             <h3 className="mt-2 text-3xl font-black text-white">
@@ -721,7 +741,7 @@ export default function AnalysisForm() {
               </div>
 
               <div>
-                <FieldLabel>Hesap linki</FieldLabel>
+                <FieldLabel>Profil / hesap linki</FieldLabel>
                 <PremiumInput
                   value={accountLink}
                   onChange={(e) => setAccountLink(e.target.value)}
@@ -735,11 +755,9 @@ export default function AnalysisForm() {
                   value={currentStatus}
                   onChange={(e) => setCurrentStatus(e.target.value)}
                 >
-                  <option value="" className="bg-[#111318]">
-                    Mevcut durumu seçin
-                  </option>
+                  <option value="">Mevcut durumu seçin</option>
                   {currentStatusOptions.map((item) => (
-                    <option key={item} value={item} className="bg-[#111318]">
+                    <option key={item} value={item}>
                       {item}
                     </option>
                   ))}
@@ -752,11 +770,9 @@ export default function AnalysisForm() {
                   value={contentStyle}
                   onChange={(e) => setContentStyle(e.target.value)}
                 >
-                  <option value="" className="bg-[#111318]">
-                    İçerik yapısını seçin
-                  </option>
+                  <option value="">İçerik yapısını seçin</option>
                   {contentStyleOptions.map((item) => (
-                    <option key={item} value={item} className="bg-[#111318]">
+                    <option key={item} value={item}>
                       {item}
                     </option>
                   ))}
@@ -769,11 +785,9 @@ export default function AnalysisForm() {
                   value={mainProblem}
                   onChange={(e) => setMainProblem(e.target.value)}
                 >
-                  <option value="" className="bg-[#111318]">
-                    Ana sorunu seçin
-                  </option>
+                  <option value="">Ana sorunu seçin</option>
                   {problemOptions.map((item) => (
-                    <option key={item} value={item} className="bg-[#111318]">
+                    <option key={item} value={item}>
                       {item}
                     </option>
                   ))}
@@ -795,28 +809,27 @@ export default function AnalysisForm() {
         {step === 4 && (
           <>
             <p className="text-xs font-black uppercase tracking-[0.22em] text-white/42">
-              Başvuru tamamlama
+              İletişim ve onay
             </p>
 
             <h3 className="mt-2 text-3xl font-black text-white">
-              Analizi bitir ve ödemeye geç
+              Başvuruyu tamamla ve ödemeye geç
             </h3>
 
             <p className="mt-3 max-w-3xl text-sm leading-7 text-white/62">
-              Başvurunuz tamamlandıktan sonra ödeme ekranına yönlendirilirsiniz.
-              Ödeme tarafı SMMTora akışıyla uyumlu şekilde sonraki aşamada
-              ilerler.
+              Başvurunuz oluşturulduktan sonra ödeme ekranına yönlendirilirsiniz.
+              Ödeme tamamlandığında analiz talebiniz ekip tarafından incelenir.
             </p>
 
             <div className="mt-6 grid gap-4 md:grid-cols-3">
               <MiniInfoCard label="Platform" value={selectedPlatformTitle} />
               <MiniInfoCard label="Hesap tipi" value={accountType || "-"} />
-              <MiniInfoCard label="Ana hedef" value={mainGoal || "-"} />
+              <MiniInfoCard label="Beklenti" value={mainGoal || "-"} />
             </div>
 
             <div className="mt-6 rounded-[28px] border border-white/10 bg-black/20 p-5">
               <h4 className="text-2xl font-black text-white">
-                İletişim ve başvuru onayı
+                İletişim bilgileri
               </h4>
 
               <div className="mt-5 grid gap-4 md:grid-cols-3">
@@ -833,13 +846,13 @@ export default function AnalysisForm() {
                   <FieldLabel required>İletişim kanalı</FieldLabel>
                   <PremiumSelect
                     value={contactType}
-                    onChange={(e) => setContactType(e.target.value as ContactType)}
+                    onChange={(e) =>
+                      setContactType(e.target.value as ContactType)
+                    }
                   >
-                    <option value="" className="bg-[#111318]">
-                      İletişim kanalı seçin
-                    </option>
+                    <option value="">İletişim kanalı seçin</option>
                     {contactTypes.map((item) => (
-                      <option key={item} value={item} className="bg-[#111318]">
+                      <option key={item} value={item}>
                         {item}
                       </option>
                     ))}
@@ -861,20 +874,22 @@ export default function AnalysisForm() {
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <p className="text-xs font-black uppercase tracking-[0.18em] text-white/38">
-                    Ödeme aşaması
+                    Ödeme bilgisi
                   </p>
+
                   <h4 className="mt-2 text-2xl font-black text-white">
-                    Sonraki ekranda ödeme akışına geçeceksiniz
+                    Para birimini seçin
                   </h4>
+
                   <p className="mt-2 max-w-2xl text-sm leading-7 text-white/60">
-                    Burada sadece para birimini belirliyorsunuz. Analizi
-                    tamamladıktan sonra ödeme ekranına yönlendirilirsiniz.
+                    Sonraki ekranda analiz talebi numarası, seçilen para birimi
+                    ve ödeme bilgileri gösterilecek.
                   </p>
                 </div>
 
                 <div className="rounded-2xl border border-white/10 bg-black/25 px-5 py-4">
                   <p className="text-xs font-black uppercase tracking-[0.18em] text-white/38">
-                    Seçili etiket
+                    Seçili tutar
                   </p>
                   <p className="mt-1 text-xl font-black text-white">
                     {currentPrice}
@@ -939,7 +954,9 @@ export default function AnalysisForm() {
               disabled={loading}
               className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white/[0.92] px-6 py-3 text-sm font-black text-black transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {loading ? "Analiz oluşturuluyor..." : "Analizi Bitir ve Ödemeye Geç"}
+              {loading
+                ? "Analiz oluşturuluyor..."
+                : "Analizi Bitir ve Ödemeye Geç"}
               {loading ? <FaPaperPlane /> : <FaCheck />}
             </button>
           )}

@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import type { RowDataPacket } from "mysql2";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { getMysqlPool } from "@/lib/mysql";
-import PhoneVerificationCard from "@/app/components/auth/PhoneVerificationCard";
+import UserMenu from "@/app/components/auth/UserMenu";
+import ContactVerificationCard from "@/app/components/auth/ContactVerificationCard";
 
 type OrderRow = RowDataPacket & {
   id: number;
@@ -73,15 +74,15 @@ const statusLabels: Record<string, string> = {
 };
 
 const statusClasses: Record<string, string> = {
-  pending_payment: "border-amber-400/25 bg-amber-400/10 text-amber-200",
-  pending: "border-sky-400/25 bg-sky-400/10 text-sky-200",
-  processing: "border-violet-400/25 bg-violet-400/10 text-violet-200",
-  in_progress: "border-sky-400/25 bg-sky-400/10 text-sky-200",
-  completed: "border-emerald-400/25 bg-emerald-400/10 text-emerald-200",
-  cancelled: "border-rose-400/25 bg-rose-400/10 text-rose-200",
-  refunded: "border-cyan-400/25 bg-cyan-400/10 text-cyan-200",
-  partial_refunded: "border-amber-400/25 bg-amber-400/10 text-amber-200",
-  failed: "border-rose-400/25 bg-rose-400/10 text-rose-200",
+  pending_payment: "border-[#6b5b2a]/60 bg-[#211d11]/70 text-[#e7d9a4]",
+  pending: "border-white/12 bg-white/[0.06] text-white/72",
+  processing: "border-white/12 bg-white/[0.06] text-white/72",
+  in_progress: "border-white/12 bg-white/[0.06] text-white/72",
+  completed: "border-white/18 bg-white/[0.08] text-white",
+  cancelled: "border-[#6b2232] bg-[#31101b]/70 text-[#f2c7d1]",
+  refunded: "border-white/12 bg-white/[0.06] text-white/72",
+  partial_refunded: "border-[#6b5b2a]/60 bg-[#211d11]/70 text-[#e7d9a4]",
+  failed: "border-[#6b2232] bg-[#31101b]/70 text-[#f2c7d1]",
 };
 
 const transactionTypeLabels: Record<string, string> = {
@@ -92,6 +93,8 @@ const transactionTypeLabels: Record<string, string> = {
   order_partial_refund: "Kısmi İade",
   welcome_bonus: "Hoş Geldin Bonusu",
   welcome_google_bonus: "Google Kayıt Bonusu",
+  contact_verification_bonus: "İletişim Doğrulama Bonusu",
+  email_verification_bonus: "E-posta Doğrulama Bonusu",
 };
 
 function formatMoney(value: string | number, currency: string) {
@@ -136,8 +139,7 @@ function getStatusLabel(status: string) {
 
 function getStatusClass(status: string) {
   return (
-    statusClasses[status] ||
-    "border-white/10 bg-white/[0.06] text-white/70"
+    statusClasses[status] || "border-white/10 bg-white/[0.06] text-white/70"
   );
 }
 
@@ -149,15 +151,74 @@ function getTransactionTypeLabel(type: string | null | undefined) {
 function getTransactionAmountClass(value: string | number) {
   const numberValue = Number(value || 0);
 
-  if (numberValue > 0) {
-    return "text-emerald-300";
-  }
-
-  if (numberValue < 0) {
-    return "text-rose-300";
-  }
+  if (numberValue > 0) return "text-white";
+  if (numberValue < 0) return "text-[#f2c7d1]";
 
   return "text-white/70";
+}
+
+function VerificationCard({
+  title,
+  description,
+  status,
+  reward,
+  actionLabel,
+}: {
+  title: string;
+  description: string;
+  status: "verified" | "pending";
+  reward: string;
+  actionLabel: string;
+}) {
+  const verified = status === "verified";
+
+  return (
+    <div className="rounded-3xl border border-white/10 bg-white/[0.045] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-white/40">
+            {title}
+          </p>
+
+          <p className="mt-3 text-sm leading-6 text-white/58">
+            {description}
+          </p>
+        </div>
+
+        <span
+          className={`shrink-0 rounded-full border px-3 py-1 text-[11px] font-black ${
+            verified
+              ? "border-white/18 bg-white/[0.08] text-white"
+              : "border-[#6b5b2a]/60 bg-[#211d11]/70 text-[#e7d9a4]"
+          }`}
+        >
+          {verified ? "Doğrulandı" : "Bekliyor"}
+        </span>
+      </div>
+
+      <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-4">
+        <p className="text-xs font-black uppercase tracking-[0.16em] text-white/38">
+          Kazanım
+        </p>
+        <p className="mt-2 text-sm font-bold text-white">{reward}</p>
+      </div>
+
+      <button
+        type="button"
+        disabled
+        className="mt-4 w-full cursor-not-allowed rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-3 text-sm font-black text-white/42"
+      >
+        {verified ? "Tamamlandı" : actionLabel}
+      </button>
+
+      {!verified && (
+        <p className="mt-3 text-xs leading-5 text-white/38">
+          Kod gönderme ve doğrulama route’ları bir sonraki aşamada bağlanacak.
+          Bu alan deploy öncesi arayüz olarak hazırlandı.
+        </p>
+      )}
+    </div>
+  );
 }
 
 export default async function AccountPage() {
@@ -281,18 +342,35 @@ export default async function AccountPage() {
     analysisStats?.pending_analysis_requests || 0
   );
 
-  return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#1a2440_0%,#0a1020_45%,#04070f_100%)] px-4 py-6 text-white sm:px-6">
-      <div className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute left-[-120px] top-[-80px] h-[320px] w-[320px] rounded-full bg-emerald-500/12 blur-3xl" />
-        <div className="absolute right-[-100px] top-[120px] h-[280px] w-[280px] rounded-full bg-sky-500/12 blur-3xl" />
-        <div className="absolute inset-0 opacity-[0.04] [background-image:linear-gradient(to_right,white_1px,transparent_1px),linear-gradient(to_bottom,white_1px,transparent_1px)] [background-size:36px_36px]" />
-      </div>
+  const anyUser = user as any;
 
-      <div className="mx-auto max-w-6xl space-y-5">
-        <header className="flex flex-col gap-4 rounded-[30px] border border-white/10 bg-[#111827]/90 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.32)] ring-1 ring-white/[0.025] backdrop-blur-xl md:flex-row md:items-center md:justify-between">
+  const emailVerified = Boolean(
+    anyUser.email_verified || anyUser.email_verified_at
+  );
+
+  const contactVerified = Boolean(
+    anyUser.phone_verified ||
+      anyUser.whatsapp_verified_at ||
+      anyUser.telegram_verified_at
+  );
+
+  const freeAnalysisGranted = Boolean(
+    anyUser.free_analysis_granted_at || !user.free_analysis_used
+  );
+
+  const contactBonusGranted = Boolean(
+    anyUser.contact_bonus_granted_at || user.welcome_bonus_claimed
+  );
+
+  return (
+    <main className="mt-premium-page px-4 py-6 text-white sm:px-6">
+      <div className="mt-top-fade" />
+      <div className="mt-bottom-fade" />
+
+      <div className="mt-premium-inner mx-auto max-w-6xl space-y-5">
+        <header className="flex flex-col gap-4 rounded-[30px] border border-white/10 bg-[#080a0d]/92 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.38)] ring-1 ring-white/[0.025] backdrop-blur-xl lg:flex-row lg:items-center lg:justify-between">
           <Link href="/" className="inline-flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-400 font-black text-black">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/12 bg-white/[0.08] font-black text-white">
               MT
             </div>
 
@@ -304,30 +382,49 @@ export default async function AccountPage() {
             </div>
           </Link>
 
-          <nav className="flex flex-wrap items-center gap-3 text-sm font-semibold text-white/70">
-            <Link href="/" className="transition hover:text-white">
-              Ana Sayfa
-            </Link>
-            <Link href="/smmtora" className="transition hover:text-white">
-              SMMTora
-            </Link>
-            <Link href="/#analysis" className="transition hover:text-white">
-              Analiz
-            </Link>
-            <Link href="/paketler" className="transition hover:text-white">
-              Paketler
-            </Link>
-          </nav>
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-end">
+            <nav className="flex flex-wrap items-center gap-2 text-sm font-semibold text-white/70">
+              <Link
+                href="/"
+                className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-2 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white"
+              >
+                Ana Sayfa
+              </Link>
+
+              <Link
+                href="/analiz"
+                className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-2 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white"
+              >
+                Analiz
+              </Link>
+
+              <Link
+                href="/paketler"
+                className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-2 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white"
+              >
+                Paketler
+              </Link>
+
+              <Link
+                href="/smmtora"
+                className="rounded-full border border-white/12 bg-white px-3 py-2 font-black text-black transition hover:bg-white/90"
+              >
+                SMMTora
+              </Link>
+            </nav>
+
+            <UserMenu />
+          </div>
         </header>
 
-        <section className="overflow-hidden rounded-[34px] border border-white/10 bg-[#111827]/90 shadow-[0_24px_100px_rgba(0,0,0,0.38)] ring-1 ring-white/[0.03] backdrop-blur-xl">
+        <section className="overflow-hidden rounded-[34px] border border-white/10 bg-[#080a0d]/92 shadow-[0_24px_100px_rgba(0,0,0,0.42)] ring-1 ring-white/[0.03] backdrop-blur-xl">
           <div className="relative p-6 md:p-8">
-            <div className="pointer-events-none absolute -right-28 -top-28 h-72 w-72 rounded-full bg-emerald-400/10 blur-3xl" />
-            <div className="pointer-events-none absolute -left-20 bottom-0 h-64 w-64 rounded-full bg-sky-400/10 blur-3xl" />
+            <div className="pointer-events-none absolute -right-28 -top-28 h-72 w-72 rounded-full bg-white/[0.035] blur-3xl" />
+            <div className="pointer-events-none absolute -left-20 bottom-0 h-64 w-64 rounded-full bg-white/[0.025] blur-3xl" />
 
             <div className="relative grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.24em] text-emerald-300">
+                <p className="text-xs font-black uppercase tracking-[0.24em] text-white/45">
                   Hesabım
                 </p>
 
@@ -336,21 +433,21 @@ export default async function AccountPage() {
                 </h1>
 
                 <p className="mt-4 max-w-2xl text-sm leading-7 text-white/60 md:text-base">
-                  Bu alanda TL, USD ve RUB bakiyelerini, analiz hakkını, telefon
-                  doğrulama durumunu ve hesabına bağlı son hareketleri takip
-                  edebilirsin.
+                  Bu alanda bakiyelerini, ücretsiz analiz hakkını, doğrulama
+                  durumunu, siparişlerini, analiz taleplerini ve son bakiye
+                  hareketlerini takip edebilirsin.
                 </p>
 
                 <div className="mt-6 flex flex-wrap gap-3">
                   <Link
                     href="/smmtora"
-                    className="rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-black text-black transition hover:-translate-y-0.5 hover:bg-emerald-300"
+                    className="rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:-translate-y-0.5 hover:bg-white/90"
                   >
                     Yeni Sipariş Oluştur
                   </Link>
 
                   <Link
-                    href="/#analysis"
+                    href="/analiz"
                     className="rounded-2xl border border-white/10 bg-white/[0.05] px-5 py-3 text-sm font-bold text-white/80 transition hover:-translate-y-0.5 hover:bg-white/[0.1] hover:text-white"
                   >
                     Analiz Talebi Bırak
@@ -359,30 +456,29 @@ export default async function AccountPage() {
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-3xl border border-emerald-400/20 bg-gradient-to-br from-emerald-400/12 to-sky-400/8 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:col-span-2">
+                <div className="rounded-3xl border border-white/10 bg-white/[0.045] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] sm:col-span-2">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-200/75">
+                      <p className="text-xs font-black uppercase tracking-[0.18em] text-white/40">
                         Cüzdan Bakiyeleri
                       </p>
                       <p className="mt-2 text-sm leading-6 text-white/55">
-                        TL, USD ve RUB bakiyeleri ayrı ayrı tutulur. Sipariş
-                        hangi para birimiyle oluşturulursa ödeme o cüzdandan
-                        düşer.
+                        TL, USD ve RUB bakiyeleri ayrı tutulur. Sipariş hangi
+                        para birimiyle oluşturulursa ödeme o cüzdandan düşer.
                       </p>
                     </div>
 
                     <Link
                       href="/smmtora"
-                      className="inline-flex shrink-0 items-center justify-center rounded-2xl bg-emerald-400 px-4 py-2 text-xs font-black text-black transition hover:-translate-y-0.5 hover:bg-emerald-300"
+                      className="inline-flex shrink-0 items-center justify-center rounded-2xl bg-white px-4 py-2 text-xs font-black text-black transition hover:-translate-y-0.5 hover:bg-white/90"
                     >
                       Bakiye ile alışveriş
                     </Link>
                   </div>
 
                   <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                    <div className="rounded-3xl border border-emerald-400/20 bg-black/25 p-4">
-                      <div className="mb-3 inline-flex rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-emerald-200">
+                    <div className="rounded-3xl border border-white/10 bg-black/25 p-4">
+                      <div className="mb-3 inline-flex rounded-full border border-white/10 bg-white/[0.055] px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-white/62">
                         TL Cüzdanı
                       </div>
                       <p className="text-2xl font-black text-white">
@@ -393,8 +489,8 @@ export default async function AccountPage() {
                       </p>
                     </div>
 
-                    <div className="rounded-3xl border border-sky-400/20 bg-black/25 p-4">
-                      <div className="mb-3 inline-flex rounded-full border border-sky-400/20 bg-sky-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-sky-200">
+                    <div className="rounded-3xl border border-white/10 bg-black/25 p-4">
+                      <div className="mb-3 inline-flex rounded-full border border-white/10 bg-white/[0.055] px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-white/62">
                         USD Cüzdanı
                       </div>
                       <p className="text-2xl font-black text-white">
@@ -405,8 +501,8 @@ export default async function AccountPage() {
                       </p>
                     </div>
 
-                    <div className="rounded-3xl border border-violet-400/20 bg-black/25 p-4">
-                      <div className="mb-3 inline-flex rounded-full border border-violet-400/20 bg-violet-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-violet-200">
+                    <div className="rounded-3xl border border-white/10 bg-black/25 p-4">
+                      <div className="mb-3 inline-flex rounded-full border border-white/10 bg-white/[0.055] px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-white/62">
                         RUB Cüzdanı
                       </div>
                       <p className="text-2xl font-black text-white">
@@ -419,41 +515,33 @@ export default async function AccountPage() {
                   </div>
                 </div>
 
-                <div className="rounded-3xl border border-sky-400/20 bg-sky-400/10 p-5">
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-sky-200/75">
-                    Analiz hakkı
+                <div className="rounded-3xl border border-white/10 bg-white/[0.045] p-5">
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-white/40">
+                    Ücretsiz analiz hakkı
                   </p>
                   <p className="mt-3 text-2xl font-black text-white">
-                    {user.free_analysis_used ? "Kullanıldı" : "Aktif"}
+                    {freeAnalysisGranted && !user.free_analysis_used
+                      ? "Aktif"
+                      : user.free_analysis_used
+                        ? "Kullanıldı"
+                        : "Bekliyor"}
                   </p>
                   <p className="mt-2 text-sm leading-6 text-white/55">
-                    Ücretsiz analiz hesabına bağlı şekilde takip edilir.
+                    E-posta doğrulaması tamamlanınca 1 ücretsiz analiz hakkı
+                    tanımlanır.
                   </p>
                 </div>
 
                 <div className="rounded-3xl border border-white/10 bg-white/[0.045] p-5">
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/40">
-                    E-posta
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-white/40">
+                    İletişim bonusu
                   </p>
-                  <p className="mt-3 break-all text-sm font-bold text-white">
-                    {user.email}
+                  <p className="mt-3 text-2xl font-black text-white">
+                    {contactBonusGranted ? "Tanımlandı" : "Bekliyor"}
                   </p>
-                  <p className="mt-2 text-sm text-white/50">
-                    {user.email_verified ? "Doğrulandı" : "Henüz doğrulanmadı"}
-                  </p>
-                </div>
-
-                <div className="rounded-3xl border border-white/10 bg-white/[0.045] p-5 sm:col-span-2">
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/40">
-                    Telefon
-                  </p>
-                  <p className="mt-3 text-sm font-bold text-white">
-                    {user.phone_number || "Eklenmedi"}
-                  </p>
-                  <p className="mt-2 text-sm text-white/50">
-                    {user.phone_verified
-                      ? "Doğrulandı"
-                      : "Doğrulama sonrası 1$ bonus aktif edilecek"}
+                  <p className="mt-2 text-sm leading-6 text-white/55">
+                    WhatsApp veya Telegram doğrulamasından biri yeterlidir.
+                    Bonus yalnızca 1 kez verilir.
                   </p>
                 </div>
               </div>
@@ -461,16 +549,35 @@ export default async function AccountPage() {
           </div>
         </section>
 
-        <PhoneVerificationCard
-          initialPhoneNumber={user.phone_number}
-          initialPhoneVerified={user.phone_verified}
-          initialBalanceUsd={user.balance_usd}
-          initialWelcomeBonusClaimed={user.welcome_bonus_claimed}
-        />
+        <section className="grid gap-4 lg:grid-cols-3">
+          <VerificationCard
+            title="E-posta doğrulama"
+            description={`Kayıtlı e-posta: ${user.email}`}
+            status={emailVerified ? "verified" : "pending"}
+            reward="1 ücretsiz analiz hakkı"
+            actionLabel="Kod Gönder"
+          />
+
+          <VerificationCard
+            title="WhatsApp doğrulama"
+            description={user.phone_number || "Telefon numarası henüz eklenmedi."}
+            status={contactVerified ? "verified" : "pending"}
+            reward="1 USD bakiye bonusu"
+            actionLabel="WhatsApp ile Doğrula"
+          />
+
+          <VerificationCard
+            title="Telegram doğrulama"
+            description="Telegram bot doğrulaması webhook aşamasında bağlanacak."
+            status={contactVerified ? "verified" : "pending"}
+            reward="WhatsApp doğrulandıysa tekrar bonus verilmez"
+            actionLabel="Telegram ile Doğrula"
+          />
+        </section>
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-[28px] border border-white/10 bg-[#111827]/90 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.24)]">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/40">
+          <div className="rounded-[28px] border border-white/10 bg-[#080a0d]/92 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.26)]">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-white/40">
               Toplam sipariş
             </p>
             <p className="mt-3 text-3xl font-black text-white">{totalOrders}</p>
@@ -479,8 +586,8 @@ export default async function AccountPage() {
             </p>
           </div>
 
-          <div className="rounded-[28px] border border-white/10 bg-[#111827]/90 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.24)]">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/40">
+          <div className="rounded-[28px] border border-white/10 bg-[#080a0d]/92 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.26)]">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-white/40">
               Aktif işlem
             </p>
             <p className="mt-3 text-3xl font-black text-white">
@@ -488,8 +595,8 @@ export default async function AccountPage() {
             </p>
           </div>
 
-          <div className="rounded-[28px] border border-white/10 bg-[#111827]/90 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.24)]">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/40">
+          <div className="rounded-[28px] border border-white/10 bg-[#080a0d]/92 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.26)]">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-white/40">
               Tamamlanan
             </p>
             <p className="mt-3 text-3xl font-black text-white">
@@ -497,8 +604,8 @@ export default async function AccountPage() {
             </p>
           </div>
 
-          <div className="rounded-[28px] border border-white/10 bg-[#111827]/90 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.24)]">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/40">
+          <div className="rounded-[28px] border border-white/10 bg-[#080a0d]/92 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.26)]">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-white/40">
               Analiz talebi
             </p>
             <p className="mt-3 text-3xl font-black text-white">
@@ -510,19 +617,17 @@ export default async function AccountPage() {
           </div>
         </section>
 
-        <section className="rounded-[34px] border border-white/10 bg-[#111827]/90 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.32)] ring-1 ring-white/[0.025] backdrop-blur-xl md:p-6">
-          <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.22em] text-white/40">
-                Bakiye hareketleri
-              </p>
-              <h2 className="mt-2 text-2xl font-black text-white">
-                Son bakiye işlemleri
-              </h2>
-              <p className="mt-2 text-sm text-white/45">
-                Bu alanda sadece son 5 bakiye hareketi gösterilir.
-              </p>
-            </div>
+        <section className="rounded-[34px] border border-white/10 bg-[#080a0d]/92 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.36)] ring-1 ring-white/[0.025] backdrop-blur-xl md:p-6">
+          <div className="mb-5">
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-white/40">
+              Bakiye hareketleri
+            </p>
+            <h2 className="mt-2 text-2xl font-black text-white">
+              Son bakiye işlemleri
+            </h2>
+            <p className="mt-2 text-sm text-white/45">
+              Bu alanda sadece son 5 bakiye hareketi gösterilir.
+            </p>
           </div>
 
           {balanceTransactions.length === 0 ? (
@@ -592,10 +697,10 @@ export default async function AccountPage() {
           )}
         </section>
 
-        <section className="rounded-[34px] border border-white/10 bg-[#111827]/90 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.32)] ring-1 ring-white/[0.025] backdrop-blur-xl md:p-6">
+        <section className="rounded-[34px] border border-white/10 bg-[#080a0d]/92 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.36)] ring-1 ring-white/[0.025] backdrop-blur-xl md:p-6">
           <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.22em] text-white/40">
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-white/40">
                 Analiz geçmişi
               </p>
               <h2 className="mt-2 text-2xl font-black text-white">
@@ -607,7 +712,7 @@ export default async function AccountPage() {
             </div>
 
             <Link
-              href="/#analysis"
+              href="/analiz"
               className="rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-bold text-white transition hover:bg-white/[0.1]"
             >
               Yeni Analiz Talebi
@@ -623,8 +728,8 @@ export default async function AccountPage() {
                 Giriş yapmış halde analiz talebi bıraktığında burada görünecek.
               </p>
               <Link
-                href="/#analysis"
-                className="mt-5 inline-flex rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-black text-black transition hover:-translate-y-0.5 hover:bg-emerald-300"
+                href="/analiz"
+                className="mt-5 inline-flex rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:-translate-y-0.5 hover:bg-white/90"
               >
                 Analiz Talebi Bırak
               </Link>
@@ -652,7 +757,7 @@ export default async function AccountPage() {
                         </span>
 
                         {Boolean(item.is_free_analysis) && (
-                          <span className="inline-flex rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1 text-xs font-bold text-emerald-200">
+                          <span className="inline-flex rounded-full border border-white/12 bg-white/[0.06] px-3 py-1 text-xs font-bold text-white/72">
                             Ücretsiz
                           </span>
                         )}
@@ -672,7 +777,7 @@ export default async function AccountPage() {
 
                     <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-right">
                       <p className="text-xs text-white/40">Analiz fiyatı</p>
-                      <p className="mt-1 text-lg font-black text-emerald-300">
+                      <p className="mt-1 text-lg font-black text-white">
                         {formatMoney(item.package_price, item.currency || "USD")}
                       </p>
                     </div>
@@ -683,10 +788,10 @@ export default async function AccountPage() {
           )}
         </section>
 
-        <section className="rounded-[34px] border border-white/10 bg-[#111827]/90 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.32)] ring-1 ring-white/[0.025] backdrop-blur-xl md:p-6">
+        <section className="rounded-[34px] border border-white/10 bg-[#080a0d]/92 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.36)] ring-1 ring-white/[0.025] backdrop-blur-xl md:p-6">
           <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.22em] text-white/40">
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-white/40">
                 Sipariş geçmişi
               </p>
               <h2 className="mt-2 text-2xl font-black text-white">
@@ -716,7 +821,7 @@ export default async function AccountPage() {
               </p>
               <Link
                 href="/smmtora"
-                className="mt-5 inline-flex rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-black text-black transition hover:-translate-y-0.5 hover:bg-emerald-300"
+                className="mt-5 inline-flex rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:-translate-y-0.5 hover:bg-white/90"
               >
                 İlk Siparişi Oluştur
               </Link>
@@ -759,7 +864,7 @@ export default async function AccountPage() {
                     </div>
 
                     <div>
-                      <p className="text-sm font-black text-emerald-300">
+                      <p className="text-sm font-black text-white">
                         {formatMoney(order.total_price, order.currency)}
                       </p>
                     </div>
@@ -783,7 +888,7 @@ export default async function AccountPage() {
                     <div>
                       <Link
                         href={`/hesabim/siparisler/${order.order_number}`}
-                        className="inline-flex rounded-2xl bg-emerald-400 px-4 py-2 text-center text-xs font-black text-black transition hover:bg-emerald-300"
+                        className="inline-flex rounded-2xl bg-white px-4 py-2 text-center text-xs font-black text-black transition hover:bg-white/90"
                       >
                         Detay
                       </Link>

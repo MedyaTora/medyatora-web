@@ -19,6 +19,9 @@ export type CurrentUser = {
   preferred_currency: PreferredCurrency;
   free_analysis_used: boolean;
   welcome_bonus_claimed: boolean;
+  whatsapp_verified_at: string | null;
+  telegram_verified_at: string | null;
+  contact_bonus_granted_at: string | null;
   is_active: boolean;
   is_admin: boolean;
 };
@@ -37,16 +40,32 @@ type CurrentUserRow = RowDataPacket & {
   preferred_currency: string | null;
   free_analysis_used: number;
   welcome_bonus_claimed: number;
+  whatsapp_verified_at: Date | string | null;
+  telegram_verified_at: Date | string | null;
+  contact_bonus_granted_at: Date | string | null;
   is_active: number;
   is_admin: number;
 };
 
-function normalizePreferredCurrency(value: string | null | undefined): PreferredCurrency {
+function normalizePreferredCurrency(
+  value: string | null | undefined
+): PreferredCurrency {
   const currency = value?.trim().toUpperCase();
 
   if (currency === "USD") return "USD";
   if (currency === "RUB") return "RUB";
+
   return "TL";
+}
+
+function normalizeNullableDate(value: Date | string | null | undefined) {
+  if (!value) return null;
+
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  return String(value);
 }
 
 export async function getCurrentUser(): Promise<CurrentUser | null> {
@@ -76,6 +95,9 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
       users.preferred_currency,
       users.free_analysis_used,
       users.welcome_bonus_claimed,
+      users.whatsapp_verified_at,
+      users.telegram_verified_at,
+      users.contact_bonus_granted_at,
       users.is_active,
       users.is_admin
     FROM user_sessions
@@ -119,6 +141,11 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     preferred_currency: normalizePreferredCurrency(user.preferred_currency),
     free_analysis_used: Boolean(user.free_analysis_used),
     welcome_bonus_claimed: Boolean(user.welcome_bonus_claimed),
+    whatsapp_verified_at: normalizeNullableDate(user.whatsapp_verified_at),
+    telegram_verified_at: normalizeNullableDate(user.telegram_verified_at),
+    contact_bonus_granted_at: normalizeNullableDate(
+      user.contact_bonus_granted_at
+    ),
     is_active: Boolean(user.is_active),
     is_admin: Boolean(user.is_admin),
   };
@@ -143,5 +170,8 @@ export function getPublicUser(user: CurrentUser | null) {
     preferred_currency: user.preferred_currency,
     free_analysis_used: user.free_analysis_used,
     welcome_bonus_claimed: user.welcome_bonus_claimed,
+    whatsapp_verified_at: user.whatsapp_verified_at,
+    telegram_verified_at: user.telegram_verified_at,
+    contact_bonus_granted_at: user.contact_bonus_granted_at,
   };
 }

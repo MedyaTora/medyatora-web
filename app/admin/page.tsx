@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+import AdminContactVerificationActions from "../components/admin-contact-verification-actions";
 import { getMysqlPool } from "@/lib/mysql";
 import StatusSelect from "../components/status-select";
 import OrderStatusCardActions from "../components/order-status-card-actions";
@@ -87,6 +88,22 @@ type VisitorEventRow = {
   timezone: string | null;
   browser_language: string | null;
   created_at: string | null;
+};
+
+type ContactVerificationRequestRow = {
+  id: number;
+  user_id: number;
+  channel: "whatsapp" | "telegram";
+  contact_value: string;
+  verification_code: string;
+  status: "pending" | "approved" | "rejected";
+  admin_note: string | null;
+  approved_at: string | null;
+  rejected_at: string | null;
+  created_at: string | null;
+  user_email: string | null;
+  user_full_name: string | null;
+  user_phone_number: string | null;
 };
 
 type SearchParams = {
@@ -321,6 +338,7 @@ export default async function AdminPage({
   let allOrders: OrderRequestRow[] = [];
   let allVisitorSessions: VisitorSessionRow[] = [];
   let allVisitorEvents: VisitorEventRow[] = [];
+  let allContactVerificationRequests: ContactVerificationRequestRow[] = [];
   let customerCount = 0;
 
   try {
@@ -441,15 +459,61 @@ export default async function AdminPage({
 
     allVisitorSessions = [];
     allVisitorEvents = [];
-  } catch (error) {
-    return (
-      <ErrorScreen
-        message={error instanceof Error ? error.message : "MySQL admin verileri okunamadı."}
-      />
-    );
-  }
 
-  const filteredAnalysis = allItems.filter((item) => {
+
+  const [contactVerificationRows] = await pool.query(
+    `
+    SELECT
+      cvr.id,
+      cvr.user_id,
+      cvr.channel,
+      cvr.contact_value,
+      cvr.verification_code,
+      cvr.status,
+      cvr.admin_note,
+      cvr.approved_at,
+      cvr.rejected_at,
+      cvr.created_at,
+      users.email AS user_email,
+      users.full_name AS user_full_name,
+      users.phone_number AS user_phone_number
+    FROM contact_verification_requests cvr
+    LEFT JOIN users ON users.id = cvr.user_id
+    ORDER BY cvr.created_at DESC, cvr.id DESC
+    LIMIT 50
+    `
+  );
+  
+  allContactVerificationRequests = (contactVerificationRows as any[]).map(
+    (row) => ({
+      id: Number(row.id),
+      user_id: Number(row.user_id),
+      channel: row.channel,
+      contact_value: row.contact_value,
+      verification_code: row.verification_code,
+      status: row.status,
+      admin_note: row.admin_note,
+      approved_at: toDateValue(row.approved_at),
+      rejected_at: toDateValue(row.rejected_at),
+      created_at: toDateValue(row.created_at),
+      user_email: row.user_email,
+      user_full_name: row.user_full_name,
+      user_phone_number: row.user_phone_number,
+    })
+  );
+    } catch (error) {
+      return (
+        <ErrorScreen
+          message={
+            error instanceof Error
+              ? error.message
+              : "MySQL admin verileri okunamadı."
+          }
+        />
+      );
+    }
+  
+    const filteredAnalysis = allItems.filter((item) => {
     const customer = normalizeCustomer(item.customers);
 
     const statusOk = analysisStatus === "all" || item.status === analysisStatus;
@@ -520,6 +584,10 @@ export default async function AdminPage({
 
   const pendingOrders = allOrders.filter(
     (item) => item.status === "pending" || item.status === "pending_payment"
+  ).length;
+
+  const pendingContactVerifications = allContactVerificationRequests.filter(
+    (item) => item.status === "pending"
   ).length;
 
   const completedOrders = allOrders.filter((item) => item.status === "completed").length;
@@ -603,7 +671,7 @@ export default async function AdminPage({
           <StatCard title="Tamamlanan Başvuru" value={completedAnalysis} accent="sky" />
           <StatCard title="Yeni Sipariş" value={pendingOrders} accent="pink" />
           <StatCard title="Tamamlanan Sipariş" value={completedOrders} accent="violet" />
-          <StatCard title="Toplam Müşteri" value={customerCount || 0} accent="white" />
+          <StatCard title="Doğrulama Bekliyor" value={pendingContactVerifications} accent="white" />
         </section>
 
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
@@ -684,14 +752,16 @@ export default async function AdminPage({
           </div>
         </form>
 
-        <VisitorTrackingPanel
-          sessions={visitorPageItems}
-          events={allVisitorEvents}
-          total={filteredVisitors.length}
-          page={visitorPage}
-          totalPages={visitorTotalPages}
-          queryParams={queryParams}
-        />
+        <ContactVerificationPanel items={allContactVerificationRequests} />
+
+    <VisitorTrackingPanel
+  sessions={visitorPageItems}
+  events={allVisitorEvents}
+  total={filteredVisitors.length}
+  page={visitorPage}
+  totalPages={visitorTotalPages}
+  queryParams={queryParams}
+/>
 
         <AnalysisTable
           items={analysisPageItems}
@@ -1252,5 +1322,123 @@ function MiniInfo({ label, value }: { label: string | number; value: string | nu
       <p className="mb-1 text-xs uppercase tracking-wide text-white/35">{label}</p>
       <p className="break-words text-white/85">{value}</p>
     </div>
+  );
+}
+
+function ContactVerificationPanel({
+  items,
+}: {
+  items: ContactVerificationRequestRow[];
+}) {
+  const pendingItems = items.filter((item) => item.status === "pending");
+  const recentItems = items.slice(0, 12);
+
+  return (
+    <section className="rounded-[28px] border border-white/10 bg-white/[0.03] p-5 md:p-6">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">
+            WhatsApp / Telegram Doğrulamaları
+          </h2>
+
+          <p className="mt-2 text-sm leading-6 text-white/50">
+            Kullanıcılar doğrulama kodu oluşturduğunda burada görünür. Kod doğru
+            geldiyse onayla; sistem 1 USD bonusu sadece bir kez verir.
+          </p>
+        </div>
+
+        <span className="rounded-full border border-amber-400/20 bg-amber-400/10 px-4 py-2 text-sm font-bold text-amber-200">
+          Bekleyen: {pendingItems.length}
+        </span>
+      </div>
+
+      <div className="mt-5 space-y-3">
+        {recentItems.length === 0 ? (
+          <div className="rounded-2xl border border-white/10 bg-black/20 p-5 text-white/45">
+            Henüz doğrulama talebi yok.
+          </div>
+        ) : (
+          recentItems.map((item) => (
+            <div
+              key={item.id}
+              className="rounded-3xl border border-white/10 bg-black/20 p-4"
+            >
+              <div className="grid gap-4 xl:grid-cols-[1fr_1fr_0.8fr_auto] xl:items-start">
+                <div>
+                  <div className="mb-2 flex flex-wrap gap-2">
+                    <span
+                      className={`rounded-full border px-3 py-1 text-xs font-black ${
+                        item.status === "pending"
+                          ? "border-amber-400/20 bg-amber-400/10 text-amber-200"
+                          : item.status === "approved"
+                            ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-200"
+                            : "border-rose-400/20 bg-rose-400/10 text-rose-200"
+                      }`}
+                    >
+                      {item.status === "pending"
+                        ? "Bekliyor"
+                        : item.status === "approved"
+                          ? "Onaylandı"
+                          : "Reddedildi"}
+                    </span>
+
+                    <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-bold uppercase text-white/60">
+                      {item.channel === "whatsapp" ? "WhatsApp" : "Telegram"}
+                    </span>
+                  </div>
+
+                  <p className="text-sm font-black text-white">
+                    {item.user_full_name || item.user_email || "Kullanıcı"}
+                  </p>
+
+                  <p className="mt-1 break-all text-xs text-white/45">
+                    {item.user_email || "-"}
+                  </p>
+
+                  <p className="mt-1 text-xs text-white/40">
+                    Tarih: {formatDate(item.created_at)}
+                  </p>
+                </div>
+
+                <div className="grid gap-2 text-sm text-white/70">
+                  <MiniInfo label="İletişim" value={item.contact_value || "-"} />
+
+                  <MiniInfo
+                    label="Kayıtlı Telefon"
+                    value={item.user_phone_number || "-"}
+                  />
+                </div>
+
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-white/35">
+                    Doğrulama Kodu
+                  </p>
+
+                  <p className="mt-2 rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-lg font-black tracking-[0.16em] text-white">
+                    {item.verification_code}
+                  </p>
+
+                  {item.admin_note && (
+                    <p className="mt-2 text-xs leading-5 text-white/45">
+                      Not: {item.admin_note}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  {item.status === "pending" ? (
+                    <AdminContactVerificationActions requestId={item.id} />
+                  ) : (
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-xs font-bold text-white/55">
+                      Sonuçlandı
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </section>
   );
 }
