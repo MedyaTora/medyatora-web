@@ -650,3 +650,38 @@ export const dictionaries: Record<Locale, Dictionary> = {
 export function getDictionary(locale: Locale) {
   return dictionaries[locale] || dictionaries.tr;
 }
+
+export function normalizeLocale(value: unknown): Locale {
+  const locale = String(value || "").trim().toLowerCase();
+
+  if (locale === "tr" || locale === "en" || locale === "ru") {
+    return locale;
+  }
+
+  return "tr";
+}
+
+export function detectBrowserLocale(): Locale {
+  if (typeof window === "undefined") return "tr";
+
+  const saved = window.localStorage.getItem("medyatora_locale");
+
+  if (saved === "tr" || saved === "en" || saved === "ru") {
+    return saved;
+  }
+
+  const browserLanguage = String(window.navigator.language || "").toLowerCase();
+
+  if (browserLanguage.startsWith("tr")) return "tr";
+  if (browserLanguage.startsWith("ru")) return "ru";
+
+  return "en";
+}
+
+export function saveLocale(locale: Locale) {
+  if (typeof window === "undefined") return;
+
+  window.localStorage.setItem("medyatora_locale", locale);
+
+  document.cookie = `medyatora_locale=${locale}; path=/; max-age=31536000; samesite=lax`;
+}

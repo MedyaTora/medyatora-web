@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { randomBytes } from "crypto";
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import { getMysqlPool } from "@/lib/mysql";
-import { getPublicUser, type PreferredCurrency } from "@/lib/auth/current-user";
-import { AUTH_COOKIE_NAME, hashSessionToken } from "@/lib/auth/session";
+import {
+  getPublicUser,
+  normalizeDateValue,
+  type PreferredCurrency,
+} from "@/lib/auth/current-user";
+import { createUserSession } from "@/lib/auth/session";
 
 type RegisterBody = {
   email?: string;
@@ -36,10 +39,6 @@ type CreatedUserRow = RowDataPacket & {
   contact_bonus_granted_at: Date | string | null;
 };
 
-function createSessionToken() {
-  return randomBytes(32).toString("hex");
-}
-
 function normalizeEmail(value: unknown) {
   return String(value || "").trim().toLowerCase();
 }
@@ -61,22 +60,13 @@ function normalizePreferredCurrency(value: unknown): PreferredCurrency {
 function getClientIp(req: Request) {
   const forwardedFor = req.headers.get("x-forwarded-for");
   const realIp = req.headers.get("x-real-ip");
+  const cloudflareIp = req.headers.get("cf-connecting-ip");
 
   if (forwardedFor) {
     return forwardedFor.split(",")[0]?.trim() || null;
   }
 
-  return realIp || null;
-}
-
-function toNullableIsoString(value: Date | string | null | undefined) {
-  if (!value) return null;
-
-  if (value instanceof Date) {
-    return value.toISOString();
-  }
-
-  return String(value);
+  return realIp || cloudflareIp || null;
 }
 
 export async function POST(req: Request) {
@@ -90,6 +80,7 @@ export async function POST(req: Request) {
     const phoneNumber = normalizeOptionalText(body.phone_number);
     const preferredCurrency = normalizePreferredCurrency(body.preferred_currency);
     const clientIp = getClientIp(req);
+    const userAgent = req.headers.get("user-agent");
 
     if (!email || !email.includes("@")) {
       return NextResponse.json(
@@ -229,40 +220,25 @@ export async function POST(req: Request) {
       );
     }
 
-    const sessionToken = createSessionToken();
-    const sessionTokenHash = hashSessionToken(sessionToken);
-
-    await pool.query(
-      `
-      INSERT INTO user_sessions (
-        user_id,
-        session_token_hash,
-        ip_address,
-        user_agent,
-        expires_at
-      )
-      VALUES (?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 30 DAY))
-      `,
-      [
-        createdUser.id,
-        sessionTokenHash,
-        clientIp,
-        req.headers.get("user-agent") || null,
-      ]
-    );
+    await createUserSession({
+      userId: Number(createdUser.id),
+      ipAddress: clientIp,
+      userAgent,
+    });
 
     await pool.query(
       `
       UPDATE users
-      SET last_login_at = NOW(),
-          last_ip = ?
+      SET
+        last_login_at = NOW(),
+        last_ip = ?
       WHERE id = ?
       LIMIT 1
       `,
       [clientIp, createdUser.id]
     );
 
-    const res = NextResponse.json({
+    return NextResponse.json({
       ok: true,
       user: getPublicUser({
         id: Number(createdUser.id),
@@ -282,27 +258,17 @@ export async function POST(req: Request) {
         welcome_bonus_claimed: Boolean(createdUser.welcome_bonus_claimed),
         is_active: Boolean(createdUser.is_active),
         is_admin: Boolean(createdUser.is_admin),
-        whatsapp_verified_at: toNullableIsoString(
+        whatsapp_verified_at: normalizeDateValue(
           createdUser.whatsapp_verified_at
         ),
-        telegram_verified_at: toNullableIsoString(
+        telegram_verified_at: normalizeDateValue(
           createdUser.telegram_verified_at
         ),
-        contact_bonus_granted_at: toNullableIsoString(
+        contact_bonus_granted_at: normalizeDateValue(
           createdUser.contact_bonus_granted_at
         ),
       }),
     });
-
-    res.cookies.set(AUTH_COOKIE_NAME, sessionToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 30,
-    });
-
-    return res;
   } catch (error) {
     console.error("REGISTER_ERROR", error);
 

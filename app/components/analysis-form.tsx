@@ -1,6 +1,12 @@
 "use client";
 
-import { useMemo, useState, type ChangeEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ChangeEvent,
+  type ReactNode,
+} from "react";
 import { useRouter } from "next/navigation";
 import type { IconType } from "react-icons";
 import {
@@ -16,6 +22,7 @@ import {
   FaXTwitter,
   FaYoutube,
 } from "react-icons/fa6";
+import { detectBrowserLocale, type Locale } from "@/lib/i18n";
 
 type PlatformKey = "instagram" | "tiktok" | "youtube" | "x";
 type ContactType = "WhatsApp" | "Telegram" | "Instagram" | "E-posta" | "";
@@ -35,172 +42,123 @@ type PlatformOption = {
   icon: IconType;
 };
 
+type AnalysisFormText = {
+  selected: string;
+  platform: string;
+  target: string;
+  detail: string;
+  confirm: string;
+
+  heroBadge: string;
+  heroTitle: string;
+  heroDesc: string;
+
+  infoFocusLabel: string;
+  infoFocusValue: string;
+  infoProcessLabel: string;
+  infoProcessValue: string;
+  infoResultLabel: string;
+  infoResultValue: string;
+
+  sideTitle: string;
+  sideItems: string[];
+
+  platformEyebrow: string;
+  platformTitle: string;
+
+  accountTypeEyebrow: string;
+  accountTypeTitle: string;
+  accountTypeDesc: string;
+
+  goalEyebrow: string;
+  goalTitle: string;
+
+  detailEyebrow: string;
+  detailTitle: string;
+  usernameLabel: string;
+  usernamePlaceholder: string;
+  accountLinkLabel: string;
+  accountLinkPlaceholder: string;
+  currentStatusLabel: string;
+  currentStatusPlaceholder: string;
+  contentStyleLabel: string;
+  contentStylePlaceholder: string;
+  mainProblemLabel: string;
+  mainProblemPlaceholder: string;
+  extraNoteLabel: string;
+  extraNotePlaceholder: string;
+
+  contactEyebrow: string;
+  contactTitle: string;
+  contactDesc: string;
+  summaryPlatform: string;
+  summaryAccountType: string;
+  summaryGoal: string;
+  contactInfoTitle: string;
+  fullNameLabel: string;
+  fullNamePlaceholder: string;
+  contactChannelLabel: string;
+  contactChannelPlaceholder: string;
+  contactValueLabel: string;
+  contactValuePlaceholder: string;
+
+  paymentInfoLabel: string;
+  currencyTitle: string;
+  currencyDesc: string;
+  selectedAmount: string;
+
+  back: string;
+  continue: string;
+  creating: string;
+  finishAndPay: string;
+
+  errorSelectPlatform: string;
+  errorAccountTypeGoal: string;
+  errorDetailRequired: string;
+  errorFullName: string;
+  errorContact: string;
+  errorUsername: string;
+  errorCreateFailed: string;
+  errorGeneric: string;
+
+  notePlatform: string;
+  noteAccountType: string;
+  noteGoal: string;
+  noteUsername: string;
+  noteAccountLink: string;
+  noteCurrentStatus: string;
+  noteContentStyle: string;
+  noteMainProblem: string;
+  noteExtraNote: string;
+  noteCurrency: string;
+  notePrice: string;
+
+  platforms: PlatformOption[];
+  accountTypeOptions: OptionCard[];
+  goalOptions: OptionCard[];
+  currentStatusOptions: string[];
+  contentStyleOptions: string[];
+  problemOptions: string[];
+};
+
+type AnalysisRequestResponse = {
+  success?: boolean;
+  ok?: boolean;
+  error?: string;
+  message?: string;
+  requestId?: string | number;
+  analysisRequestId?: string | number;
+  analysis_request_id?: string | number;
+  id?: string | number;
+  isFreeAnalysis?: boolean;
+  freeAnalysisUsed?: boolean;
+  paymentRequired?: boolean;
+  packagePrice?: string | number;
+  formattedPackagePrice?: string;
+  currency?: CurrencyCode;
+};
+
 const ANALYSIS_PAYMENT_PATH = "/analiz/odeme";
-
-const platformOptions: PlatformOption[] = [
-  {
-    key: "instagram",
-    title: "Instagram",
-    description:
-      "Profil güveni, Reels düzeni, içerik dili, DM ve satış dönüşümü incelenir.",
-    icon: FaInstagram,
-  },
-  {
-    key: "tiktok",
-    title: "TikTok",
-    description:
-      "İlk saniye etkisi, video akışı, izlenme potansiyeli ve takipçi dönüşümü incelenir.",
-    icon: FaTiktok,
-  },
-  {
-    key: "youtube",
-    title: "YouTube",
-    description:
-      "Kanal görünümü, başlıklar, kapaklar, Shorts yapısı, izlenme süresi ve abone dönüşümü incelenir.",
-    icon: FaYoutube,
-  },
-  {
-    key: "x",
-    title: "X / Twitter",
-    description:
-      "Profil algısı, paylaşım dili, görünürlük, etkileşim ve yönlendirme gücü incelenir.",
-    icon: FaXTwitter,
-  },
-];
-
-const accountTypeOptions: OptionCard[] = [
-  {
-    value: "İşletme / Marka Hesabı",
-    title: "İşletme / Marka",
-    description:
-      "Ürün, hizmet veya marka güveni oluşturmak isteyen hesaplar için uygundur.",
-    icon: FaBuilding,
-  },
-  {
-    value: "E-ticaret / Satış Hesabı",
-    title: "E-ticaret / Satış",
-    description:
-      "Ürün satışı, reklam dönüşümü, DM siparişi veya site trafiği hedefleyen hesaplar için.",
-  },
-  {
-    value: "İçerik Üretici / Kişisel Marka",
-    title: "Kişisel Marka / Creator",
-    description:
-      "Uzmanlık, görünürlük, takipçi büyümesi ve içerik disiplini hedefleyen hesaplar için.",
-    icon: FaUserTie,
-  },
-  {
-    value: "Hizmet Sağlayıcı / Uzman Hesabı",
-    title: "Uzman / Hizmet",
-    description:
-      "Danışmanlık, klinik, emlak, güzellik, ajans, eğitim veya profesyonel hizmet sunan hesaplar için.",
-  },
-  {
-    value: "Medya / Haber / Eğlence Kanalı",
-    title: "Medya / Kanal",
-    description:
-      "Film, haber, mizah, bilgi, içerik derleme, Reels veya Shorts temelli sayfalar için.",
-  },
-  {
-    value: "Topluluk / Proje / Organizasyon",
-    title: "Topluluk / Proje",
-    description:
-      "Etkinlik, topluluk, organizasyon, kulüp veya proje hesabı olarak kullanılan yapılar için.",
-  },
-  {
-    value: "Yeni Açılmış Hesap",
-    title: "Yeni Hesap",
-    description:
-      "Henüz düzeni oturmamış, doğru başlangıç ve sağlam kurulum isteyen hesaplar için.",
-  },
-  {
-    value: "Diğer",
-    title: "Diğer",
-    description:
-      "Yukarıdakilere tam uymuyorsa bu seçeneği seçip detayları not alanında belirtebilirsiniz.",
-  },
-];
-
-const goalOptions: OptionCard[] = [
-  {
-    value: "Profil güveni ve profesyonel görünüm kazanmak",
-    title: "Profil güveni",
-    description:
-      "Hesabımın ilk bakışta daha güçlü, düzenli ve güven veren bir yapıya kavuşmasını istiyorum.",
-  },
-  {
-    value: "Daha fazla görünürlük ve erişim elde etmek",
-    title: "Görünürlük",
-    description:
-      "Paylaşımlarımın daha çok kişiye ulaşmasını ve keşfet / önerilen alanlarda güçlenmesini istiyorum.",
-  },
-  {
-    value: "Takipçi, abone veya topluluk büyümesini artırmak",
-    title: "Büyüme",
-    description:
-      "Hesabın kitlesini daha sağlıklı ve daha istikrarlı biçimde büyütmek istiyorum.",
-  },
-  {
-    value: "Satış, mesaj veya müşteri dönüşümünü iyileştirmek",
-    title: "Dönüşüm",
-    description:
-      "İzlenme veya trafik geliyor ama mesaj, satış ya da müşteri dönüşümü yeterli değil.",
-  },
-  {
-    value: "İçerik düzeni ve paylaşım stratejisi oluşturmak",
-    title: "İçerik düzeni",
-    description:
-      "Ne paylaşacağımı, hangi formatta ilerleyeceğimi ve nasıl bir sistem kuracağımı netleştirmek istiyorum.",
-  },
-  {
-    value: "Reklam performansını destekleyecek hesap yapısı kurmak",
-    title: "Reklam desteği",
-    description:
-      "Reklam veriyorum veya vermeyi düşünüyorum; önce hesabımın buna ne kadar hazır olduğunu görmek istiyorum.",
-  },
-  {
-    value: "Hesabımdaki açıkları profesyonel analizle görmek",
-    title: "Genel analiz",
-    description:
-      "Profil, içerik, güven algısı, dönüşüm ve büyüme tarafındaki açıkları görmek istiyorum.",
-  },
-];
-
-const currentStatusOptions = [
-  "Yeni başladım, hesabın temel düzenini doğru kurmak istiyorum",
-  "Hesabım aktif ama profesyonel görünmediğini düşünüyorum",
-  "Düzenli paylaşım yapıyorum fakat büyüme zayıf ilerliyor",
-  "İçerik üretiyorum ama beklediğim görünürlüğü alamıyorum",
-  "İzlenme alıyorum ancak etkileşim düşük kalıyor",
-  "Mesaj geliyor ama satışa ya da müşteriye dönüşmüyor",
-  "Reklam veriyorum ama sonuçlardan memnun değilim",
-  "Hesapta neyin eksik olduğunu net göremiyorum",
-  "Marka / işletme hesabım var ama güven algısını güçlendirmek istiyorum",
-];
-
-const contentStyleOptions = [
-  "Ürün / hizmet tanıtımı içerikleri",
-  "Reels / Shorts / kısa video ağırlıklı içerikler",
-  "Bilgilendirici / eğitici içerikler",
-  "Kişisel marka / uzmanlık içerikleri",
-  "Kampanya / satış / reklam odaklı içerikler",
-  "Hikâye anlatımı / vlog / yaşam tarzı içerikleri",
-  "Medya / haber / eğlence içerikleri",
-  "Karışık içerik yapısı",
-  "Henüz net bir içerik düzenim yok",
-];
-
-const problemOptions = [
-  "Profil ilk bakışta yeterince güven vermiyor",
-  "İçerikler dikkat çekmiyor veya ilk saniyede kullanıcıyı tutmuyor",
-  "Paylaşımlar düzenli olsa da görünürlük zayıf kalıyor",
-  "Takipçi / abone artışı yavaş ilerliyor",
-  "İzlenme geliyor ama etkileşim düşük",
-  "Etkileşim geliyor ama satış / mesaj / müşteri dönüşümü düşük",
-  "Reklam veriyorum ama dönüşler tatmin etmiyor",
-  "Marka dili, görsel düzen veya içerik yapısı dağınık duruyor",
-  "Hesapta neyin eksik olduğunu bilmiyorum, profesyonel yorum istiyorum",
-];
 
 const contactTypes: ContactType[] = [
   "WhatsApp",
@@ -213,6 +171,818 @@ const priceMap: Record<CurrencyCode, string> = {
   TL: "1000 TL",
   USD: "15 USD",
   RUB: "1800 RUB",
+};
+
+const analysisFormText: Record<Locale, AnalysisFormText> = {
+  tr: {
+    selected: "Seçili",
+    platform: "Platform",
+    target: "Hedef",
+    detail: "Detay",
+    confirm: "Onay",
+
+    heroBadge: "Profesyonel Hesap Analizi",
+    heroTitle: "Analize Başla",
+    heroDesc:
+      "Sosyal medya hesabınızın neden yeterli büyüme, güven veya dönüşüm sağlayamadığını profesyonel bakışla inceliyoruz. Profil görünümü, içerik düzeni, ilk saniye etkisi, anlatım dili, hedef kitle uyumu ve satışa giden akış birlikte değerlendirilir.",
+
+    infoFocusLabel: "Odak",
+    infoFocusValue: "Profil, içerik, güven ve dönüşüm",
+    infoProcessLabel: "Süreç",
+    infoProcessValue: "Form alınır, ekip inceler, analiz hazırlanır",
+    infoResultLabel: "Sonuç",
+    infoResultValue: "Eksikler ve iyileştirme alanları paylaşılır",
+
+    sideTitle: "Analizde neleri inceliyoruz?",
+    sideItems: [
+      "Profilinizin ilk bakışta ne kadar güven verdiğini",
+      "İçeriklerinizin kullanıcıyı ilk saniyede yakalayıp yakalamadığını",
+      "Video, görsel ve açıklama dilinizin hedef kitleyle uyumunu",
+      "Paylaşım düzeninizin büyüme açısından yeterli olup olmadığını",
+      "Reklam, DM, web sitesi veya satış akışında kopma yaşanan noktaları",
+    ],
+
+    platformEyebrow: "Platform seçimi",
+    platformTitle: "Hangi platformu analiz ettirmek istiyorsunuz?",
+
+    accountTypeEyebrow: "Hesap türü",
+    accountTypeTitle: "Hesabınız ne için kullanılıyor?",
+    accountTypeDesc:
+      "Hesabınız işletme, marka, içerik sayfası, proje, medya kanalı, e-ticaret veya kişisel marka olabilir. Size en yakın yapıyı seçin.",
+
+    goalEyebrow: "Analizde ne bekliyorsunuz?",
+    goalTitle: "Bu analizden asıl beklentiniz nedir?",
+
+    detailEyebrow: "Profil / hesap linki",
+    detailTitle: "Hesabınızı daha iyi anlayalım",
+    usernameLabel: "Kullanıcı adı veya hesap adı",
+    usernamePlaceholder: "@kullaniciadi veya hesap adı",
+    accountLinkLabel: "Profil / hesap linki",
+    accountLinkPlaceholder: "https://...",
+    currentStatusLabel: "Mevcut durum",
+    currentStatusPlaceholder: "Mevcut durumu seçin",
+    contentStyleLabel: "İçerik yapısı",
+    contentStylePlaceholder: "İçerik yapısını seçin",
+    mainProblemLabel: "Ana sorun alanı",
+    mainProblemPlaceholder: "Ana sorunu seçin",
+    extraNoteLabel: "Ek not",
+    extraNotePlaceholder:
+      "Özellikle bakılmasını istediğiniz bir konu varsa buraya yazabilirsiniz.",
+
+    contactEyebrow: "İletişim ve onay",
+    contactTitle: "Başvuruyu tamamla ve ödemeye geç",
+    contactDesc:
+      "Başvurunuz oluşturulduktan sonra ödeme ekranına yönlendirilirsiniz. Ödeme tamamlandığında analiz talebiniz ekip tarafından incelenir.",
+    summaryPlatform: "Platform",
+    summaryAccountType: "Hesap tipi",
+    summaryGoal: "Beklenti",
+    contactInfoTitle: "İletişim bilgileri",
+    fullNameLabel: "Ad soyad",
+    fullNamePlaceholder: "Adınız ve soyadınız",
+    contactChannelLabel: "İletişim kanalı",
+    contactChannelPlaceholder: "İletişim kanalı seçin",
+    contactValueLabel: "İletişim bilginiz",
+    contactValuePlaceholder: "+90 5xx..., @kullanici veya e-posta",
+
+    paymentInfoLabel: "Ödeme bilgisi",
+    currencyTitle: "Para birimini seçin",
+    currencyDesc:
+      "Sonraki ekranda analiz talebi numarası, seçilen para birimi ve ödeme bilgileri gösterilecek.",
+    selectedAmount: "Seçili tutar",
+
+    back: "Geri",
+    continue: "Devam Et",
+    creating: "Analiz oluşturuluyor...",
+    finishAndPay: "Analizi Bitir ve Ödemeye Geç",
+
+    errorSelectPlatform: "Lütfen analiz edilecek platformu seçin.",
+    errorAccountTypeGoal:
+      "Lütfen hesap tipini ve analizden beklentinizi seçin.",
+    errorDetailRequired:
+      "Lütfen hesap bilgisi, mevcut durum, içerik yapısı ve ana sorun alanlarını doldurun.",
+    errorFullName: "Ad soyad boş bırakılamaz.",
+    errorContact: "İletişim kanalı ve iletişim bilginiz gereklidir.",
+    errorUsername: "Kullanıcı adı veya hesap bilgisi gereklidir.",
+    errorCreateFailed: "Analiz başvurusu oluşturulamadı.",
+    errorGeneric: "Başvuru oluşturulurken bir hata oluştu.",
+
+    notePlatform: "Platform",
+    noteAccountType: "Hesap tipi",
+    noteGoal: "Analizde beklenen",
+    noteUsername: "Kullanıcı adı / hesap adı",
+    noteAccountLink: "Hesap linki",
+    noteCurrentStatus: "Mevcut durum",
+    noteContentStyle: "İçerik yapısı",
+    noteMainProblem: "Ana sorun",
+    noteExtraNote: "Ek not",
+    noteCurrency: "Seçilen para birimi",
+    notePrice: "Analiz fiyat etiketi",
+
+    platforms: [
+      {
+        key: "instagram",
+        title: "Instagram",
+        description:
+          "Profil güveni, Reels düzeni, içerik dili, DM ve satış dönüşümü incelenir.",
+        icon: FaInstagram,
+      },
+      {
+        key: "tiktok",
+        title: "TikTok",
+        description:
+          "İlk saniye etkisi, video akışı, izlenme potansiyeli ve takipçi dönüşümü incelenir.",
+        icon: FaTiktok,
+      },
+      {
+        key: "youtube",
+        title: "YouTube",
+        description:
+          "Kanal görünümü, başlıklar, kapaklar, Shorts yapısı, izlenme süresi ve abone dönüşümü incelenir.",
+        icon: FaYoutube,
+      },
+      {
+        key: "x",
+        title: "X / Twitter",
+        description:
+          "Profil algısı, paylaşım dili, görünürlük, etkileşim ve yönlendirme gücü incelenir.",
+        icon: FaXTwitter,
+      },
+    ],
+
+    accountTypeOptions: [
+      {
+        value: "İşletme / Marka Hesabı",
+        title: "İşletme / Marka",
+        description:
+          "Ürün, hizmet veya marka güveni oluşturmak isteyen hesaplar için uygundur.",
+        icon: FaBuilding,
+      },
+      {
+        value: "E-ticaret / Satış Hesabı",
+        title: "E-ticaret / Satış",
+        description:
+          "Ürün satışı, reklam dönüşümü, DM siparişi veya site trafiği hedefleyen hesaplar için.",
+      },
+      {
+        value: "İçerik Üretici / Kişisel Marka",
+        title: "Kişisel Marka / Creator",
+        description:
+          "Uzmanlık, görünürlük, takipçi büyümesi ve içerik disiplini hedefleyen hesaplar için.",
+        icon: FaUserTie,
+      },
+      {
+        value: "Hizmet Sağlayıcı / Uzman Hesabı",
+        title: "Uzman / Hizmet",
+        description:
+          "Danışmanlık, klinik, emlak, güzellik, ajans, eğitim veya profesyonel hizmet sunan hesaplar için.",
+      },
+      {
+        value: "Medya / Haber / Eğlence Kanalı",
+        title: "Medya / Kanal",
+        description:
+          "Film, haber, mizah, bilgi, içerik derleme, Reels veya Shorts temelli sayfalar için.",
+      },
+      {
+        value: "Topluluk / Proje / Organizasyon",
+        title: "Topluluk / Proje",
+        description:
+          "Etkinlik, topluluk, organizasyon, kulüp veya proje hesabı olarak kullanılan yapılar için.",
+      },
+      {
+        value: "Yeni Açılmış Hesap",
+        title: "Yeni Hesap",
+        description:
+          "Henüz düzeni oturmamış, doğru başlangıç ve sağlam kurulum isteyen hesaplar için.",
+      },
+      {
+        value: "Diğer",
+        title: "Diğer",
+        description:
+          "Yukarıdakilere tam uymuyorsa bu seçeneği seçip detayları not alanında belirtebilirsiniz.",
+      },
+    ],
+
+    goalOptions: [
+      {
+        value: "Profil güveni ve profesyonel görünüm kazanmak",
+        title: "Profil güveni",
+        description:
+          "Hesabımın ilk bakışta daha güçlü, düzenli ve güven veren bir yapıya kavuşmasını istiyorum.",
+      },
+      {
+        value: "Daha fazla görünürlük ve erişim elde etmek",
+        title: "Görünürlük",
+        description:
+          "Paylaşımlarımın daha çok kişiye ulaşmasını ve keşfet / önerilen alanlarda güçlenmesini istiyorum.",
+      },
+      {
+        value: "Takipçi, abone veya topluluk büyümesini artırmak",
+        title: "Büyüme",
+        description:
+          "Hesabın kitlesini daha sağlıklı ve daha istikrarlı biçimde büyütmek istiyorum.",
+      },
+      {
+        value: "Satış, mesaj veya müşteri dönüşümünü iyileştirmek",
+        title: "Dönüşüm",
+        description:
+          "İzlenme veya trafik geliyor ama mesaj, satış ya da müşteri dönüşümü yeterli değil.",
+      },
+      {
+        value: "İçerik düzeni ve paylaşım stratejisi oluşturmak",
+        title: "İçerik düzeni",
+        description:
+          "Ne paylaşacağımı, hangi formatta ilerleyeceğimi ve nasıl bir sistem kuracağımı netleştirmek istiyorum.",
+      },
+      {
+        value: "Reklam performansını destekleyecek hesap yapısı kurmak",
+        title: "Reklam desteği",
+        description:
+          "Reklam veriyorum veya vermeyi düşünüyorum; önce hesabımın buna ne kadar hazır olduğunu görmek istiyorum.",
+      },
+      {
+        value: "Hesabımdaki açıkları profesyonel analizle görmek",
+        title: "Genel analiz",
+        description:
+          "Profil, içerik, güven algısı, dönüşüm ve büyüme tarafındaki açıkları görmek istiyorum.",
+      },
+    ],
+
+    currentStatusOptions: [
+      "Yeni başladım, hesabın temel düzenini doğru kurmak istiyorum",
+      "Hesabım aktif ama profesyonel görünmediğini düşünüyorum",
+      "Düzenli paylaşım yapıyorum fakat büyüme zayıf ilerliyor",
+      "İçerik üretiyorum ama beklediğim görünürlüğü alamıyorum",
+      "İzlenme alıyorum ancak etkileşim düşük kalıyor",
+      "Mesaj geliyor ama satışa ya da müşteriye dönüşmüyor",
+      "Reklam veriyorum ama sonuçlardan memnun değilim",
+      "Hesapta neyin eksik olduğunu net göremiyorum",
+      "Marka / işletme hesabım var ama güven algısını güçlendirmek istiyorum",
+    ],
+
+    contentStyleOptions: [
+      "Ürün / hizmet tanıtımı içerikleri",
+      "Reels / Shorts / kısa video ağırlıklı içerikler",
+      "Bilgilendirici / eğitici içerikler",
+      "Kişisel marka / uzmanlık içerikleri",
+      "Kampanya / satış / reklam odaklı içerikler",
+      "Hikâye anlatımı / vlog / yaşam tarzı içerikleri",
+      "Medya / haber / eğlence içerikleri",
+      "Karışık içerik yapısı",
+      "Henüz net bir içerik düzenim yok",
+    ],
+
+    problemOptions: [
+      "Profil ilk bakışta yeterince güven vermiyor",
+      "İçerikler dikkat çekmiyor veya ilk saniyede kullanıcıyı tutmuyor",
+      "Paylaşımlar düzenli olsa da görünürlük zayıf kalıyor",
+      "Takipçi / abone artışı yavaş ilerliyor",
+      "İzlenme geliyor ama etkileşim düşük",
+      "Etkileşim geliyor ama satış / mesaj / müşteri dönüşümü düşük",
+      "Reklam veriyorum ama dönüşler tatmin etmiyor",
+      "Marka dili, görsel düzen veya içerik yapısı dağınık duruyor",
+      "Hesapta neyin eksik olduğunu bilmiyorum, profesyonel yorum istiyorum",
+    ],
+  },
+
+  en: {
+    selected: "Selected",
+    platform: "Platform",
+    target: "Goal",
+    detail: "Details",
+    confirm: "Confirm",
+
+    heroBadge: "Professional Account Analysis",
+    heroTitle: "Start Analysis",
+    heroDesc:
+      "We professionally review why your social media account is not achieving enough growth, trust, or conversion. Profile appearance, content structure, first-second impact, communication style, audience fit, and the path to sales are evaluated together.",
+
+    infoFocusLabel: "Focus",
+    infoFocusValue: "Profile, content, trust, and conversion",
+    infoProcessLabel: "Process",
+    infoProcessValue: "Form is received, team reviews, analysis is prepared",
+    infoResultLabel: "Result",
+    infoResultValue: "Weak points and improvement areas are shared",
+
+    sideTitle: "What do we review in the analysis?",
+    sideItems: [
+      "How much trust your profile creates at first glance",
+      "Whether your content catches users in the first second",
+      "How well your video, visual, and caption language fits your audience",
+      "Whether your posting structure is enough for growth",
+      "Where users drop off in ads, DM, website, or sales flow",
+    ],
+
+    platformEyebrow: "Platform selection",
+    platformTitle: "Which platform would you like to analyze?",
+
+    accountTypeEyebrow: "Account type",
+    accountTypeTitle: "What is your account used for?",
+    accountTypeDesc:
+      "Your account may be a business, brand, content page, project, media channel, e-commerce account, or personal brand. Choose the closest structure.",
+
+    goalEyebrow: "What do you expect from the analysis?",
+    goalTitle: "What is your main expectation from this analysis?",
+
+    detailEyebrow: "Profile / account link",
+    detailTitle: "Let’s understand your account better",
+    usernameLabel: "Username or account name",
+    usernamePlaceholder: "@username or account name",
+    accountLinkLabel: "Profile / account link",
+    accountLinkPlaceholder: "https://...",
+    currentStatusLabel: "Current status",
+    currentStatusPlaceholder: "Select current status",
+    contentStyleLabel: "Content structure",
+    contentStylePlaceholder: "Select content structure",
+    mainProblemLabel: "Main problem area",
+    mainProblemPlaceholder: "Select main problem",
+    extraNoteLabel: "Extra note",
+    extraNotePlaceholder:
+      "If there is anything specific you want us to review, write it here.",
+
+    contactEyebrow: "Contact and confirmation",
+    contactTitle: "Complete the request and continue to payment",
+    contactDesc:
+      "After your request is created, you will be redirected to the payment screen. Once payment is completed, your analysis request will be reviewed by the team.",
+    summaryPlatform: "Platform",
+    summaryAccountType: "Account type",
+    summaryGoal: "Expectation",
+    contactInfoTitle: "Contact information",
+    fullNameLabel: "Full name",
+    fullNamePlaceholder: "Your full name",
+    contactChannelLabel: "Contact channel",
+    contactChannelPlaceholder: "Select contact channel",
+    contactValueLabel: "Your contact information",
+    contactValuePlaceholder: "+90 5xx..., @username or email",
+
+    paymentInfoLabel: "Payment information",
+    currencyTitle: "Choose currency",
+    currencyDesc:
+      "On the next screen, the analysis request number, selected currency, and payment details will be shown.",
+    selectedAmount: "Selected amount",
+
+    back: "Back",
+    continue: "Continue",
+    creating: "Creating analysis...",
+    finishAndPay: "Finish Analysis and Continue to Payment",
+
+    errorSelectPlatform: "Please select the platform to analyze.",
+    errorAccountTypeGoal:
+      "Please select the account type and your expectation from the analysis.",
+    errorDetailRequired:
+      "Please fill in the account information, current status, content structure, and main problem area.",
+    errorFullName: "Full name cannot be empty.",
+    errorContact: "Contact channel and contact information are required.",
+    errorUsername: "Username or account information is required.",
+    errorCreateFailed: "Analysis request could not be created.",
+    errorGeneric: "An error occurred while creating the request.",
+
+    notePlatform: "Platform",
+    noteAccountType: "Account type",
+    noteGoal: "Expected from analysis",
+    noteUsername: "Username / account name",
+    noteAccountLink: "Account link",
+    noteCurrentStatus: "Current status",
+    noteContentStyle: "Content structure",
+    noteMainProblem: "Main problem",
+    noteExtraNote: "Extra note",
+    noteCurrency: "Selected currency",
+    notePrice: "Analysis price label",
+
+    platforms: [
+      {
+        key: "instagram",
+        title: "Instagram",
+        description:
+          "Profile trust, Reels structure, content language, DM, and sales conversion are reviewed.",
+        icon: FaInstagram,
+      },
+      {
+        key: "tiktok",
+        title: "TikTok",
+        description:
+          "First-second impact, video flow, view potential, and follower conversion are reviewed.",
+        icon: FaTiktok,
+      },
+      {
+        key: "youtube",
+        title: "YouTube",
+        description:
+          "Channel appearance, titles, thumbnails, Shorts structure, watch time, and subscriber conversion are reviewed.",
+        icon: FaYoutube,
+      },
+      {
+        key: "x",
+        title: "X / Twitter",
+        description:
+          "Profile perception, posting language, visibility, engagement, and referral strength are reviewed.",
+        icon: FaXTwitter,
+      },
+    ],
+
+    accountTypeOptions: [
+      {
+        value: "Business / Brand Account",
+        title: "Business / Brand",
+        description:
+          "Suitable for accounts that want to build product, service, or brand trust.",
+        icon: FaBuilding,
+      },
+      {
+        value: "E-commerce / Sales Account",
+        title: "E-commerce / Sales",
+        description:
+          "For accounts targeting product sales, ad conversion, DM orders, or website traffic.",
+      },
+      {
+        value: "Content Creator / Personal Brand",
+        title: "Personal Brand / Creator",
+        description:
+          "For accounts targeting expertise, visibility, audience growth, and content discipline.",
+        icon: FaUserTie,
+      },
+      {
+        value: "Service Provider / Expert Account",
+        title: "Expert / Service",
+        description:
+          "For consulting, clinic, real estate, beauty, agency, education, or professional service accounts.",
+      },
+      {
+        value: "Media / News / Entertainment Channel",
+        title: "Media / Channel",
+        description:
+          "For movie, news, humor, information, content curation, Reels, or Shorts-based pages.",
+      },
+      {
+        value: "Community / Project / Organization",
+        title: "Community / Project",
+        description:
+          "For event, community, organization, club, or project accounts.",
+      },
+      {
+        value: "New Account",
+        title: "New Account",
+        description:
+          "For accounts that need a correct start and solid setup before the structure is fully settled.",
+      },
+      {
+        value: "Other",
+        title: "Other",
+        description:
+          "Choose this if none of the above fits exactly, and explain the details in the note field.",
+      },
+    ],
+
+    goalOptions: [
+      {
+        value: "Gain profile trust and professional appearance",
+        title: "Profile trust",
+        description:
+          "I want my account to look stronger, more organized, and more trustworthy at first glance.",
+      },
+      {
+        value: "Get more visibility and reach",
+        title: "Visibility",
+        description:
+          "I want my posts to reach more people and become stronger in discovery or recommended areas.",
+      },
+      {
+        value: "Increase follower, subscriber, or community growth",
+        title: "Growth",
+        description:
+          "I want to grow the account audience in a healthier and more stable way.",
+      },
+      {
+        value: "Improve sales, messages, or customer conversion",
+        title: "Conversion",
+        description:
+          "Views or traffic are coming, but messages, sales, or customer conversion are not enough.",
+      },
+      {
+        value: "Create a content structure and posting strategy",
+        title: "Content structure",
+        description:
+          "I want to clarify what to post, which format to use, and what system to build.",
+      },
+      {
+        value: "Build an account structure that supports ad performance",
+        title: "Ad support",
+        description:
+          "I run ads or plan to run ads; I want to see how ready my account is first.",
+      },
+      {
+        value: "See account weaknesses with professional analysis",
+        title: "General analysis",
+        description:
+          "I want to see weaknesses in profile, content, trust perception, conversion, and growth.",
+      },
+    ],
+
+    currentStatusOptions: [
+      "I have just started and want to set up the account correctly",
+      "My account is active but I think it does not look professional",
+      "I post regularly but growth is weak",
+      "I create content but do not get the visibility I expect",
+      "I get views but engagement remains low",
+      "I get messages but they do not convert into sales or customers",
+      "I run ads but I am not satisfied with the results",
+      "I cannot clearly see what is missing in the account",
+      "I have a brand / business account and want to strengthen trust perception",
+    ],
+
+    contentStyleOptions: [
+      "Product / service promotion content",
+      "Reels / Shorts / short-video focused content",
+      "Informational / educational content",
+      "Personal brand / expertise content",
+      "Campaign / sales / ad-focused content",
+      "Storytelling / vlog / lifestyle content",
+      "Media / news / entertainment content",
+      "Mixed content structure",
+      "I do not have a clear content structure yet",
+    ],
+
+    problemOptions: [
+      "The profile does not create enough trust at first glance",
+      "Content does not catch attention or hold users in the first second",
+      "Posts are regular but visibility is weak",
+      "Follower / subscriber growth is slow",
+      "Views come in but engagement is low",
+      "Engagement comes in but sales / messages / customer conversion is low",
+      "I run ads but returns are not satisfying",
+      "Brand language, visual layout, or content structure looks scattered",
+      "I do not know what is missing and want professional feedback",
+    ],
+  },
+
+  ru: {
+    selected: "Выбрано",
+    platform: "Платформа",
+    target: "Цель",
+    detail: "Детали",
+    confirm: "Подтверждение",
+
+    heroBadge: "Профессиональный анализ аккаунта",
+    heroTitle: "Начать анализ",
+    heroDesc:
+      "Мы профессионально анализируем, почему ваш аккаунт в социальных сетях не даёт достаточного роста, доверия или конверсии. Внешний вид профиля, структура контента, первые секунды, стиль подачи, соответствие аудитории и путь к продаже оцениваются вместе.",
+
+    infoFocusLabel: "Фокус",
+    infoFocusValue: "Профиль, контент, доверие и конверсия",
+    infoProcessLabel: "Процесс",
+    infoProcessValue: "Форма принимается, команда изучает, анализ готовится",
+    infoResultLabel: "Результат",
+    infoResultValue: "Передаются слабые места и зоны улучшения",
+
+    sideTitle: "Что мы анализируем?",
+    sideItems: [
+      "Насколько профиль вызывает доверие с первого взгляда",
+      "Захватывает ли контент пользователя в первые секунды",
+      "Насколько видео, визуал и текст подходят целевой аудитории",
+      "Достаточна ли структура публикаций для роста",
+      "Где происходит разрыв в рекламе, DM, сайте или продажах",
+    ],
+
+    platformEyebrow: "Выбор платформы",
+    platformTitle: "Какую платформу вы хотите проанализировать?",
+
+    accountTypeEyebrow: "Тип аккаунта",
+    accountTypeTitle: "Для чего используется ваш аккаунт?",
+    accountTypeDesc:
+      "Аккаунт может быть бизнесом, брендом, контент-страницей, проектом, медиа-каналом, e-commerce или личным брендом. Выберите наиболее близкий вариант.",
+
+    goalEyebrow: "Что вы ожидаете от анализа?",
+    goalTitle: "Какая главная цель этого анализа?",
+
+    detailEyebrow: "Профиль / ссылка на аккаунт",
+    detailTitle: "Давайте лучше поймём ваш аккаунт",
+    usernameLabel: "Username или название аккаунта",
+    usernamePlaceholder: "@username или название аккаунта",
+    accountLinkLabel: "Ссылка на профиль / аккаунт",
+    accountLinkPlaceholder: "https://...",
+    currentStatusLabel: "Текущая ситуация",
+    currentStatusPlaceholder: "Выберите текущую ситуацию",
+    contentStyleLabel: "Структура контента",
+    contentStylePlaceholder: "Выберите структуру контента",
+    mainProblemLabel: "Главная проблема",
+    mainProblemPlaceholder: "Выберите главную проблему",
+    extraNoteLabel: "Дополнительная заметка",
+    extraNotePlaceholder:
+      "Если есть тема, на которую нужно обратить особое внимание, напишите здесь.",
+
+    contactEyebrow: "Контакты и подтверждение",
+    contactTitle: "Завершите заявку и перейдите к оплате",
+    contactDesc:
+      "После создания заявки вы будете перенаправлены на экран оплаты. После оплаты заявка будет изучена командой.",
+    summaryPlatform: "Платформа",
+    summaryAccountType: "Тип аккаунта",
+    summaryGoal: "Ожидание",
+    contactInfoTitle: "Контактная информация",
+    fullNameLabel: "Имя и фамилия",
+    fullNamePlaceholder: "Ваше имя и фамилия",
+    contactChannelLabel: "Канал связи",
+    contactChannelPlaceholder: "Выберите канал связи",
+    contactValueLabel: "Ваши контактные данные",
+    contactValuePlaceholder: "+90 5xx..., @username или e-mail",
+
+    paymentInfoLabel: "Информация об оплате",
+    currencyTitle: "Выберите валюту",
+    currencyDesc:
+      "На следующем экране будет показан номер заявки, выбранная валюта и платёжная информация.",
+    selectedAmount: "Выбранная сумма",
+
+    back: "Назад",
+    continue: "Продолжить",
+    creating: "Создание анализа...",
+    finishAndPay: "Завершить анализ и перейти к оплате",
+
+    errorSelectPlatform: "Пожалуйста, выберите платформу для анализа.",
+    errorAccountTypeGoal:
+      "Пожалуйста, выберите тип аккаунта и ожидание от анализа.",
+    errorDetailRequired:
+      "Пожалуйста, заполните данные аккаунта, текущую ситуацию, структуру контента и главную проблему.",
+    errorFullName: "Имя и фамилия не могут быть пустыми.",
+    errorContact: "Канал связи и контактные данные обязательны.",
+    errorUsername: "Username или данные аккаунта обязательны.",
+    errorCreateFailed: "Не удалось создать заявку на анализ.",
+    errorGeneric: "Произошла ошибка при создании заявки.",
+
+    notePlatform: "Платформа",
+    noteAccountType: "Тип аккаунта",
+    noteGoal: "Ожидание от анализа",
+    noteUsername: "Username / название аккаунта",
+    noteAccountLink: "Ссылка на аккаунт",
+    noteCurrentStatus: "Текущая ситуация",
+    noteContentStyle: "Структура контента",
+    noteMainProblem: "Главная проблема",
+    noteExtraNote: "Дополнительная заметка",
+    noteCurrency: "Выбранная валюта",
+    notePrice: "Ценник анализа",
+
+    platforms: [
+      {
+        key: "instagram",
+        title: "Instagram",
+        description:
+          "Анализируются доверие к профилю, структура Reels, язык контента, DM и конверсия в продажи.",
+        icon: FaInstagram,
+      },
+      {
+        key: "tiktok",
+        title: "TikTok",
+        description:
+          "Анализируются первые секунды, поток видео, потенциал просмотров и конверсия в подписчиков.",
+        icon: FaTiktok,
+      },
+      {
+        key: "youtube",
+        title: "YouTube",
+        description:
+          "Анализируются вид канала, заголовки, обложки, структура Shorts, время просмотра и конверсия в подписчиков.",
+        icon: FaYoutube,
+      },
+      {
+        key: "x",
+        title: "X / Twitter",
+        description:
+          "Анализируются восприятие профиля, язык публикаций, видимость, вовлечённость и сила переходов.",
+        icon: FaXTwitter,
+      },
+    ],
+
+    accountTypeOptions: [
+      {
+        value: "Бизнес / Брендовый аккаунт",
+        title: "Бизнес / Бренд",
+        description:
+          "Для аккаунтов, которые хотят создать доверие к продукту, услуге или бренду.",
+        icon: FaBuilding,
+      },
+      {
+        value: "E-commerce / Продажи",
+        title: "E-commerce / Продажи",
+        description:
+          "Для аккаунтов, ориентированных на продажи, конверсию рекламы, заказы в DM или трафик на сайт.",
+      },
+      {
+        value: "Контент-мейкер / Личный бренд",
+        title: "Личный бренд / Creator",
+        description:
+          "Для аккаунтов, ориентированных на экспертность, видимость, рост аудитории и дисциплину контента.",
+        icon: FaUserTie,
+      },
+      {
+        value: "Поставщик услуг / Экспертный аккаунт",
+        title: "Эксперт / Услуги",
+        description:
+          "Для консультаций, клиник, недвижимости, красоты, агентств, образования или профессиональных услуг.",
+      },
+      {
+        value: "Медиа / Новости / Развлекательный канал",
+        title: "Медиа / Канал",
+        description:
+          "Для страниц с фильмами, новостями, юмором, информацией, подборками, Reels или Shorts.",
+      },
+      {
+        value: "Сообщество / Проект / Организация",
+        title: "Сообщество / Проект",
+        description:
+          "Для мероприятий, сообществ, организаций, клубов или проектных аккаунтов.",
+      },
+      {
+        value: "Новый аккаунт",
+        title: "Новый аккаунт",
+        description:
+          "Для аккаунтов, которым нужен правильный старт и крепкая настройка.",
+      },
+      {
+        value: "Другое",
+        title: "Другое",
+        description:
+          "Выберите это, если варианты выше не подходят, и опишите детали в поле заметки.",
+      },
+    ],
+
+    goalOptions: [
+      {
+        value: "Получить доверие к профилю и профессиональный внешний вид",
+        title: "Доверие к профилю",
+        description:
+          "Я хочу, чтобы аккаунт с первого взгляда выглядел сильнее, аккуратнее и вызывал больше доверия.",
+      },
+      {
+        value: "Получить больше видимости и охвата",
+        title: "Видимость",
+        description:
+          "Я хочу, чтобы публикации доходили до большего количества людей и усиливались в рекомендациях.",
+      },
+      {
+        value: "Увеличить рост подписчиков, аудитории или сообщества",
+        title: "Рост",
+        description:
+          "Я хочу более здорово и стабильно растить аудиторию аккаунта.",
+      },
+      {
+        value: "Улучшить продажи, сообщения или конверсию клиентов",
+        title: "Конверсия",
+        description:
+          "Просмотры или трафик есть, но сообщений, продаж или клиентов недостаточно.",
+      },
+      {
+        value: "Создать структуру контента и стратегию публикаций",
+        title: "Структура контента",
+        description:
+          "Я хочу понять, что публиковать, в каком формате двигаться и какую систему построить.",
+      },
+      {
+        value: "Создать структуру аккаунта для поддержки рекламы",
+        title: "Поддержка рекламы",
+        description:
+          "Я запускаю рекламу или планирую запуск; сначала хочу понять, насколько аккаунт готов.",
+      },
+      {
+        value: "Увидеть слабые места аккаунта через профессиональный анализ",
+        title: "Общий анализ",
+        description:
+          "Я хочу увидеть слабые места профиля, контента, доверия, конверсии и роста.",
+      },
+    ],
+
+    currentStatusOptions: [
+      "Я только начал(а) и хочу правильно настроить основу аккаунта",
+      "Аккаунт активен, но мне кажется, что он выглядит непрофессионально",
+      "Я регулярно публикую, но рост идёт слабо",
+      "Я создаю контент, но не получаю ожидаемой видимости",
+      "Просмотры есть, но вовлечённость низкая",
+      "Сообщения приходят, но не превращаются в продажи или клиентов",
+      "Я запускаю рекламу, но недоволен(на) результатами",
+      "Я не понимаю, чего именно не хватает аккаунту",
+      "У меня бренд / бизнес-аккаунт, и я хочу усилить доверие",
+    ],
+
+    contentStyleOptions: [
+      "Контент с продвижением товаров / услуг",
+      "Reels / Shorts / короткие видео",
+      "Информационный / образовательный контент",
+      "Личный бренд / экспертный контент",
+      "Кампании / продажи / рекламный контент",
+      "Storytelling / vlog / lifestyle контент",
+      "Медиа / новости / развлекательный контент",
+      "Смешанная структура контента",
+      "У меня пока нет чёткой структуры контента",
+    ],
+
+    problemOptions: [
+      "Профиль с первого взгляда не вызывает достаточно доверия",
+      "Контент не привлекает внимание или не удерживает в первые секунды",
+      "Публикации регулярные, но видимость слабая",
+      "Рост подписчиков / аудитории идёт медленно",
+      "Просмотры есть, но вовлечённость низкая",
+      "Вовлечённость есть, но продажи / сообщения / клиенты слабые",
+      "Я запускаю рекламу, но результат не удовлетворяет",
+      "Язык бренда, визуальная структура или контент выглядят хаотично",
+      "Я не знаю, чего не хватает аккаунту, и хочу профессиональный комментарий",
+    ],
+  },
 };
 
 function FieldLabel({
@@ -297,12 +1067,14 @@ function ChoiceCard({
   description,
   active,
   icon: Icon,
+  selectedText,
   onClick,
 }: {
   title: string;
   description: string;
   active: boolean;
   icon?: IconType;
+  selectedText: string;
   onClick: () => void;
 }) {
   return (
@@ -337,7 +1109,7 @@ function ChoiceCard({
 
       {active && (
         <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/12 bg-black/45 px-3 py-1 text-xs font-black text-white">
-          Seçili <FaCheck />
+          {selectedText} <FaCheck />
         </div>
       )}
     </button>
@@ -371,13 +1143,7 @@ function StepPill({
   );
 }
 
-function MiniInfoCard({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
+function MiniInfoCard({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-[22px] border border-white/10 bg-white/[0.04] p-4">
       <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/38">
@@ -399,7 +1165,20 @@ function safeJsonParse<T>(value: string): T | null {
 export default function AnalysisForm() {
   const router = useRouter();
 
+  const [locale, setLocale] = useState<Locale>("tr");
   const [step, setStep] = useState(1);
+
+  const t = useMemo(
+    () => analysisFormText[locale] || analysisFormText.tr,
+    [locale]
+  );
+
+  const platformOptions = t.platforms;
+  const accountTypeOptions = t.accountTypeOptions;
+  const goalOptions = t.goalOptions;
+  const currentStatusOptions = t.currentStatusOptions;
+  const contentStyleOptions = t.contentStyleOptions;
+  const problemOptions = t.problemOptions;
 
   const [selectedPlatform, setSelectedPlatform] =
     useState<PlatformKey>("instagram");
@@ -423,12 +1202,36 @@ export default function AnalysisForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    setLocale(detectBrowserLocale());
+
+    function handleLocaleChange(event: Event) {
+      const customEvent = event as CustomEvent<{ locale?: Locale }>;
+      const nextLocale = customEvent.detail?.locale;
+
+      if (nextLocale === "tr" || nextLocale === "en" || nextLocale === "ru") {
+        setLocale(nextLocale);
+        return;
+      }
+
+      setLocale(detectBrowserLocale());
+    }
+
+    window.addEventListener("medyatora_locale_change", handleLocaleChange);
+    window.addEventListener("medyatora_locale_changed", handleLocaleChange);
+
+    return () => {
+      window.removeEventListener("medyatora_locale_change", handleLocaleChange);
+      window.removeEventListener("medyatora_locale_changed", handleLocaleChange);
+    };
+  }, []);
+
   const selectedPlatformTitle = useMemo(() => {
     return (
       platformOptions.find((platform) => platform.key === selectedPlatform)
         ?.title || "Instagram"
     );
-  }, [selectedPlatform]);
+  }, [platformOptions, selectedPlatform]);
 
   const currentPrice = priceMap[selectedCurrency];
 
@@ -436,12 +1239,12 @@ export default function AnalysisForm() {
     setError("");
 
     if (step === 1 && !selectedPlatform) {
-      setError("Lütfen analiz edilecek platformu seçin.");
+      setError(t.errorSelectPlatform);
       return;
     }
 
     if (step === 2 && (!accountType || !mainGoal)) {
-      setError("Lütfen hesap tipini ve analizden beklentinizi seçin.");
+      setError(t.errorAccountTypeGoal);
       return;
     }
 
@@ -452,9 +1255,7 @@ export default function AnalysisForm() {
         !contentStyle ||
         !mainProblem)
     ) {
-      setError(
-        "Lütfen hesap bilgisi, mevcut durum, içerik yapısı ve ana sorun alanlarını doldurun."
-      );
+      setError(t.errorDetailRequired);
       return;
     }
 
@@ -470,17 +1271,17 @@ export default function AnalysisForm() {
     setError("");
 
     if (!fullName.trim()) {
-      setError("Ad soyad boş bırakılamaz.");
+      setError(t.errorFullName);
       return;
     }
 
     if (!contactType || !contactValue.trim()) {
-      setError("İletişim kanalı ve iletişim bilginiz gereklidir.");
+      setError(t.errorContact);
       return;
     }
 
     if (!accountUsername.trim()) {
-      setError("Kullanıcı adı veya hesap bilgisi gereklidir.");
+      setError(t.errorUsername);
       return;
     }
 
@@ -488,17 +1289,17 @@ export default function AnalysisForm() {
 
     try {
       const analysisNote = [
-        `Platform: ${selectedPlatformTitle}`,
-        `Hesap tipi: ${accountType}`,
-        `Analizde beklenen: ${mainGoal}`,
-        `Kullanıcı adı / hesap adı: ${accountUsername.trim()}`,
-        accountLink.trim() ? `Hesap linki: ${accountLink.trim()}` : "",
-        `Mevcut durum: ${currentStatus}`,
-        `İçerik yapısı: ${contentStyle}`,
-        `Ana sorun: ${mainProblem}`,
-        extraNote.trim() ? `Ek not: ${extraNote.trim()}` : "",
-        `Seçilen para birimi: ${selectedCurrency}`,
-        `Analiz fiyat etiketi: ${currentPrice}`,
+        `${t.notePlatform}: ${selectedPlatformTitle}`,
+        `${t.noteAccountType}: ${accountType}`,
+        `${t.noteGoal}: ${mainGoal}`,
+        `${t.noteUsername}: ${accountUsername.trim()}`,
+        accountLink.trim() ? `${t.noteAccountLink}: ${accountLink.trim()}` : "",
+        `${t.noteCurrentStatus}: ${currentStatus}`,
+        `${t.noteContentStyle}: ${contentStyle}`,
+        `${t.noteMainProblem}: ${mainProblem}`,
+        extraNote.trim() ? `${t.noteExtraNote}: ${extraNote.trim()}` : "",
+        `${t.noteCurrency}: ${selectedCurrency}`,
+        `${t.notePrice}: ${currentPrice}`,
       ]
         .filter(Boolean)
         .join("\n");
@@ -532,19 +1333,10 @@ export default function AnalysisForm() {
       });
 
       const text = await res.text();
-      const data = safeJsonParse<{
-        success?: boolean;
-        error?: string;
-        requestId?: string | number;
-        analysisRequestId?: string | number;
-        analysis_request_id?: string | number;
-        id?: string | number;
-      }>(text);
+      const data = safeJsonParse<AnalysisRequestResponse>(text);
 
-      if (!res.ok || data?.success === false) {
-        throw new Error(
-          data?.error || "Analiz başvurusu oluşturulamadı."
-        );
+      if (!res.ok || data?.success === false || data?.ok === false) {
+        throw new Error(data?.error || t.errorCreateFailed);
       }
 
       const requestId =
@@ -554,10 +1346,28 @@ export default function AnalysisForm() {
         data?.id ||
         "";
 
+      const isFreeAnalysis =
+        data?.isFreeAnalysis === true ||
+        data?.freeAnalysisUsed === true ||
+        data?.paymentRequired === false ||
+        Number(data?.packagePrice || 0) === 0;
+
+      if (isFreeAnalysis) {
+        router.push("/hesabim");
+        return;
+      }
+
+      const paymentCurrency = data?.currency || selectedCurrency;
+      const paymentPrice =
+        data?.formattedPackagePrice ||
+        (data?.packagePrice
+          ? `${data.packagePrice} ${paymentCurrency}`
+          : currentPrice);
+
       const params = new URLSearchParams({
         source: "analysis",
-        currency: selectedCurrency,
-        price: currentPrice,
+        currency: paymentCurrency,
+        price: paymentPrice,
         platform: selectedPlatformTitle,
       });
 
@@ -567,11 +1377,7 @@ export default function AnalysisForm() {
 
       router.push(`${ANALYSIS_PAYMENT_PATH}?${params.toString()}`);
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Başvuru oluşturulurken bir hata oluştu."
-      );
+      setError(err instanceof Error ? err.message : t.errorGeneric);
     } finally {
       setLoading(false);
     }
@@ -584,43 +1390,34 @@ export default function AnalysisForm() {
 
       <div className="relative">
         <div className="mb-6 flex flex-wrap gap-2">
-          <StepPill step={1} currentStep={step} label="Platform" />
-          <StepPill step={2} currentStep={step} label="Hedef" />
-          <StepPill step={3} currentStep={step} label="Detay" />
-          <StepPill step={4} currentStep={step} label="Onay" />
+          <StepPill step={1} currentStep={step} label={t.platform} />
+          <StepPill step={2} currentStep={step} label={t.target} />
+          <StepPill step={3} currentStep={step} label={t.detail} />
+          <StepPill step={4} currentStep={step} label={t.confirm} />
         </div>
 
         <div className="mb-7 grid gap-5 lg:grid-cols-[1fr_0.82fr]">
           <div>
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-white/72">
               <span className="h-1.5 w-1.5 rounded-full bg-white/85" />
-              Profesyonel Hesap Analizi
+              {t.heroBadge}
             </div>
 
             <h2 className="text-4xl font-black tracking-tight text-white md:text-5xl">
-              Analize Başla
+              {t.heroTitle}
             </h2>
 
             <p className="mt-4 max-w-3xl text-sm leading-7 text-white/64 md:text-base">
-              Sosyal medya hesabınızın neden yeterli büyüme, güven veya dönüşüm
-              sağlayamadığını profesyonel bakışla inceliyoruz. Profil görünümü,
-              içerik düzeni, ilk saniye etkisi, anlatım dili, hedef kitle uyumu
-              ve satışa giden akış birlikte değerlendirilir.
+              {t.heroDesc}
             </p>
 
             <div className="mt-6 grid gap-3 md:grid-cols-3">
+              <MiniInfoCard label={t.infoFocusLabel} value={t.infoFocusValue} />
               <MiniInfoCard
-                label="Odak"
-                value="Profil, içerik, güven ve dönüşüm"
+                label={t.infoProcessLabel}
+                value={t.infoProcessValue}
               />
-              <MiniInfoCard
-                label="Süreç"
-                value="Form alınır, ekip inceler, analiz hazırlanır"
-              />
-              <MiniInfoCard
-                label="Sonuç"
-                value="Eksikler ve iyileştirme alanları paylaşılır"
-              />
+              <MiniInfoCard label={t.infoResultLabel} value={t.infoResultValue} />
             </div>
           </div>
 
@@ -629,16 +1426,12 @@ export default function AnalysisForm() {
               <FaCircleQuestion />
             </div>
 
-            <h3 className="text-xl font-black text-white">
-              Analizde neleri inceliyoruz?
-            </h3>
+            <h3 className="text-xl font-black text-white">{t.sideTitle}</h3>
 
             <div className="mt-4 space-y-3 text-sm leading-6 text-white/62">
-              <p>• Profilinizin ilk bakışta ne kadar güven verdiğini</p>
-              <p>• İçeriklerinizin kullanıcıyı ilk saniyede yakalayıp yakalamadığını</p>
-              <p>• Video, görsel ve açıklama dilinizin hedef kitleyle uyumunu</p>
-              <p>• Paylaşım düzeninizin büyüme açısından yeterli olup olmadığını</p>
-              <p>• Reklam, DM, web sitesi veya satış akışında kopma yaşanan noktaları</p>
+              {t.sideItems.map((item) => (
+                <p key={item}>• {item}</p>
+              ))}
             </div>
           </div>
         </div>
@@ -646,11 +1439,11 @@ export default function AnalysisForm() {
         {step === 1 && (
           <>
             <p className="text-xs font-black uppercase tracking-[0.22em] text-white/42">
-              Platform seçimi
+              {t.platformEyebrow}
             </p>
 
             <h3 className="mt-2 text-3xl font-black text-white">
-              Hangi platformu analiz ettirmek istiyorsunuz?
+              {t.platformTitle}
             </h3>
 
             <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -661,6 +1454,7 @@ export default function AnalysisForm() {
                   description={platform.description}
                   icon={platform.icon}
                   active={selectedPlatform === platform.key}
+                  selectedText={t.selected}
                   onClick={() => setSelectedPlatform(platform.key)}
                 />
               ))}
@@ -671,16 +1465,15 @@ export default function AnalysisForm() {
         {step === 2 && (
           <>
             <p className="text-xs font-black uppercase tracking-[0.22em] text-white/42">
-              Hesap türü
+              {t.accountTypeEyebrow}
             </p>
 
             <h3 className="mt-2 text-3xl font-black text-white">
-              Hesabınız ne için kullanılıyor?
+              {t.accountTypeTitle}
             </h3>
 
             <p className="mt-3 max-w-3xl text-sm leading-7 text-white/60">
-              Hesabınız işletme, marka, içerik sayfası, proje, medya kanalı,
-              e-ticaret veya kişisel marka olabilir. Size en yakın yapıyı seçin.
+              {t.accountTypeDesc}
             </p>
 
             <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -691,6 +1484,7 @@ export default function AnalysisForm() {
                   description={option.description}
                   icon={option.icon}
                   active={accountType === option.value}
+                  selectedText={t.selected}
                   onClick={() => setAccountType(option.value)}
                 />
               ))}
@@ -698,11 +1492,11 @@ export default function AnalysisForm() {
 
             <div className="mt-8">
               <p className="text-xs font-black uppercase tracking-[0.22em] text-white/42">
-                Analizde ne bekliyorsunuz?
+                {t.goalEyebrow}
               </p>
 
               <h3 className="mt-2 text-3xl font-black text-white">
-                Bu analizden asıl beklentiniz nedir?
+                {t.goalTitle}
               </h3>
 
               <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -712,6 +1506,7 @@ export default function AnalysisForm() {
                     title={option.title}
                     description={option.description}
                     active={mainGoal === option.value}
+                    selectedText={t.selected}
                     onClick={() => setMainGoal(option.value)}
                   />
                 ))}
@@ -723,39 +1518,39 @@ export default function AnalysisForm() {
         {step === 3 && (
           <>
             <p className="text-xs font-black uppercase tracking-[0.22em] text-white/42">
-              Profil / hesap linki
+              {t.detailEyebrow}
             </p>
 
             <h3 className="mt-2 text-3xl font-black text-white">
-              Hesabınızı daha iyi anlayalım
+              {t.detailTitle}
             </h3>
 
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               <div>
-                <FieldLabel required>Kullanıcı adı veya hesap adı</FieldLabel>
+                <FieldLabel required>{t.usernameLabel}</FieldLabel>
                 <PremiumInput
                   value={accountUsername}
                   onChange={(e) => setAccountUsername(e.target.value)}
-                  placeholder="@kullaniciadi veya hesap adı"
+                  placeholder={t.usernamePlaceholder}
                 />
               </div>
 
               <div>
-                <FieldLabel>Profil / hesap linki</FieldLabel>
+                <FieldLabel>{t.accountLinkLabel}</FieldLabel>
                 <PremiumInput
                   value={accountLink}
                   onChange={(e) => setAccountLink(e.target.value)}
-                  placeholder="https://..."
+                  placeholder={t.accountLinkPlaceholder}
                 />
               </div>
 
               <div>
-                <FieldLabel required>Mevcut durum</FieldLabel>
+                <FieldLabel required>{t.currentStatusLabel}</FieldLabel>
                 <PremiumSelect
                   value={currentStatus}
                   onChange={(e) => setCurrentStatus(e.target.value)}
                 >
-                  <option value="">Mevcut durumu seçin</option>
+                  <option value="">{t.currentStatusPlaceholder}</option>
                   {currentStatusOptions.map((item) => (
                     <option key={item} value={item}>
                       {item}
@@ -765,12 +1560,12 @@ export default function AnalysisForm() {
               </div>
 
               <div>
-                <FieldLabel required>İçerik yapısı</FieldLabel>
+                <FieldLabel required>{t.contentStyleLabel}</FieldLabel>
                 <PremiumSelect
                   value={contentStyle}
                   onChange={(e) => setContentStyle(e.target.value)}
                 >
-                  <option value="">İçerik yapısını seçin</option>
+                  <option value="">{t.contentStylePlaceholder}</option>
                   {contentStyleOptions.map((item) => (
                     <option key={item} value={item}>
                       {item}
@@ -780,12 +1575,12 @@ export default function AnalysisForm() {
               </div>
 
               <div className="md:col-span-2">
-                <FieldLabel required>Ana sorun alanı</FieldLabel>
+                <FieldLabel required>{t.mainProblemLabel}</FieldLabel>
                 <PremiumSelect
                   value={mainProblem}
                   onChange={(e) => setMainProblem(e.target.value)}
                 >
-                  <option value="">Ana sorunu seçin</option>
+                  <option value="">{t.mainProblemPlaceholder}</option>
                   {problemOptions.map((item) => (
                     <option key={item} value={item}>
                       {item}
@@ -795,11 +1590,11 @@ export default function AnalysisForm() {
               </div>
 
               <div className="md:col-span-2">
-                <FieldLabel>Ek not</FieldLabel>
+                <FieldLabel>{t.extraNoteLabel}</FieldLabel>
                 <PremiumTextarea
                   value={extraNote}
                   onChange={(e) => setExtraNote(e.target.value)}
-                  placeholder="Özellikle bakılmasını istediğiniz bir konu varsa buraya yazabilirsiniz."
+                  placeholder={t.extraNotePlaceholder}
                 />
               </div>
             </div>
@@ -809,48 +1604,47 @@ export default function AnalysisForm() {
         {step === 4 && (
           <>
             <p className="text-xs font-black uppercase tracking-[0.22em] text-white/42">
-              İletişim ve onay
+              {t.contactEyebrow}
             </p>
 
             <h3 className="mt-2 text-3xl font-black text-white">
-              Başvuruyu tamamla ve ödemeye geç
+              {t.contactTitle}
             </h3>
 
             <p className="mt-3 max-w-3xl text-sm leading-7 text-white/62">
-              Başvurunuz oluşturulduktan sonra ödeme ekranına yönlendirilirsiniz.
-              Ödeme tamamlandığında analiz talebiniz ekip tarafından incelenir.
+              {t.contactDesc}
             </p>
 
             <div className="mt-6 grid gap-4 md:grid-cols-3">
-              <MiniInfoCard label="Platform" value={selectedPlatformTitle} />
-              <MiniInfoCard label="Hesap tipi" value={accountType || "-"} />
-              <MiniInfoCard label="Beklenti" value={mainGoal || "-"} />
+              <MiniInfoCard label={t.summaryPlatform} value={selectedPlatformTitle} />
+              <MiniInfoCard label={t.summaryAccountType} value={accountType || "-"} />
+              <MiniInfoCard label={t.summaryGoal} value={mainGoal || "-"} />
             </div>
 
             <div className="mt-6 rounded-[28px] border border-white/10 bg-black/20 p-5">
               <h4 className="text-2xl font-black text-white">
-                İletişim bilgileri
+                {t.contactInfoTitle}
               </h4>
 
               <div className="mt-5 grid gap-4 md:grid-cols-3">
                 <div>
-                  <FieldLabel required>Ad soyad</FieldLabel>
+                  <FieldLabel required>{t.fullNameLabel}</FieldLabel>
                   <PremiumInput
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Adınız ve soyadınız"
+                    placeholder={t.fullNamePlaceholder}
                   />
                 </div>
 
                 <div>
-                  <FieldLabel required>İletişim kanalı</FieldLabel>
+                  <FieldLabel required>{t.contactChannelLabel}</FieldLabel>
                   <PremiumSelect
                     value={contactType}
                     onChange={(e) =>
                       setContactType(e.target.value as ContactType)
                     }
                   >
-                    <option value="">İletişim kanalı seçin</option>
+                    <option value="">{t.contactChannelPlaceholder}</option>
                     {contactTypes.map((item) => (
                       <option key={item} value={item}>
                         {item}
@@ -860,11 +1654,11 @@ export default function AnalysisForm() {
                 </div>
 
                 <div>
-                  <FieldLabel required>İletişim bilginiz</FieldLabel>
+                  <FieldLabel required>{t.contactValueLabel}</FieldLabel>
                   <PremiumInput
                     value={contactValue}
                     onChange={(e) => setContactValue(e.target.value)}
-                    placeholder="+90 5xx..., @kullanici veya e-posta"
+                    placeholder={t.contactValuePlaceholder}
                   />
                 </div>
               </div>
@@ -874,22 +1668,21 @@ export default function AnalysisForm() {
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <p className="text-xs font-black uppercase tracking-[0.18em] text-white/38">
-                    Ödeme bilgisi
+                    {t.paymentInfoLabel}
                   </p>
 
                   <h4 className="mt-2 text-2xl font-black text-white">
-                    Para birimini seçin
+                    {t.currencyTitle}
                   </h4>
 
                   <p className="mt-2 max-w-2xl text-sm leading-7 text-white/60">
-                    Sonraki ekranda analiz talebi numarası, seçilen para birimi
-                    ve ödeme bilgileri gösterilecek.
+                    {t.currencyDesc}
                   </p>
                 </div>
 
                 <div className="rounded-2xl border border-white/10 bg-black/25 px-5 py-4">
                   <p className="text-xs font-black uppercase tracking-[0.18em] text-white/38">
-                    Seçili tutar
+                    {t.selectedAmount}
                   </p>
                   <p className="mt-1 text-xl font-black text-white">
                     {currentPrice}
@@ -935,7 +1728,7 @@ export default function AnalysisForm() {
             className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-black text-white transition hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-40"
           >
             <FaArrowLeft />
-            Geri
+            {t.back}
           </button>
 
           {step < 4 ? (
@@ -944,7 +1737,7 @@ export default function AnalysisForm() {
               onClick={nextStep}
               className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white/[0.92] px-6 py-3 text-sm font-black text-black transition hover:bg-white"
             >
-              Devam Et
+              {t.continue}
               <FaArrowRight />
             </button>
           ) : (
@@ -954,9 +1747,7 @@ export default function AnalysisForm() {
               disabled={loading}
               className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white/[0.92] px-6 py-3 text-sm font-black text-black transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {loading
-                ? "Analiz oluşturuluyor..."
-                : "Analizi Bitir ve Ödemeye Geç"}
+              {loading ? t.creating : t.finishAndPay}
               {loading ? <FaPaperPlane /> : <FaCheck />}
             </button>
           )}

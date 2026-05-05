@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import AuthModal from "./AuthModal";
+import { detectBrowserLocale, saveLocale, type Locale } from "@/lib/i18n";
 
 type PreferredCurrency = "TL" | "USD" | "RUB";
 
@@ -19,9 +20,63 @@ type PublicUser = {
   preferred_currency: PreferredCurrency;
   free_analysis_used: boolean;
   welcome_bonus_claimed: boolean;
+  whatsapp_verified_at?: string | null;
+  telegram_verified_at?: string | null;
+  contact_bonus_granted_at?: string | null;
 };
 
 type AuthMode = "login" | "register";
+
+type Props = {
+  showLocaleSwitcher?: boolean;
+};
+
+const localeOptions: Locale[] = ["tr", "en", "ru"];
+
+const userMenuText: Record<
+  Locale,
+  {
+    checking: string;
+    welcome: string;
+    wallet: string;
+    account: string;
+    logout: string;
+    login: string;
+    register: string;
+    language: string;
+  }
+> = {
+  tr: {
+    checking: "Kontrol...",
+    welcome: "Hoş geldin",
+    wallet: "Cüzdan",
+    account: "Hesabım",
+    logout: "Çıkış",
+    login: "Giriş Yap",
+    register: "Üye Ol",
+    language: "Dil",
+  },
+  en: {
+    checking: "Checking...",
+    welcome: "Welcome",
+    wallet: "Wallet",
+    account: "Account",
+    logout: "Logout",
+    login: "Login",
+    register: "Sign Up",
+    language: "Language",
+  },
+  ru: {
+    checking: "Проверка...",
+    welcome: "Добро пожаловать",
+    wallet: "Баланс",
+    account: "Аккаунт",
+    logout: "Выйти",
+    login: "Войти",
+    register: "Регистрация",
+    language: "Язык",
+  },
+};
 
 function normalizePreferredCurrency(value: unknown): PreferredCurrency {
   const currency = String(value || "").trim().toUpperCase();
@@ -47,6 +102,9 @@ function normalizePublicUser(value: any): PublicUser {
     preferred_currency: normalizePreferredCurrency(value?.preferred_currency),
     free_analysis_used: Boolean(value?.free_analysis_used),
     welcome_bonus_claimed: Boolean(value?.welcome_bonus_claimed),
+    whatsapp_verified_at: value?.whatsapp_verified_at || null,
+    telegram_verified_at: value?.telegram_verified_at || null,
+    contact_bonus_granted_at: value?.contact_bonus_granted_at || null,
   };
 }
 
@@ -82,11 +140,38 @@ function getInitials(user: PublicUser) {
   return value.slice(0, 2).toUpperCase();
 }
 
-export default function UserMenu() {
+function saveLocaleCookie(locale: Locale) {
+  if (typeof document === "undefined") return;
+
+  document.cookie = `medyatora_locale=${locale}; path=/; max-age=${
+    60 * 60 * 24 * 365
+  }; SameSite=Lax`;
+}
+
+function notifyLocaleChange(locale: Locale) {
+  if (typeof window === "undefined") return;
+
+  window.dispatchEvent(
+    new CustomEvent("medyatora_locale_change", {
+      detail: { locale },
+    })
+  );
+
+  window.dispatchEvent(
+    new CustomEvent("medyatora_locale_changed", {
+      detail: { locale },
+    })
+  );
+}
+
+export default function UserMenu({ showLocaleSwitcher = true }: Props) {
   const [user, setUser] = useState<PublicUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>("login");
+  const [selectedLocale, setSelectedLocale] = useState<Locale>("tr");
+
+  const text = userMenuText[selectedLocale] || userMenuText.tr;
 
   async function loadMe() {
     try {
@@ -111,6 +196,12 @@ export default function UserMenu() {
   }
 
   useEffect(() => {
+    const detectedLocale = detectBrowserLocale();
+
+    setSelectedLocale(detectedLocale);
+    saveLocale(detectedLocale);
+    saveLocaleCookie(detectedLocale);
+
     loadMe();
   }, []);
 
@@ -122,22 +213,25 @@ export default function UserMenu() {
       });
 
       setUser(null);
-
-      if (typeof window !== "undefined") {
-        window.location.reload();
-      }
     } catch {
       setUser(null);
-
-      if (typeof window !== "undefined") {
-        window.location.reload();
-      }
     }
   }
 
   function openAuth(mode: AuthMode) {
     setAuthMode(mode);
     setAuthOpen(true);
+  }
+
+  function handleLocaleChange(locale: Locale) {
+    setSelectedLocale(locale);
+    saveLocale(locale);
+    saveLocaleCookie(locale);
+    notifyLocaleChange(locale);
+
+    if (typeof window !== "undefined") {
+      window.location.reload();
+    }
   }
 
   const walletBalance = useMemo(() => {
@@ -147,97 +241,114 @@ export default function UserMenu() {
 
   if (loading) {
     return (
-      <div className="inline-flex h-11 w-full items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-xs font-black text-white/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:w-auto">
-        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white/70" />
-        Hesap kontrol ediliyor...
+      <div className="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.045] px-3 text-[11px] font-bold text-white/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:h-12 sm:rounded-2xl sm:px-4 sm:text-sm">
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400 sm:h-2 sm:w-2" />
+        {text.checking}
       </div>
     );
   }
 
   return (
     <>
-      {user ? (
-        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:justify-end">
-          <div className="flex h-11 min-w-0 items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.045] px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.08] text-xs font-black text-white">
-              {getInitials(user)}
-            </div>
-
-            <div className="min-w-0">
-              <p className="text-[9px] font-black uppercase tracking-[0.16em] text-white/38">
-                Hoş geldin
-              </p>
-              <p className="max-w-[95px] truncate text-xs font-black text-white sm:max-w-[118px]">
-                {user.full_name || user.email}
-              </p>
-            </div>
+      <div className="flex w-full flex-wrap items-center justify-end gap-1.5 sm:w-auto sm:gap-2">
+        {showLocaleSwitcher && (
+          <div className="flex h-9 items-center overflow-hidden rounded-full border border-white/10 bg-white/[0.05] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:h-12 sm:rounded-2xl">
+            {localeOptions.map((locale) => (
+              <button
+                key={locale}
+                type="button"
+                onClick={() => handleLocaleChange(locale)}
+                className={`h-7 rounded-full px-2 text-[9px] font-black uppercase transition sm:h-9 sm:rounded-xl sm:px-3 sm:text-[10px] ${
+                  selectedLocale === locale
+                    ? "bg-white text-black"
+                    : "text-white/60 hover:bg-white/[0.08] hover:text-white"
+                }`}
+                aria-label={`${text.language}: ${locale.toUpperCase()}`}
+              >
+                {locale}
+              </button>
+            ))}
           </div>
+        )}
 
-          <a
-            href="/hesabim/bakiye"
-            className="flex h-11 min-w-0 items-center justify-between gap-2 rounded-2xl border border-white/10 bg-white/[0.045] px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:border-white/18 hover:bg-white/[0.075]"
-          >
-            <div className="min-w-0">
-              <p className="text-[9px] font-black uppercase tracking-[0.16em] text-white/38">
-                Cüzdan
-              </p>
-              <p className="truncate text-xs font-black text-white">
-                {walletBalance}
-              </p>
+        {user ? (
+          <>
+            <div className="flex h-9 min-w-0 items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:h-12 sm:rounded-2xl sm:px-3">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-400 text-[9px] font-black text-black shadow-[0_10px_26px_rgba(52,211,153,0.18)] sm:h-9 sm:w-9 sm:rounded-xl sm:text-xs">
+                {getInitials(user)}
+              </div>
+
+              <div className="min-w-0">
+                <p className="hidden text-[9px] font-black uppercase tracking-[0.16em] text-emerald-200/70 sm:block">
+                  {text.welcome}
+                </p>
+
+                <p className="max-w-[74px] truncate text-[11px] font-black text-white sm:max-w-[118px] sm:text-xs">
+                  {user.full_name || user.email}
+                </p>
+              </div>
             </div>
 
-            <span className="shrink-0 rounded-xl border border-white/10 bg-black/20 px-2 py-1 text-[10px] font-black text-white/70">
-              {user.preferred_currency}
-            </span>
-          </a>
+            <a
+              href="/hesabim/bakiye"
+              className="flex h-9 min-w-0 items-center justify-between gap-1.5 rounded-full border border-sky-400/20 bg-gradient-to-br from-sky-400/14 to-emerald-400/10 px-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition hover:-translate-y-0.5 hover:border-emerald-300/30 hover:bg-emerald-400/10 sm:h-12 sm:rounded-2xl sm:px-3"
+            >
+              <div className="min-w-0">
+                <p className="hidden text-[9px] font-black uppercase tracking-[0.16em] text-sky-100/70 sm:block">
+                  {text.wallet}
+                </p>
 
-          <a
-            href="/hesabim"
-            className="inline-flex h-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.045] px-4 text-xs font-black text-white/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:border-white/18 hover:bg-white/[0.075] hover:text-white"
-          >
-            Hesabım
-          </a>
+                <p className="max-w-[82px] truncate text-[11px] font-black text-white sm:max-w-none sm:text-xs">
+                  {walletBalance}
+                </p>
+              </div>
 
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="inline-flex h-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.035] px-4 text-xs font-black text-white/62 transition hover:-translate-y-0.5 hover:border-white/18 hover:bg-white/[0.075] hover:text-white"
-          >
-            Çıkış
-          </button>
-        </div>
-      ) : (
-        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:justify-end">
-          <button
-            type="button"
-            onClick={() => openAuth("login")}
-            className="inline-flex h-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.045] px-4 text-xs font-black text-white/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:border-white/18 hover:bg-white/[0.075] hover:text-white"
-          >
-            Giriş Yap
-          </button>
+              <span className="hidden shrink-0 rounded-xl border border-white/10 bg-black/20 px-2 py-1 text-[10px] font-black text-emerald-300 sm:inline-flex">
+                {user.preferred_currency}
+              </span>
+            </a>
 
-          <button
-            type="button"
-            onClick={() => openAuth("register")}
-            className="inline-flex h-11 items-center justify-center rounded-2xl bg-white px-4 text-xs font-black text-black shadow-[0_16px_38px_rgba(255,255,255,0.12)] transition hover:-translate-y-0.5 hover:bg-white/90"
-          >
-            Üye Ol
-          </button>
-        </div>
-      )}
+            <a
+              href="/hesabim"
+              className="inline-flex h-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] px-3 text-[11px] font-black text-white/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:bg-white/[0.1] hover:text-white sm:h-12 sm:rounded-2xl sm:px-4 sm:text-xs"
+            >
+              {text.account}
+            </a>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="inline-flex h-9 items-center justify-center rounded-full border border-rose-400/20 bg-rose-400/10 px-3 text-[11px] font-black text-rose-300 transition hover:-translate-y-0.5 hover:bg-rose-400/15 sm:h-12 sm:rounded-2xl sm:px-4 sm:text-xs"
+            >
+              {text.logout}
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={() => openAuth("login")}
+              className="inline-flex h-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] px-3 text-[11px] font-black text-white/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:bg-white/[0.1] hover:text-white sm:h-12 sm:rounded-2xl sm:px-4 sm:text-xs"
+            >
+              {text.login}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => openAuth("register")}
+              className="inline-flex h-9 items-center justify-center rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 px-3 text-[11px] font-black text-black shadow-[0_16px_38px_rgba(52,211,153,0.18)] transition hover:-translate-y-0.5 hover:from-emerald-300 hover:to-emerald-400 sm:h-12 sm:rounded-2xl sm:px-4 sm:text-xs"
+            >
+              {text.register}
+            </button>
+          </>
+        )}
+      </div>
 
       <AuthModal
         open={authOpen}
         initialMode={authMode}
         onClose={() => setAuthOpen(false)}
-        onAuthenticated={(nextUser) => {
-          setUser(normalizePublicUser(nextUser));
-          setAuthOpen(false);
-
-          if (typeof window !== "undefined") {
-            window.location.reload();
-          }
-        }}
+        onAuthenticated={(nextUser) => setUser(normalizePublicUser(nextUser))}
       />
     </>
   );

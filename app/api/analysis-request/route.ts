@@ -1,6 +1,6 @@
 import https from "https";
 import { NextResponse } from "next/server";
-import type { RowDataPacket } from "mysql2";
+import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import { getMysqlPool, hasMysqlConfig } from "@/lib/mysql";
 import { getCurrentUser } from "@/lib/auth/current-user";
 
@@ -63,6 +63,7 @@ function normalizeCurrency(value: unknown): CurrencyCode {
 
   if (raw === "USD") return "USD";
   if (raw === "RUB") return "RUB";
+
   return "TL";
 }
 
@@ -75,7 +76,7 @@ function formatMoney(value: number, currency: CurrencyCode) {
     return `${Math.round(value).toLocaleString("tr-TR")} ${currency}`;
   }
 
-  return `${value.toFixed(2)} ${currency}`;
+  return `${Number(value || 0).toFixed(2)} ${currency}`;
 }
 
 function getPaymentMethodLabel({
@@ -92,7 +93,7 @@ function getPaymentMethodLabel({
   if (paymentMethod === "turkey_bank") return "Havale / EFT";
   if (paymentMethod === "support") return "Destek ile ödeme";
 
-  return "Belirtilmedi";
+  return "Ödeme sayfasına yönlendirildi";
 }
 
 async function sendTelegramMessage(text: string) {
@@ -186,8 +187,10 @@ export async function POST(req: Request) {
     const body = await req.json();
 
     const fullName = normalizeString(body?.full_name);
-    const username = normalizeString(body?.username);
+
+    const username = normalizeString(body?.account_username ?? body?.username);
     const accountLink = normalizeString(body?.account_link);
+
     const accountType = normalizeString(body?.account_type);
     const contentType = normalizeString(body?.content_type);
 
@@ -196,72 +199,106 @@ export async function POST(req: Request) {
 
     const mainProblem = normalizeString(body?.main_problem);
     const mainMissing = normalizeString(body?.main_missing);
+
+    const goal = normalizeString(body?.goal);
+    const extraNote = normalizeString(body?.extra_note);
+
     const contactType = normalizeContactType(body?.contact_type);
     const contactValue = normalizeString(body?.contact_value);
 
-    const currency = normalizeCurrency(body?.analysis_currency ?? body?.currency);
-    const analysisPlatform = normalizeString(body?.analysis_platform);
+    const currency = normalizeCurrency(
+      body?.selected_currency ?? body?.analysis_currency ?? body?.currency
+    );
+
+    const analysisPlatform = normalizeString(
+      body?.analysis_platform ?? body?.platform
+    );
+
     const paymentMethod = normalizeString(body?.payment_method);
 
     if (!isNonEmptyString(fullName)) {
       return NextResponse.json(
-        { success: false, error: "Ad soyad boş bırakılamaz." },
+        { success: false, ok: false, error: "Ad soyad boş bırakılamaz." },
         { status: 400 }
       );
     }
 
     if (!isNonEmptyString(username) && !isNonEmptyString(accountLink)) {
       return NextResponse.json(
-        { success: false, error: "Kullanıcı adı veya hesap linki gerekli." },
+        {
+          success: false,
+          ok: false,
+          error: "Kullanıcı adı veya hesap linki gerekli.",
+        },
         { status: 400 }
       );
     }
 
     if (!isNonEmptyString(accountType)) {
       return NextResponse.json(
-        { success: false, error: "Hesap türü boş bırakılamaz." },
+        { success: false, ok: false, error: "Hesap türü boş bırakılamaz." },
         { status: 400 }
       );
     }
 
     if (!isNonEmptyString(contentType)) {
       return NextResponse.json(
-        { success: false, error: "İçerik türü boş bırakılamaz." },
+        { success: false, ok: false, error: "İçerik türü boş bırakılamaz." },
         { status: 400 }
       );
     }
 
     if (!isNonEmptyString(mainProblem)) {
       return NextResponse.json(
-        { success: false, error: "Genel sorun alanı boş bırakılamaz." },
+        {
+          success: false,
+          ok: false,
+          error: "Genel sorun alanı boş bırakılamaz.",
+        },
         { status: 400 }
       );
     }
 
     if (!isNonEmptyString(mainMissing)) {
       return NextResponse.json(
-        { success: false, error: "En büyük eksik alanı boş bırakılamaz." },
+        {
+          success: false,
+          ok: false,
+          error: "Analiz detayları boş bırakılamaz.",
+        },
         { status: 400 }
       );
     }
 
     if (!contactType || !ALLOWED_CONTACT_TYPES.includes(contactType)) {
       return NextResponse.json(
-        { success: false, error: "Geçerli bir iletişim türü seçiniz." },
+        {
+          success: false,
+          ok: false,
+          error: "Geçerli bir iletişim türü seçiniz.",
+        },
         { status: 400 }
       );
     }
 
     if (!isNonEmptyString(contactValue)) {
       return NextResponse.json(
-        { success: false, error: "İletişim bilgisi boş bırakılamaz." },
+        {
+          success: false,
+          ok: false,
+          error: "İletişim bilgisi boş bırakılamaz.",
+        },
         { status: 400 }
       );
     }
 
     if (!ALLOWED_CURRENCIES.includes(currency)) {
       return NextResponse.json(
-        { success: false, error: "Geçerli bir para birimi seçiniz." },
+        {
+          success: false,
+          ok: false,
+          error: "Geçerli bir para birimi seçiniz.",
+        },
         { status: 400 }
       );
     }
@@ -272,6 +309,7 @@ export async function POST(req: Request) {
       return NextResponse.json(
         {
           success: false,
+          ok: false,
           error:
             "Geliştirme ortamında MySQL bağlantısı yok. Canlı ortamda başvuru sistemi çalışır.",
         },
@@ -298,7 +336,11 @@ export async function POST(req: Request) {
       if (currentUser?.id) {
         const [userRows] = await connection.query<CurrentUserDbRow[]>(
           `
-          SELECT id, email, email_verified, free_analysis_used
+          SELECT
+            id,
+            email,
+            email_verified,
+            free_analysis_used
           FROM users
           WHERE id = ?
           LIMIT 1
@@ -318,7 +360,15 @@ export async function POST(req: Request) {
 
       packagePrice = verifiedFreeRight ? 0 : ANALYSIS_PRICES[currency];
 
-      const [customerResult] = await connection.execute(
+      const finalMainMissing = [
+        mainMissing,
+        goal ? `\n\nAnaliz beklentisi:\n${goal}` : "",
+        extraNote ? `\n\nEk not:\n${extraNote}` : "",
+      ]
+        .filter(Boolean)
+        .join("");
+
+      const [customerResult] = await connection.execute<ResultSetHeader>(
         `
         INSERT INTO customers (
           full_name,
@@ -341,19 +391,19 @@ export async function POST(req: Request) {
           contentType,
           dailyPostCount,
           mainProblem,
-          mainMissing,
+          finalMainMissing,
           contactType,
           contactValue,
         ]
       );
 
-      customerId = (customerResult as { insertId?: number }).insertId || null;
+      customerId = Number(customerResult.insertId || 0) || null;
 
       if (!customerId) {
         throw new Error("Müşteri ID alınamadı.");
       }
 
-      const [analysisResult] = await connection.execute(
+      const [analysisResult] = await connection.execute<ResultSetHeader>(
         `
         INSERT INTO analysis_requests (
           user_id,
@@ -377,15 +427,18 @@ export async function POST(req: Request) {
           analysisPlatform || accountType || null,
           packagePrice,
           currency,
-          paymentMethod || null,
-          "pending",
+          verifiedFreeRight ? "free_analysis_right" : paymentMethod || null,
+          verifiedFreeRight ? "pending" : "pending_payment",
           verifiedFreeRight ? 1 : 0,
-          currency === "USD" ? packagePrice : 15,
+          currency === "USD" ? packagePrice : ANALYSIS_PRICES.USD,
         ]
       );
 
-      analysisRequestId =
-        (analysisResult as { insertId?: number }).insertId || null;
+      analysisRequestId = Number(analysisResult.insertId || 0) || null;
+
+      if (!analysisRequestId) {
+        throw new Error("Analiz başvuru ID alınamadı.");
+      }
 
       if (verifiedFreeRight && currentUser?.id) {
         await connection.execute(
@@ -408,6 +461,7 @@ export async function POST(req: Request) {
       return NextResponse.json(
         {
           success: false,
+          ok: false,
           error:
             "Analiz başvurusu kaydedilemedi. Lütfen bilgileri kontrol edip tekrar deneyin.",
         },
@@ -427,22 +481,26 @@ export async function POST(req: Request) {
       `🆔 Başvuru ID: ${analysisRequestId || "-"}\n` +
       `👤 Müşteri ID: ${customerId || "-"}\n` +
       `🧑‍💻 Kullanıcı Hesabı: ${
-        currentUser ? `#${currentUser.id} | ${currentUser.email}` : "Üyeliksiz başvuru"
+        currentUser
+          ? `#${currentUser.id} | ${currentUser.email}`
+          : "Üyeliksiz başvuru"
       }\n` +
-      `📱 Analiz Platformu: ${analysisPlatform || accountType || "-"}\n` +
+      `📱 Analiz Platformu: ${analysisPlatform || "-"}\n` +
+      `🎯 Analiz Beklentisi: ${goal || "-"}\n` +
       `🎁 Ücretsiz Analiz: ${verifiedFreeRight ? "Evet" : "Hayır"}\n` +
       `💳 Ödeme Yöntemi: ${paymentMethodLabel}\n` +
-      `💵 Analiz Fiyatı: ${formatMoney(packagePrice, currency)}\n` +
+      `💵 Analiz Fiyatı: ${formatMoney(packagePrice, currency)}\n\n` +
       `👤 Ad Soyad: ${fullName}\n` +
       `📷 Kullanıcı Adı: ${username || "-"}\n` +
       `🔗 Hesap Linki: ${accountLink || "-"}\n` +
       `🏷️ Hesap Türü: ${accountType}\n` +
       `🎬 İçerik Türü: ${contentType}\n` +
-      `📆 Paylaşım Sıklığı: ${dailyPostCountRaw || "-"}\n` +
+      `📆 Mevcut Durum: ${dailyPostCountRaw || "-"}\n` +
       `📞 İletişim Türü: ${contactType}\n` +
       `📩 İletişim: ${contactValue}\n\n` +
       `⚠️ Genel Sorun:\n${mainProblem}\n\n` +
-      `❗ En Büyük Eksik / Beklenen Cevap:\n${mainMissing}`;
+      `❗ Analiz Detayları:\n${mainMissing}\n\n` +
+      `📝 Ek Not:\n${extraNote || "-"}`;
 
     const telegramResult = await sendTelegramMessage(telegramMessage);
 
@@ -453,17 +511,23 @@ export async function POST(req: Request) {
     return NextResponse.json(
       {
         success: true,
+        ok: true,
         message: verifiedFreeRight
-          ? "Analiz başvurunuz oluşturuldu. 24 saat içerisinde ekibimiz sizinle iletişime geçecektir."
+          ? "Analiz başvurunuz oluşturuldu. Ücretsiz analiz hakkınız kullanıldı."
           : `Analiz başvurunuz oluşturuldu. Analiz ücreti ${formatMoney(
               packagePrice,
               currency
-            )}. 24 saat içerisinde ekibimiz sizinle iletişime geçecektir.`,
+            )}.`,
         customerId,
         analysisRequestId,
+        analysis_request_id: analysisRequestId,
+        requestId: analysisRequestId,
+        id: analysisRequestId,
         isFreeAnalysis: verifiedFreeRight,
         freeAnalysisUsed: verifiedFreeRight,
+        paymentRequired: !verifiedFreeRight,
         packagePrice,
+        formattedPackagePrice: formatMoney(packagePrice, currency),
         currency,
         paymentMethod: paymentMethodLabel,
         telegramWarning: telegramResult.warning,
@@ -476,6 +540,7 @@ export async function POST(req: Request) {
     return NextResponse.json(
       {
         success: false,
+        ok: false,
         error:
           error instanceof Error
             ? error.message

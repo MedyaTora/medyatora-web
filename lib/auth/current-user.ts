@@ -54,10 +54,11 @@ function normalizePreferredCurrency(
 
   if (currency === "USD") return "USD";
   if (currency === "RUB") return "RUB";
+
   return "TL";
 }
 
-function normalizeDateValue(value: Date | string | null | undefined) {
+export function normalizeDateValue(value: Date | string | null | undefined) {
   if (!value) return null;
 
   if (value instanceof Date) {

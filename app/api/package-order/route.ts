@@ -72,6 +72,14 @@ const ALLOWED_PAYMENT_METHODS: PaymentMethod[] = [
   "balance",
 ];
 
+const PACKAGE_TYPES: PackageType[] = [
+  "ekonomik",
+  "global",
+  "turk",
+  "garantili",
+  "hizli",
+];
+
 const PACKAGE_PRICE_MATRIX: Record<
   string,
   Record<string, Record<PackageType, number>>
@@ -345,6 +353,10 @@ function normalizeString(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function normalizeSlug(value: unknown) {
+  return normalizeString(value).toLowerCase();
+}
+
 function normalizePhoneNumber(value: string) {
   return value.replace(/[^\d+]/g, "").trim();
 }
@@ -354,7 +366,7 @@ function roundMoney(value: number) {
 }
 
 function formatMoney(value: number) {
-  return `${value.toFixed(2)} TL`;
+  return `${Number(value || 0).toFixed(2)} TL`;
 }
 
 function formatNumber(value: number) {
@@ -364,7 +376,7 @@ function formatNumber(value: number) {
 function getPaymentMethodLabel(method: PaymentMethod) {
   if (method === "turkey_bank") return "Türkiye Banka Havalesi / EFT";
   if (method === "balance") return "MedyaTora Bakiyesi";
-  return "Destek ile İletişime Geçilecek";
+  return "Destek ile Ödeme";
 }
 
 function getPackageTypeLabel(type: PackageType) {
@@ -468,6 +480,7 @@ async function findPackageService(params: {
   platform: string;
   category: string;
   packageType: PackageType;
+  quantity: number;
 }) {
   const pool = getMysqlPool();
 
@@ -500,17 +513,20 @@ async function findPackageService(params: {
       AND tl_cost_price > 0
       AND min > 0
       AND max > 0
+      AND min <= ?
       ${packageCondition}
     ORDER BY
       CASE
-        WHEN max >= 100000 THEN 0
-        WHEN max >= 10000 THEN 1
-        ELSE 2
+        WHEN max >= ? THEN 0
+        WHEN max >= 100000 THEN 1
+        WHEN max >= 10000 THEN 2
+        ELSE 3
       END ASC,
-      tl_cost_price ASC
+      tl_cost_price ASC,
+      max DESC
     LIMIT 1
     `,
-    [params.platform, params.category]
+    [params.platform, params.category, params.quantity, params.quantity]
   );
 
   if (rows[0]) return rows[0];
@@ -542,13 +558,87 @@ async function findPackageService(params: {
       AND tl_cost_price > 0
       AND min > 0
       AND max > 0
-    ORDER BY tl_cost_price ASC
+      AND min <= ?
+    ORDER BY
+      CASE
+        WHEN max >= ? THEN 0
+        WHEN max >= 100000 THEN 1
+        WHEN max >= 10000 THEN 2
+        ELSE 3
+      END ASC,
+      tl_cost_price ASC,
+      max DESC
     LIMIT 1
     `,
-    [params.platform, params.category]
+    [params.platform, params.category, params.quantity, params.quantity]
   );
 
   return fallbackRows[0] || null;
+}
+
+function createQuantityChunks({
+  quantity,
+  min,
+  max,
+}: {
+  quantity: number;
+  min: number;
+  max: number;
+}) {
+  const safeMin = Math.max(1, Number(min || 1));
+  const safeMax = Math.max(safeMin, Number(max || safeMin));
+
+  if (quantity < safeMin) {
+    throw new Error(
+      `Bu servis için minimum miktar ${formatNumber(
+        safeMin
+      )}. Lütfen miktarı artırın veya farklı paket seçin.`
+    );
+  }
+
+  const chunks: number[] = [];
+  let remaining = quantity;
+
+  while (remaining > 0) {
+    if (remaining <= safeMax) {
+      if (remaining < safeMin) {
+        const lastIndex = chunks.length - 1;
+
+        if (lastIndex >= 0 && chunks[lastIndex] + remaining <= safeMax) {
+          chunks[lastIndex] += remaining;
+          remaining = 0;
+          break;
+        }
+
+        throw new Error(
+          `Kalan miktar servis minimumunun altında kaldı. Lütfen miktarı ${formatNumber(
+            safeMin
+          )} ve katlarına daha uygun seçin.`
+        );
+      }
+
+      chunks.push(remaining);
+      remaining = 0;
+      break;
+    }
+
+    const nextRemaining = remaining - safeMax;
+
+    if (nextRemaining > 0 && nextRemaining < safeMin) {
+      const adjustedChunk = remaining - safeMin;
+
+      if (adjustedChunk >= safeMin && adjustedChunk <= safeMax) {
+        chunks.push(adjustedChunk);
+        remaining -= adjustedChunk;
+        continue;
+      }
+    }
+
+    chunks.push(safeMax);
+    remaining -= safeMax;
+  }
+
+  return chunks;
 }
 
 async function sendTelegramMessage(text: string) {
@@ -643,8 +733,8 @@ export async function POST(req: Request) {
 
     const body = rawBody as Partial<PackageOrderPayload>;
 
-    const platform = normalizeString(body.platform);
-    const category = normalizeString(body.category);
+    const platform = normalizeSlug(body.platform);
+    const category = normalizeSlug(body.category);
     const packageType = body.package_type;
     const quantity = Number(body.quantity || 0);
 
@@ -669,12 +759,7 @@ export async function POST(req: Request) {
       );
     }
 
-    if (
-      !packageType ||
-      !["ekonomik", "global", "turk", "garantili", "hizli"].includes(
-        packageType
-      )
-    ) {
+    if (!packageType || !PACKAGE_TYPES.includes(packageType)) {
       return NextResponse.json(
         { success: false, error: "Geçerli bir paket türü seçiniz." },
         { status: 400 }
@@ -756,6 +841,7 @@ export async function POST(req: Request) {
       platform,
       category,
       packageType,
+      quantity,
     });
 
     if (!service) {
@@ -769,6 +855,12 @@ export async function POST(req: Request) {
       );
     }
 
+    const quantityChunks = createQuantityChunks({
+      quantity,
+      min: Number(service.min || 1),
+      max: Number(service.max || quantity),
+    });
+
     const unitSalePrice = getPackagePricePer1000(
       platform,
       category,
@@ -780,19 +872,21 @@ export async function POST(req: Request) {
     const totalCostPrice = roundMoney((quantity / 1000) * unitCostPrice);
 
     const batchCode = createBatchCode();
-    const orderNumber = createOrderNumber();
     const currency: CurrencyCode = "TL";
-    const status = paymentMethod === "turkey_bank" ? "pending_payment" : "pending";
+    const status = paymentMethod === "balance" ? "pending" : "pending_payment";
 
     const packageLabel = getPackageTypeLabel(packageType);
-    const serviceTitle = `${service.platform.toUpperCase()} ${service.category} Paketi • ${packageLabel}`;
+    const serviceTitle = `${service.platform.toUpperCase()} ${
+      service.category
+    } Paketi • ${packageLabel}`;
 
     const pool = getMysqlPool();
     const connection = await pool.getConnection();
 
     let balanceBefore = 0;
     let balanceAfter = 0;
-    let insertedOrderId: number | null = null;
+    let firstInsertedOrderId: number | null = null;
+    const orderNumbers: string[] = [];
 
     try {
       await connection.beginTransaction();
@@ -863,69 +957,100 @@ export async function POST(req: Request) {
         );
       }
 
-      const [insertResult] = await connection.execute<ResultSetHeader>(
-        `
-        INSERT INTO order_requests (
-          user_id,
-          batch_code,
-          order_number,
-          full_name,
-          phone_number,
-          contact_type,
-          contact_value,
-          platform,
-          category,
-          service_id,
-          site_code,
-          service_title,
-          quantity,
-          unit_price,
-          total_price,
-          unit_cost_price,
-          total_cost_price,
-          guarantee_label,
-          speed,
-          currency,
-          payment_method,
-          target_username,
-          target_link,
-          order_note,
-          status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `,
-        [
-          userId,
-          batchCode,
-          orderNumber,
-          fullName,
-          phoneNumber,
-          contactType,
-          contactValue,
-          service.platform,
-          service.category,
-          Number(service.panel_service_id),
-          Number(service.site_code),
-          serviceTitle,
-          quantity,
-          unitSalePrice,
-          totalPrice,
-          unitCostPrice,
-          totalCostPrice,
-          service.guarantee_label || packageLabel,
-          service.speed || packageLabel,
-          currency,
-          paymentMethod,
-          targetUsername,
-          targetLink || null,
-          orderNote ||
-            `Paketler sayfasından oluşturuldu. Paket türü: ${packageLabel}. Kaynak servis: ${
-              service.clean_title || service.original_name
-            }`,
-          status,
-        ]
-      );
+      for (let index = 0; index < quantityChunks.length; index += 1) {
+        const chunkQuantity = quantityChunks[index];
+        const orderNumber = createOrderNumber();
 
-      insertedOrderId = Number(insertResult.insertId || 0);
+        const chunkTotalPrice = roundMoney(
+          (chunkQuantity / 1000) * unitSalePrice
+        );
+
+        const chunkTotalCostPrice = roundMoney(
+          (chunkQuantity / 1000) * unitCostPrice
+        );
+
+        const chunkNoteParts = [
+          orderNote || "",
+          `Paketler sayfasından oluşturuldu.`,
+          `Paket türü: ${packageLabel}.`,
+          `Kaynak servis: ${service.clean_title || service.original_name}.`,
+        ];
+
+        if (quantityChunks.length > 1) {
+          chunkNoteParts.push(
+            `Parça: ${index + 1}/${quantityChunks.length}. Toplam istenen miktar: ${formatNumber(
+              quantity
+            )}.`
+          );
+        }
+
+        const [insertResult] = await connection.execute<ResultSetHeader>(
+          `
+          INSERT INTO order_requests (
+            user_id,
+            batch_code,
+            order_number,
+            full_name,
+            phone_number,
+            contact_type,
+            contact_value,
+            platform,
+            category,
+            service_id,
+            site_code,
+            service_title,
+            quantity,
+            unit_price,
+            total_price,
+            unit_cost_price,
+            total_cost_price,
+            guarantee_label,
+            speed,
+            currency,
+            payment_method,
+            target_username,
+            target_link,
+            order_note,
+            status
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `,
+          [
+            userId,
+            batchCode,
+            orderNumber,
+            fullName,
+            phoneNumber,
+            contactType,
+            contactValue,
+            service.platform,
+            service.category,
+            Number(service.panel_service_id),
+            Number(service.site_code),
+            serviceTitle,
+            chunkQuantity,
+            unitSalePrice,
+            chunkTotalPrice,
+            unitCostPrice,
+            chunkTotalCostPrice,
+            service.guarantee_label || packageLabel,
+            service.speed || packageLabel,
+            currency,
+            paymentMethod,
+            targetUsername,
+            targetLink || null,
+            chunkNoteParts.filter(Boolean).join(" "),
+            status,
+          ]
+        );
+
+        const insertedOrderId = Number(insertResult.insertId || 0);
+
+        if (!firstInsertedOrderId) {
+          firstInsertedOrderId = insertedOrderId;
+        }
+
+        orderNumbers.push(orderNumber);
+      }
 
       if (paymentMethod === "balance" && currentUser) {
         await connection.execute(
@@ -955,8 +1080,10 @@ export async function POST(req: Request) {
             0,
             Number(currentUser.balance_usd || 0),
             Number(currentUser.balance_usd || 0),
-            `MedyaTora paket siparis odemesi - ${orderNumber} - TL`,
-            insertedOrderId,
+            `MedyaTora paket sipariş ödemesi - ${batchCode} - ${orderNumbers.join(
+              ", "
+            )} - TL`,
+            firstInsertedOrderId,
           ]
         );
       }
@@ -981,10 +1108,20 @@ export async function POST(req: Request) {
 
     const profit = roundMoney(totalPrice - totalCostPrice);
 
+    const chunkSummary =
+      quantityChunks.length > 1
+        ? quantityChunks
+            .map(
+              (chunk, index) =>
+                `${index + 1}. parça: ${formatNumber(chunk)} adet`
+            )
+            .join("\n")
+        : "Tek parça sipariş";
+
     const telegramMessage =
       `📦 Yeni paket siparişi alındı\n\n` +
       `🧾 Batch Kodu: ${batchCode}\n` +
-      `🔢 Sipariş No: ${orderNumber}\n` +
+      `🔢 Sipariş No:\n${orderNumbers.join("\n")}\n` +
       `👤 Ad Soyad: ${fullName}\n` +
       `🆔 Kullanıcı Hesabı: ${
         currentUser
@@ -999,12 +1136,16 @@ export async function POST(req: Request) {
       `📱 Platform: ${service.platform}\n` +
       `📂 Kategori: ${service.category}\n` +
       `🏷️ Paket Türü: ${packageLabel}\n` +
-      `📦 Miktar: ${formatNumber(quantity)}\n` +
+      `📦 Toplam Miktar: ${formatNumber(quantity)}\n` +
+      `🧩 Parçalama:\n${chunkSummary}\n` +
       `🎯 Hedef Kullanıcı: ${targetUsername}\n` +
       `🔗 Hedef Link: ${targetLink || "-"}\n\n` +
       `🧩 Kaynak Panel Servis ID: ${service.panel_service_id}\n` +
       `🧩 Müşteri Ürün Kodu: ${service.site_code}\n` +
-      `🧩 Kaynak Servis: ${service.clean_title || service.original_name}\n\n` +
+      `🧩 Kaynak Servis: ${service.clean_title || service.original_name}\n` +
+      `📉 Servis Limitleri: Min ${formatNumber(
+        Number(service.min || 0)
+      )} / Max ${formatNumber(Number(service.max || 0))}\n\n` +
       `💰 Birim Alış: ${unitCostPrice} TL / 1000\n` +
       `🏷️ Birim Satış: ${unitSalePrice} TL / 1000\n` +
       `💰 Toplam Alış: ${totalCostPrice} TL\n` +
@@ -1026,12 +1167,13 @@ export async function POST(req: Request) {
             ? "Paket siparişiniz alındı. Ödeme kontrolünden sonra işleme alınacaktır."
             : paymentMethod === "balance"
               ? "Paket siparişiniz TL bakiyenizden ödenerek alındı."
-              : "Paket siparişiniz alındı. Ekibimiz sizinle iletişime geçecektir.",
+              : "Paket siparişiniz alındı. Ödeme ve işlem adımları için ekibimiz sizinle iletişime geçecektir.",
         batchCode,
-        orderNumbers: [orderNumber],
-        orderNumber,
+        orderNumbers,
+        orderNumber: orderNumbers[0] || null,
         totalPrice,
         currency,
+        splitCount: orderNumbers.length,
         telegramWarning: telegramResult.warning,
       },
       { status: 200 }

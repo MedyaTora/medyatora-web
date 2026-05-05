@@ -1,33 +1,30 @@
 import https from "https";
 import { NextResponse } from "next/server";
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
-import { getMysqlPool, hasMysqlConfig } from "@/lib/mysql";
 import { getCurrentUser } from "@/lib/auth/current-user";
-import {
-  mapDbServiceToOrderItem,
-  type DbServiceRow,
-  type OrderServiceItem,
-} from "@/lib/services";
+import { getMysqlPool, hasMysqlConfig } from "@/lib/mysql";
 
 type CurrencyCode = "TL" | "USD" | "RUB";
-type BalanceColumn = "balance_usd" | "balance_tl" | "balance_rub";
 type ContactType = "Telegram" | "WhatsApp" | "Instagram" | "E-posta";
 type PaymentMethod = "turkey_bank" | "support" | "balance";
 
+type BalanceColumn = "balance_tl" | "balance_usd" | "balance_rub";
+
 type OrderItemPayload = {
+  cartId?: string;
   service_id: number;
   site_code: number;
-  service_title?: string;
-  platform?: string;
-  category?: string;
+  service_title: string;
+  platform: string;
+  category: string;
   quantity: number;
-  unit_price?: number;
-  total_price?: number;
-  unit_cost_price?: number;
-  total_cost_price?: number;
-  guarantee_label?: string;
-  speed?: string;
-  target_username?: string;
+  unit_price: number;
+  total_price: number;
+  unit_cost_price: number;
+  total_cost_price: number;
+  guarantee_label: string;
+  speed: string;
+  target_username: string;
   target_link?: string;
   order_note?: string;
 };
@@ -39,42 +36,14 @@ type OrderRequestPayload = {
   contact_value: string;
   currency: CurrencyCode;
   payment_method: PaymentMethod;
-  policies_accepted: boolean;
   items: OrderItemPayload[];
-};
-
-type OrderRowForInsert = {
-  user_id: number | null;
-  batch_code: string;
-  order_number: string;
-  full_name: string;
-  phone_number: string;
-  contact_type: ContactType;
-  contact_value: string;
-  platform: string;
-  category: string;
-  service_id: number;
-  site_code: number;
-  service_title: string;
-  quantity: number;
-  unit_price: number;
-  total_price: number;
-  unit_cost_price: number;
-  total_cost_price: number;
-  guarantee_label: string;
-  speed: string;
-  currency: CurrencyCode;
-  payment_method: PaymentMethod;
-  target_username: string;
-  target_link: string | null;
-  order_note: string | null;
-  status: string;
 };
 
 type BalanceUserRow = RowDataPacket & {
   id: number;
-  balance_usd: string | number;
+  email: string;
   balance_tl: string | number;
+  balance_usd: string | number;
   balance_rub: string | number;
 };
 
@@ -93,10 +62,84 @@ const ALLOWED_PAYMENT_METHODS: PaymentMethod[] = [
   "balance",
 ];
 
-function getPaymentMethodLabel(method: PaymentMethod) {
-  if (method === "turkey_bank") return "Türkiye Banka Havalesi / EFT";
-  if (method === "balance") return "MedyaTora Bakiyesi";
-  return "Destek ile İletişime Geçilecek";
+const MAX_ITEMS_PER_ORDER = 50;
+const MIN_QUANTITY = 1;
+const MAX_QUANTITY = 10_000_000;
+
+function normalizeString(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizePhoneNumber(value: unknown) {
+  return String(value || "")
+    .replace(/[^\d+]/g, "")
+    .trim()
+    .slice(0, 40);
+}
+
+function normalizeCurrency(value: unknown): CurrencyCode | null {
+  const currency = normalizeString(value).toUpperCase();
+
+  if (currency === "TL") return "TL";
+  if (currency === "USD") return "USD";
+  if (currency === "RUB") return "RUB";
+
+  return null;
+}
+
+function normalizeContactType(value: unknown): ContactType | null {
+  const raw = normalizeString(value);
+  const normalized = raw.toLowerCase().replace(/\s+/g, "");
+
+  if (normalized === "telegram") return "Telegram";
+  if (normalized === "whatsapp" || normalized === "wa") return "WhatsApp";
+  if (normalized === "instagram" || normalized === "ig") return "Instagram";
+
+  if (
+    normalized === "e-posta" ||
+    normalized === "eposta" ||
+    normalized === "email" ||
+    normalized === "e-mail" ||
+    normalized === "mail"
+  ) {
+    return "E-posta";
+  }
+
+  return null;
+}
+
+function normalizePaymentMethod(value: unknown): PaymentMethod | null {
+  const method = normalizeString(value);
+
+  if (method === "turkey_bank") return "turkey_bank";
+  if (method === "support") return "support";
+  if (method === "balance") return "balance";
+
+  return null;
+}
+
+function roundMoney(value: number) {
+  return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
+}
+
+function formatMoney(value: number, currency: CurrencyCode) {
+  const safeValue = Number(value || 0);
+
+  if (currency === "TL") {
+    return `${safeValue.toLocaleString("tr-TR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })} TL`;
+  }
+
+  return `${safeValue.toLocaleString("tr-TR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })} ${currency}`;
+}
+
+function formatNumber(value: number) {
+  return Number(value || 0).toLocaleString("tr-TR");
 }
 
 function getBalanceColumn(currency: CurrencyCode): BalanceColumn {
@@ -105,8 +148,15 @@ function getBalanceColumn(currency: CurrencyCode): BalanceColumn {
   return "balance_tl";
 }
 
-function formatMoney(value: number, currency: CurrencyCode) {
-  return `${value.toFixed(2)} ${currency}`;
+function getPaymentMethodLabel(method: PaymentMethod) {
+  if (method === "turkey_bank") return "Türkiye Banka Havalesi / EFT";
+  if (method === "balance") return "MedyaTora Bakiyesi";
+  return "Destek ile Ödeme";
+}
+
+function getInitialOrderStatus(method: PaymentMethod) {
+  if (method === "balance") return "pending";
+  return "pending_payment";
 }
 
 function createBatchCode() {
@@ -131,57 +181,72 @@ function createOrderNumber() {
   return `MT-ORD-${datePart}-${random}`;
 }
 
-function isPositiveNumber(value: unknown) {
-  return typeof value === "number" && Number.isFinite(value) && value > 0;
+function sanitizeItem(item: unknown): OrderItemPayload | null {
+  if (!item || typeof item !== "object") return null;
+
+  const raw = item as Partial<OrderItemPayload>;
+
+  const serviceId = Number(raw.service_id || 0);
+  const siteCode = Number(raw.site_code || 0);
+  const quantity = Number(raw.quantity || 0);
+
+  const unitPrice = roundMoney(Number(raw.unit_price || 0));
+  const totalPrice = roundMoney(Number(raw.total_price || 0));
+  const unitCostPrice = roundMoney(Number(raw.unit_cost_price || 0));
+  const totalCostPrice = roundMoney(Number(raw.total_cost_price || 0));
+
+  const serviceTitle = normalizeString(raw.service_title).slice(0, 500);
+  const platform = normalizeString(raw.platform).toLowerCase().slice(0, 80);
+  const category = normalizeString(raw.category).toLowerCase().slice(0, 80);
+  const guaranteeLabel = normalizeString(raw.guarantee_label).slice(0, 120);
+  const speed = normalizeString(raw.speed).slice(0, 120);
+  const targetUsername = normalizeString(raw.target_username).slice(0, 255);
+  const targetLink = normalizeString(raw.target_link).slice(0, 500);
+  const orderNote = normalizeString(raw.order_note).slice(0, 1000);
+
+  if (!Number.isFinite(serviceId) || serviceId <= 0) return null;
+  if (!Number.isFinite(siteCode) || siteCode <= 0) return null;
+  if (!serviceTitle) return null;
+  if (!platform) return null;
+  if (!category) return null;
+
+  if (
+    !Number.isFinite(quantity) ||
+    quantity < MIN_QUANTITY ||
+    quantity > MAX_QUANTITY
+  ) {
+    return null;
+  }
+
+  if (!Number.isFinite(unitPrice) || unitPrice <= 0) return null;
+  if (!Number.isFinite(totalPrice) || totalPrice <= 0) return null;
+
+  if (!targetUsername || targetUsername.length < 2) return null;
+
+  return {
+    service_id: serviceId,
+    site_code: siteCode,
+    service_title: serviceTitle,
+    platform,
+    category,
+    quantity,
+    unit_price: unitPrice,
+    total_price: totalPrice,
+    unit_cost_price: Number.isFinite(unitCostPrice) ? unitCostPrice : 0,
+    total_cost_price: Number.isFinite(totalCostPrice) ? totalCostPrice : 0,
+    guarantee_label: guaranteeLabel || "-",
+    speed: speed || "-",
+    target_username: targetUsername,
+    target_link: targetLink || "",
+    order_note: orderNote || "",
+  };
 }
 
-function normalizeString(value: unknown) {
-  return typeof value === "string" ? value.trim() : "";
-}
+function validateCalculatedTotal(item: OrderItemPayload) {
+  const expectedTotal = roundMoney((item.quantity / 1000) * item.unit_price);
+  const difference = Math.abs(expectedTotal - item.total_price);
 
-function normalizePhoneNumber(value: string) {
-  return value.replace(/[^\d+]/g, "").trim();
-}
-
-function roundMoney(value: number) {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
-}
-
-function toNumber(value: unknown) {
-  const num = Number(value || 0);
-  return Number.isFinite(num) ? num : 0;
-}
-
-function toBoolean(value: unknown) {
-  return value === true || value === 1 || value === "1";
-}
-
-function getUnitSalePrice(service: OrderServiceItem, currency: CurrencyCode) {
-  if (currency === "USD") return service.salePriceUsd;
-  if (currency === "RUB") return service.salePriceRub;
-  return service.salePriceTl;
-}
-
-function getUnitCostPrice(service: OrderServiceItem, currency: CurrencyCode) {
-  if (currency === "USD") return service.costPriceUsd;
-  if (currency === "RUB") return service.costPriceRub;
-  return service.costPriceTl;
-}
-
-function validateItemBasic(item: unknown): item is OrderItemPayload {
-  if (!item || typeof item !== "object") return false;
-
-  const x = item as Record<string, unknown>;
-
-  return (
-    isPositiveNumber(x.service_id) &&
-    isPositiveNumber(x.site_code) &&
-    isPositiveNumber(x.quantity)
-  );
-}
-
-function formatNumber(value: number) {
-  return Number.isFinite(value) ? value.toLocaleString("tr-TR") : String(value);
+  return difference <= 1;
 }
 
 async function sendTelegramMessage(text: string) {
@@ -231,33 +296,16 @@ async function sendTelegramMessage(text: string) {
         }
       );
 
-      req.on("error", (err) => {
-        reject(err);
-      });
-
+      req.on("error", (err) => reject(err));
       req.write(body);
       req.end();
     });
 
-    try {
-      const json = JSON.parse(responseText);
-
-      if (!json.ok) {
-        return {
-          ok: false,
-          warning: "Telegram API sipariş bildirimini kabul etmedi.",
-        };
-      }
-    } catch {
-      return {
-        ok: false,
-        warning: "Telegram cevabı beklenen formatta alınamadı.",
-      };
-    }
+    const json = JSON.parse(responseText);
 
     return {
-      ok: true,
-      warning: null,
+      ok: Boolean(json.ok),
+      warning: json.ok ? null : "Telegram API bildirimi kabul etmedi.",
     };
   } catch (error) {
     return {
@@ -270,198 +318,148 @@ async function sendTelegramMessage(text: string) {
   }
 }
 
-async function getVerifiedServiceForOrder(params: {
-  serviceId: number;
-  siteCode: number;
-}) {
-  const pool = getMysqlPool();
-
-  const [rows] = await pool.query(
-    `
-    SELECT
-      id,
-      panel_service_id,
-      site_code,
-      platform,
-      category,
-      original_name,
-      clean_title,
-      subtitle,
-      guarantee,
-      guarantee_label,
-      min,
-      max,
-      speed,
-      level,
-      description,
-      tl_cost_price,
-      usd_cost_price,
-      tl_sale_price,
-      usd_sale_price,
-      rub_sale_price,
-      manual_title,
-      manual_description,
-      manual_sale_price_tl
-    FROM services
-    WHERE is_active = 1
-      AND public_visible = 1
-      AND review_status = 'approved'
-      AND product_type = 'single'
-      AND public_page = 'paketler'
-      AND panel_service_id = ?
-      AND site_code = ?
-      AND tl_sale_price > 0
-      AND usd_sale_price > 0
-      AND rub_sale_price > 0
-      AND min > 0
-      AND max > 0
-    LIMIT 1
-    `,
-    [params.serviceId, params.siteCode]
-  );
-
-  const row = (rows as any[])[0];
-
-  if (!row) {
-    return null;
-  }
-
-  const dbRow: DbServiceRow = {
-    id: Number(row.id),
-    panel_service_id: Number(row.panel_service_id),
-    site_code: Number(row.site_code),
-    platform: row.platform || "",
-    category: row.category || "",
-    original_name: row.original_name || "",
-    clean_title: row.clean_title || "",
-    subtitle: row.subtitle || "",
-    guarantee: toBoolean(row.guarantee),
-    guarantee_label: row.guarantee_label || "",
-    min: toNumber(row.min),
-    max: toNumber(row.max),
-    speed: row.speed || "",
-    level: row.level || "",
-    description: row.description || "",
-    tl_cost_price: toNumber(row.tl_cost_price),
-    usd_cost_price: toNumber(row.usd_cost_price),
-    tl_sale_price: toNumber(row.tl_sale_price),
-    usd_sale_price: toNumber(row.usd_sale_price),
-    rub_sale_price: toNumber(row.rub_sale_price),
-    manual_title: row.manual_title || null,
-    manual_description: row.manual_description || null,
-    manual_sale_price_tl:
-      row.manual_sale_price_tl === null
-        ? null
-        : toNumber(row.manual_sale_price_tl),
-  };
-
-  return mapDbServiceToOrderItem(dbRow);
-}
-
 export async function POST(req: Request) {
   try {
-    const rawBody = await req.json();
+    if (!hasMysqlConfig()) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "MySQL bağlantısı bulunamadı.",
+        },
+        { status: 503 }
+      );
+    }
+
+    const rawBody = await req.json().catch(() => null);
 
     if (!rawBody || typeof rawBody !== "object") {
       return NextResponse.json(
-        { success: false, error: "Geçersiz istek gövdesi." },
+        {
+          success: false,
+          error: "Geçersiz istek gövdesi.",
+        },
         { status: 400 }
       );
     }
 
     const body = rawBody as Partial<OrderRequestPayload>;
 
-    const fullName = normalizeString(body.full_name);
-
-    const phoneNumber =
-      typeof body.phone_number === "string"
-        ? normalizePhoneNumber(body.phone_number)
-        : "";
-
-    const contactType = body.contact_type;
-    const contactValue = normalizeString(body.contact_value);
-    const currency = body.currency;
-    const paymentMethod = body.payment_method;
-    const policiesAccepted = body.policies_accepted === true;
-    const items = Array.isArray(body.items) ? body.items : [];
+    const fullName = normalizeString(body.full_name).slice(0, 191);
+    const phoneNumber = normalizePhoneNumber(body.phone_number);
+    const contactType = normalizeContactType(body.contact_type);
+    const contactValue = normalizeString(body.contact_value).slice(0, 191);
+    const currency = normalizeCurrency(body.currency);
+    const paymentMethod = normalizePaymentMethod(body.payment_method);
 
     if (!fullName || fullName.length < 2) {
       return NextResponse.json(
-        { success: false, error: "Geçerli bir ad soyad giriniz." },
+        {
+          success: false,
+          error: "Geçerli bir ad soyad giriniz.",
+        },
         { status: 400 }
       );
     }
 
     if (!phoneNumber || phoneNumber.length < 7) {
       return NextResponse.json(
-        { success: false, error: "Geçerli bir telefon numarası giriniz." },
+        {
+          success: false,
+          error: "Geçerli bir telefon numarası giriniz.",
+        },
         { status: 400 }
       );
     }
 
     if (!contactType || !ALLOWED_CONTACT_TYPES.includes(contactType)) {
       return NextResponse.json(
-        { success: false, error: "Geçerli bir iletişim türü seçiniz." },
+        {
+          success: false,
+          error: "Geçerli bir iletişim türü seçiniz.",
+        },
         { status: 400 }
       );
     }
 
     if (!contactValue) {
       return NextResponse.json(
-        { success: false, error: "İletişim bilgisi boş bırakılamaz." },
+        {
+          success: false,
+          error: "İletişim bilgisi boş bırakılamaz.",
+        },
         { status: 400 }
       );
     }
 
     if (!currency || !ALLOWED_CURRENCIES.includes(currency)) {
       return NextResponse.json(
-        { success: false, error: "Geçerli bir para birimi seçiniz." },
+        {
+          success: false,
+          error: "Geçerli bir para birimi seçiniz.",
+        },
         { status: 400 }
       );
     }
 
     if (!paymentMethod || !ALLOWED_PAYMENT_METHODS.includes(paymentMethod)) {
       return NextResponse.json(
-        { success: false, error: "Geçerli bir ödeme yöntemi seçiniz." },
-        { status: 400 }
-      );
-    }
-
-    if (!policiesAccepted) {
-      return NextResponse.json(
         {
           success: false,
-          error:
-            "Sipariş oluşturmak için kullanım şartları, gizlilik politikası, iade koşulları ve mesafeli satış sözleşmesini kabul etmelisiniz.",
+          error: "Geçerli bir ödeme yöntemi seçiniz.",
         },
         { status: 400 }
       );
     }
 
-    if (!items.length) {
+    const rawItems = Array.isArray(body.items) ? body.items : [];
+
+    if (rawItems.length === 0) {
       return NextResponse.json(
-        { success: false, error: "En az bir hizmet seçmelisiniz." },
+        {
+          success: false,
+          error: "Sipariş oluşturmak için en az 1 hizmet seçmelisiniz.",
+        },
         { status: 400 }
       );
     }
 
-    if (items.some((item) => !validateItemBasic(item))) {
+    if (rawItems.length > MAX_ITEMS_PER_ORDER) {
       return NextResponse.json(
-        { success: false, error: "Sipariş hizmetlerinden biri geçersiz." },
+        {
+          success: false,
+          error: `Tek seferde en fazla ${MAX_ITEMS_PER_ORDER} hizmet gönderilebilir.`,
+        },
         { status: 400 }
       );
     }
 
-    if (!hasMysqlConfig()) {
-      console.warn("[MedyaTora] Sipariş alınamadı: MySQL env eksik.");
+    const items = rawItems.map(sanitizeItem);
 
+    if (items.some((item) => item === null)) {
       return NextResponse.json(
         {
           success: false,
           error:
-            "Geliştirme ortamında MySQL bağlantısı yok. Canlı ortamda sipariş sistemi çalışır.",
+            "Sepette geçersiz hizmet bilgisi var. Lütfen sepeti kontrol edip tekrar deneyin.",
         },
-        { status: 503 }
+        { status: 400 }
+      );
+    }
+
+    const orderItems = items as OrderItemPayload[];
+
+    const invalidTotalItem = orderItems.find(
+      (item) => !validateCalculatedTotal(item)
+    );
+
+    if (invalidTotalItem) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Sipariş tutarı doğrulanamadı. Lütfen sayfayı yenileyip tekrar deneyin.",
+        },
+        { status: 400 }
       );
     }
 
@@ -472,127 +470,81 @@ export async function POST(req: Request) {
       return NextResponse.json(
         {
           success: false,
-          error: "Bakiye ile ödeme yapmak için giriş yapmalısın.",
+          error: "Bakiye ile ödeme yapmak için giriş yapmalısınız.",
         },
         { status: 401 }
       );
     }
 
-    const batchCode = createBatchCode();
-    const rows: OrderRowForInsert[] = [];
-
-    for (const item of items as OrderItemPayload[]) {
-      const quantity = Number(item.quantity);
-      const serviceId = Number(item.service_id);
-      const siteCode = Number(item.site_code);
-
-      const verifiedService = await getVerifiedServiceForOrder({
-        serviceId,
-        siteCode,
-      });
-
-      if (!verifiedService) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: `Ürün doğrulanamadı. Ürün kodu: ${siteCode}`,
-          },
-          { status: 400 }
-        );
-      }
-
-      if (quantity < verifiedService.min || quantity > verifiedService.max) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: `${verifiedService.siteCode} kodlu ürün için miktar ${verifiedService.min} - ${verifiedService.max} aralığında olmalıdır.`,
-          },
-          { status: 400 }
-        );
-      }
-
-      const unitPrice = roundMoney(getUnitSalePrice(verifiedService, currency));
-      const unitCostPrice = roundMoney(getUnitCostPrice(verifiedService, currency));
-      const totalPrice = roundMoney((quantity / 1000) * unitPrice);
-      const totalCostPrice = roundMoney((quantity / 1000) * unitCostPrice);
-
-      rows.push({
-        user_id: userId,
-        batch_code: batchCode,
-        order_number: createOrderNumber(),
-        full_name: fullName,
-        phone_number: phoneNumber,
-        contact_type: contactType,
-        contact_value: contactValue,
-        platform: verifiedService.platform,
-        category: verifiedService.category,
-        service_id: verifiedService.id,
-        site_code: verifiedService.siteCode,
-        service_title: verifiedService.title,
-        quantity,
-        unit_price: unitPrice,
-        total_price: totalPrice,
-        unit_cost_price: unitCostPrice,
-        total_cost_price: totalCostPrice,
-        guarantee_label: verifiedService.guaranteeLabel,
-        speed: verifiedService.speed,
-        currency,
-        payment_method: paymentMethod,
-        target_username: normalizeString(item.target_username),
-        target_link: normalizeString(item.target_link) || null,
-        order_note: normalizeString(item.order_note) || null,
-        status: paymentMethod === "turkey_bank" ? "pending_payment" : "pending",
-      });
-    }
-
-    const totalSaleForBalance = roundMoney(
-      rows.reduce((sum, item) => sum + Number(item.total_price || 0), 0)
+    const totalPrice = roundMoney(
+      orderItems.reduce((sum, item) => sum + Number(item.total_price || 0), 0)
     );
+
+    const totalCostPrice = roundMoney(
+      orderItems.reduce(
+        (sum, item) => sum + Number(item.total_cost_price || 0),
+        0
+      )
+    );
+
+    if (!Number.isFinite(totalPrice) || totalPrice <= 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Sipariş toplam tutarı geçersiz.",
+        },
+        { status: 400 }
+      );
+    }
 
     const pool = getMysqlPool();
     const connection = await pool.getConnection();
 
+    const batchCode = createBatchCode();
+    const status = getInitialOrderStatus(paymentMethod);
+    const orderNumbers: string[] = [];
+    const insertedOrderIds: number[] = [];
+
+    let balanceBefore = 0;
+    let balanceAfter = 0;
+
     try {
       await connection.beginTransaction();
 
-      let balanceBefore = 0;
-      let balanceAfter = 0;
-
-      let balanceBeforeUsd = 0;
-      let balanceAfterUsd = 0;
-
-      let firstInsertedOrderId: number | null = null;
-
       if (paymentMethod === "balance") {
-        if (!currentUser) {
+        if (!currentUser?.id) {
           await connection.rollback();
 
           return NextResponse.json(
             {
               success: false,
-              error: "Bakiye ile ödeme yapmak için giriş yapmalısın.",
+              error: "Bakiye ile ödeme yapmak için giriş yapmalısınız.",
             },
             { status: 401 }
           );
         }
 
-        const balanceUserId = currentUser.id;
         const balanceColumn = getBalanceColumn(currency);
 
         const [userRows] = await connection.query<BalanceUserRow[]>(
           `
-          SELECT id, balance_usd, balance_tl, balance_rub
+          SELECT
+            id,
+            email,
+            balance_tl,
+            balance_usd,
+            balance_rub
           FROM users
           WHERE id = ?
           LIMIT 1
           FOR UPDATE
           `,
-          [balanceUserId]
+          [currentUser.id]
         );
 
-        const userRow = userRows[0];
+        const lockedUser = userRows[0];
 
-        if (!userRow) {
+        if (!lockedUser) {
           await connection.rollback();
 
           return NextResponse.json(
@@ -604,49 +556,24 @@ export async function POST(req: Request) {
           );
         }
 
-        balanceBefore = roundMoney(Number(userRow[balanceColumn] || 0));
-        balanceAfter = roundMoney(balanceBefore - totalSaleForBalance);
+        balanceBefore = roundMoney(Number(lockedUser[balanceColumn] || 0));
 
-        balanceBeforeUsd = roundMoney(Number(userRow.balance_usd || 0));
-        balanceAfterUsd =
-          currency === "USD" ? balanceAfter : balanceBeforeUsd;
-
-        if (balanceBefore < totalSaleForBalance) {
+        if (balanceBefore < totalPrice) {
           await connection.rollback();
-
-          const tlBalance = roundMoney(Number(userRow.balance_tl || 0));
-          const usdBalance = roundMoney(Number(userRow.balance_usd || 0));
-          const rubBalance = roundMoney(Number(userRow.balance_rub || 0));
-
-          const otherBalanceHint =
-            currency === "USD" && tlBalance > 0
-              ? " TL bakiyeniz var; TL ile ödeme yapmak için para birimini TL seçebilirsiniz."
-              : currency === "USD" && rubBalance > 0
-                ? " RUB bakiyeniz var; RUB ile ödeme yapmak için para birimini RUB seçebilirsiniz."
-                : currency === "TL" && usdBalance > 0
-                  ? " USD bakiyeniz var; USD ile ödeme yapmak için para birimini USD seçebilirsiniz."
-                  : currency === "TL" && rubBalance > 0
-                    ? " RUB bakiyeniz var; RUB ile ödeme yapmak için para birimini RUB seçebilirsiniz."
-                    : currency === "RUB" && tlBalance > 0
-                      ? " TL bakiyeniz var; TL ile ödeme yapmak için para birimini TL seçebilirsiniz."
-                      : currency === "RUB" && usdBalance > 0
-                        ? " USD bakiyeniz var; USD ile ödeme yapmak için para birimini USD seçebilirsiniz."
-                        : "";
 
           return NextResponse.json(
             {
               success: false,
-              error:
-                `${currency} bakiyeniz yetersiz. ` +
-                `Sipariş tutarı: ${formatMoney(totalSaleForBalance, currency)}. ` +
-                `Mevcut bakiyeleriniz: TL ${tlBalance.toFixed(2)}, USD ${usdBalance.toFixed(
-                  2
-                )}, RUB ${rubBalance.toFixed(2)}.` +
-                otherBalanceHint,
+              error: `${currency} bakiyeniz yetersiz. Sipariş tutarı: ${formatMoney(
+                totalPrice,
+                currency
+              )}. Mevcut bakiyeniz: ${formatMoney(balanceBefore, currency)}.`,
             },
             { status: 400 }
           );
         }
+
+        balanceAfter = roundMoney(balanceBefore - totalPrice);
 
         await connection.execute(
           `
@@ -655,11 +582,13 @@ export async function POST(req: Request) {
           WHERE id = ?
           LIMIT 1
           `,
-          [balanceAfter, balanceUserId]
+          [balanceAfter, currentUser.id]
         );
       }
 
-      for (const row of rows) {
+      for (const item of orderItems) {
+        const orderNumber = createOrderNumber();
+
         const [insertResult] = await connection.execute<ResultSetHeader>(
           `
           INSERT INTO order_requests (
@@ -691,54 +620,44 @@ export async function POST(req: Request) {
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `,
           [
-            row.user_id,
-            row.batch_code,
-            row.order_number,
-            row.full_name,
-            row.phone_number,
-            row.contact_type,
-            row.contact_value,
-            row.platform,
-            row.category,
-            row.service_id,
-            row.site_code,
-            row.service_title,
-            row.quantity,
-            row.unit_price,
-            row.total_price,
-            row.unit_cost_price,
-            row.total_cost_price,
-            row.guarantee_label,
-            row.speed,
-            row.currency,
-            row.payment_method,
-            row.target_username,
-            row.target_link,
-            row.order_note,
-            row.status,
+            userId,
+            batchCode,
+            orderNumber,
+            fullName,
+            phoneNumber,
+            contactType,
+            contactValue,
+            item.platform,
+            item.category,
+            Number(item.service_id),
+            Number(item.site_code),
+            item.service_title,
+            Number(item.quantity),
+            roundMoney(Number(item.unit_price)),
+            roundMoney(Number(item.total_price)),
+            roundMoney(Number(item.unit_cost_price || 0)),
+            roundMoney(Number(item.total_cost_price || 0)),
+            item.guarantee_label || "-",
+            item.speed || "-",
+            currency,
+            paymentMethod,
+            item.target_username,
+            item.target_link || null,
+            item.order_note || null,
+            status,
           ]
         );
 
-        const insertedId = Number(insertResult.insertId || 0);
+        const insertedOrderId = Number(insertResult.insertId || 0);
 
-        if (!firstInsertedOrderId && insertedId) {
-          firstInsertedOrderId = insertedId;
+        if (insertedOrderId) {
+          insertedOrderIds.push(insertedOrderId);
         }
+
+        orderNumbers.push(orderNumber);
       }
 
-      if (paymentMethod === "balance") {
-        if (!currentUser) {
-          await connection.rollback();
-
-          return NextResponse.json(
-            {
-              success: false,
-              error: "Bakiye ile ödeme yapmak için giriş yapmalısın.",
-            },
-            { status: 401 }
-          );
-        }
-
+      if (paymentMethod === "balance" && currentUser?.id) {
         await connection.execute(
           `
           INSERT INTO balance_transactions (
@@ -760,14 +679,18 @@ export async function POST(req: Request) {
             currentUser.id,
             "order_payment",
             currency,
-            -totalSaleForBalance,
+            -totalPrice,
             balanceBefore,
             balanceAfter,
-            currency === "USD" ? -totalSaleForBalance : 0,
-            balanceBeforeUsd,
-            balanceAfterUsd,
-            `MedyaTora siparis odemesi - ${batchCode} - ${currency}`,
-            firstInsertedOrderId,
+            currency === "USD" ? -totalPrice : 0,
+            Number(currentUser.balance_usd || 0),
+            currency === "USD"
+              ? balanceAfter
+              : Number(currentUser.balance_usd || 0),
+            `MedyaTora sipariş ödemesi - ${batchCode} - ${orderNumbers.join(
+              ", "
+            )} - ${currency}`,
+            insertedOrderIds[0] || null,
           ]
         );
       }
@@ -776,7 +699,7 @@ export async function POST(req: Request) {
     } catch (dbError) {
       await connection.rollback();
 
-      console.error("MySQL order insert error:", dbError);
+      console.error("ORDER_REQUEST_DB_ERROR", dbError);
 
       return NextResponse.json(
         {
@@ -790,62 +713,45 @@ export async function POST(req: Request) {
       connection.release();
     }
 
-    const lines = rows
-      .map(
-        (item, index) =>
-          `${index + 1}. ${item.service_title}\n` +
+    const profit = roundMoney(totalPrice - totalCostPrice);
+
+    const itemSummary = orderItems
+      .map((item, index) => {
+        return (
+          `${index + 1}) ${item.service_title}\n` +
+          `   Ürün Kodu: ${item.site_code}\n` +
           `   Panel Servis ID: ${item.service_id}\n` +
-          `   Müşteri Ürün Kodu: ${item.site_code}\n` +
-          `   Platform: ${item.platform}\n` +
-          `   Kategori: ${item.category}\n` +
-          `   Garanti: ${item.guarantee_label}\n` +
-          `   Hız: ${item.speed}\n` +
+          `   Platform/Kategori: ${item.platform} / ${item.category}\n` +
           `   Miktar: ${formatNumber(item.quantity)}\n` +
-          `   Birim Satış: ${item.unit_price} ${currency} / 1000\n` +
-          `   Toplam Satış: ${item.total_price} ${currency}\n` +
-          `   Toplam Alış: ${item.total_cost_price} ${currency}\n` +
-          `   Hedef Kullanıcı: ${item.target_username || "-"}\n` +
-          `   Hedef Link: ${item.target_link || "-"}\n` +
+          `   Hedef: ${item.target_username}\n` +
+          `   Link: ${item.target_link || "-"}\n` +
+          `   Tutar: ${formatMoney(item.total_price, currency)}\n` +
           `   Not: ${item.order_note || "-"}`
-      )
+        );
+      })
       .join("\n\n");
 
-    const orderNumberLines = rows
-      .map(
-        (row) =>
-          `• ${row.order_number} | Panel ID: ${row.service_id} | Ürün Kodu: ${row.site_code}`
-      )
-      .join("\n");
-
-    const totalSale = roundMoney(
-      rows.reduce((sum, item) => sum + Number(item.total_price || 0), 0)
-    );
-
-    const totalCost = roundMoney(
-      rows.reduce((sum, item) => sum + Number(item.total_cost_price || 0), 0)
-    );
-
-    const totalProfit = roundMoney(totalSale - totalCost);
-
     const telegramMessage =
-      `🛒 Yeni sipariş alındı\n\n` +
+      `📦 Yeni SMMTora siparişi alındı\n\n` +
       `🧾 Batch Kodu: ${batchCode}\n` +
+      `🔢 Sipariş Numaraları:\n${orderNumbers.join("\n")}\n\n` +
       `👤 Ad Soyad: ${fullName}\n` +
       `🆔 Kullanıcı Hesabı: ${
-        currentUser ? `#${currentUser.id} | ${currentUser.email}` : "Üyeliksiz sipariş"
+        currentUser
+          ? `#${currentUser.id} | ${currentUser.email}`
+          : "Üyeliksiz sipariş"
       }\n` +
       `📞 Telefon: ${phoneNumber}\n` +
       `📩 İletişim Türü: ${contactType}\n` +
       `📨 İletişim Bilgisi: ${contactValue}\n` +
-      `💱 Para Birimi: ${currency}\n` +
       `💳 Ödeme Yöntemi: ${getPaymentMethodLabel(paymentMethod)}\n` +
-      `📌 Sipariş Durumu: ${rows[0]?.status || "pending"}\n` +
-      `📦 Hizmet Sayısı: ${rows.length}\n` +
-      `💰 Toplam Alış: ${totalCost} ${currency}\n` +
-      `🏷️ Toplam Satış: ${totalSale} ${currency}\n` +
-      `📈 Tahmini Kâr: ${totalProfit} ${currency}\n\n` +
-      `🔢 Sipariş Numaraları:\n${orderNumberLines}\n\n` +
-      `📌 Sipariş Detayları:\n\n${lines}`;
+      `📌 Sipariş Durumu: ${status}\n` +
+      `💱 Para Birimi: ${currency}\n\n` +
+      `🧮 Hizmet Sayısı: ${orderItems.length}\n` +
+      `🏷️ Toplam Satış: ${formatMoney(totalPrice, currency)}\n` +
+      `💰 Toplam Alış: ${formatMoney(totalCostPrice, currency)}\n` +
+      `📈 Tahmini Kâr: ${formatMoney(profit, currency)}\n\n` +
+      `🧩 Sipariş Detayları:\n${itemSummary}`;
 
     const telegramResult = await sendTelegramMessage(telegramMessage);
 
@@ -856,24 +762,33 @@ export async function POST(req: Request) {
     return NextResponse.json(
       {
         success: true,
+        ok: true,
         message:
-          paymentMethod === "turkey_bank"
-            ? "Siparişiniz alındı. Ödeme kontrolünden sonra işleme alınacaktır."
-            : paymentMethod === "balance"
-              ? `Siparişiniz ${currency} bakiyenizden ödenerek alındı.`
-              : "Siparişiniz alındı. Ekibimiz sizinle iletişime geçecektir.",
+          paymentMethod === "balance"
+            ? "Siparişiniz bakiyenizden ödenerek oluşturuldu."
+            : paymentMethod === "turkey_bank"
+              ? "Siparişiniz oluşturuldu. Ödeme kontrolünden sonra işleme alınacaktır."
+              : "Siparişiniz oluşturuldu. Ödeme ve işlem adımları için ekibimiz sizinle iletişime geçecektir.",
         batchCode,
-        orderNumbers: rows.map((row) => row.order_number),
+        orderNumbers,
+        orderNumber: orderNumbers[0] || null,
+        orderIds: insertedOrderIds,
+        totalPrice,
+        totalCostPrice,
+        currency,
+        paymentMethod,
+        status,
         telegramWarning: telegramResult.warning,
       },
       { status: 200 }
     );
   } catch (error) {
-    console.error("Order request server error:", error);
+    console.error("ORDER_REQUEST_SERVER_ERROR", error);
 
     return NextResponse.json(
       {
         success: false,
+        ok: false,
         error:
           error instanceof Error
             ? error.message

@@ -3,7 +3,11 @@ import type { RowDataPacket } from "mysql2";
 import { getMysqlPool } from "@/lib/mysql";
 import { normalizeEmail, verifyPassword } from "@/lib/auth/password";
 import { createUserSession } from "@/lib/auth/session";
-import { getPublicUser } from "@/lib/auth/current-user";
+import {
+  getPublicUser,
+  normalizeDateValue,
+  type PreferredCurrency,
+} from "@/lib/auth/current-user";
 
 type LoginUserRow = RowDataPacket & {
   id: number;
@@ -22,6 +26,9 @@ type LoginUserRow = RowDataPacket & {
   welcome_bonus_claimed: number;
   is_active: number;
   is_admin: number;
+  whatsapp_verified_at: Date | string | null;
+  telegram_verified_at: Date | string | null;
+  contact_bonus_granted_at: Date | string | null;
 };
 
 function getClientIp(request: NextRequest) {
@@ -38,11 +45,14 @@ function getClientIp(request: NextRequest) {
   );
 }
 
-function normalizePreferredCurrency(value: string | null | undefined) {
+function normalizePreferredCurrency(
+  value: string | null | undefined
+): PreferredCurrency {
   const currency = value?.trim().toUpperCase();
 
   if (currency === "USD") return "USD";
   if (currency === "RUB") return "RUB";
+
   return "TL";
 }
 
@@ -80,7 +90,10 @@ export async function POST(request: NextRequest) {
         free_analysis_used,
         welcome_bonus_claimed,
         is_active,
-        is_admin
+        is_admin,
+        whatsapp_verified_at,
+        telegram_verified_at,
+        contact_bonus_granted_at
       FROM users
       WHERE email = ?
       LIMIT 1
@@ -145,9 +158,11 @@ export async function POST(request: NextRequest) {
         welcome_bonus_claimed: Boolean(user.welcome_bonus_claimed),
         is_active: Boolean(user.is_active),
         is_admin: Boolean(user.is_admin),
-        whatsapp_verified_at: null,
-        telegram_verified_at: null,
-        contact_bonus_granted_at: null,
+        whatsapp_verified_at: normalizeDateValue(user.whatsapp_verified_at),
+        telegram_verified_at: normalizeDateValue(user.telegram_verified_at),
+        contact_bonus_granted_at: normalizeDateValue(
+          user.contact_bonus_granted_at
+        ),
       }),
     });
   } catch (error) {

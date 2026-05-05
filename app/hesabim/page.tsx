@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { cookies, headers } from "next/headers";
 import type { RowDataPacket } from "mysql2";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { getMysqlPool } from "@/lib/mysql";
 import UserMenu from "@/app/components/auth/UserMenu";
 import ContactVerificationCard from "@/app/components/auth/ContactVerificationCard";
+
+type LocaleCode = "tr" | "en" | "ru";
 
 type OrderRow = RowDataPacket & {
   id: number;
@@ -61,16 +64,446 @@ type AnalysisStatsRow = RowDataPacket & {
   pending_analysis_requests: string | number;
 };
 
-const statusLabels: Record<string, string> = {
-  pending_payment: "Ödeme Onaylanıyor",
-  pending: "Sipariş Alındı",
-  processing: "İşleme Alındı",
-  in_progress: "Devam Ediyor",
-  completed: "Tamamlandı",
-  cancelled: "İptal Edildi",
-  refunded: "İade Edildi",
-  partial_refunded: "Kısmi Tamamlandı",
-  failed: "Başarısız",
+type AccountText = {
+  accountSubtitle: string;
+  home: string;
+  analysis: string;
+  packages: string;
+  myAccount: string;
+  welcomePrefix: string;
+  intro: string;
+  createNewOrder: string;
+  leaveAnalysisRequest: string;
+  walletBalances: string;
+  walletDesc: string;
+  shopWithBalance: string;
+  tlWallet: string;
+  usdWallet: string;
+  rubWallet: string;
+  tlWalletDesc: string;
+  usdWalletDesc: string;
+  rubWalletDesc: string;
+  freeAnalysisRight: string;
+  active: string;
+  used: string;
+  waiting: string;
+  freeAnalysisDesc: string;
+  contactBonus: string;
+  granted: string;
+  contactBonusDesc: string;
+  emailVerification: string;
+  registeredEmail: string;
+  whatsappVerification: string;
+  phoneNotAdded: string;
+  telegramVerification: string;
+  telegramWebhookPending: string;
+  verified: string;
+  pending: string;
+  gain: string;
+  completed: string;
+  codeSend: string;
+  whatsappVerify: string;
+  telegramVerify: string;
+  nextStageNote: string;
+  freeAnalysisReward: string;
+  usdBonusReward: string;
+  noRepeatBonusReward: string;
+  totalOrders: string;
+  totalOrdersDesc: string;
+  activeProcess: string;
+  completedOrders: string;
+  analysisRequest: string;
+  pendingCount: string;
+  balanceMovements: string;
+  latestBalanceTransactions: string;
+  latestFiveBalanceDesc: string;
+  noBalanceTransaction: string;
+  noBalanceTransactionDesc: string;
+  noDescription: string;
+  amount: string;
+  finalBalance: string;
+  analysisHistory: string;
+  yourAnalysisRequests: string;
+  latestFiveAnalysisDesc: string;
+  newAnalysisRequest: string;
+  noAnalysisRequest: string;
+  noAnalysisRequestDesc: string;
+  analysisRequestButton: string;
+  free: string;
+  userLabel: string;
+  accountType: string;
+  content: string;
+  date: string;
+  analysisPrice: string;
+  orderHistory: string;
+  latestOrders: string;
+  latestOrdersDesc: string;
+  viewAllOrders: string;
+  noOrder: string;
+  noOrderDesc: string;
+  firstOrderButton: string;
+  order: string;
+  service: string;
+  total: string;
+  status: string;
+  detail: string;
+  orderNo: string;
+  target: string;
+  statusLabels: Record<string, string>;
+  transactionTypeLabels: Record<string, string>;
+};
+
+const texts: Record<LocaleCode, AccountText> = {
+  tr: {
+    accountSubtitle: "Kullanıcı hesabı",
+    home: "Ana Sayfa",
+    analysis: "Analiz",
+    packages: "Paketler",
+    myAccount: "Hesabım",
+    welcomePrefix: "Hoş geldin",
+    intro:
+      "Bu alanda bakiyelerini, ücretsiz analiz hakkını, doğrulama durumunu, siparişlerini, analiz taleplerini ve son bakiye hareketlerini takip edebilirsin.",
+    createNewOrder: "Yeni Sipariş Oluştur",
+    leaveAnalysisRequest: "Analiz Talebi Bırak",
+    walletBalances: "Cüzdan Bakiyeleri",
+    walletDesc:
+      "TL, USD ve RUB bakiyeleri ayrı tutulur. Sipariş hangi para birimiyle oluşturulursa ödeme o cüzdandan düşer.",
+    shopWithBalance: "Bakiye ile alışveriş",
+    tlWallet: "TL Cüzdanı",
+    usdWallet: "USD Cüzdanı",
+    rubWallet: "RUB Cüzdanı",
+    tlWalletDesc: "TL ile verilen siparişlerde kullanılır.",
+    usdWalletDesc: "USD ile verilen siparişlerde kullanılır.",
+    rubWalletDesc: "RUB ile verilen siparişlerde kullanılır.",
+    freeAnalysisRight: "Ücretsiz analiz hakkı",
+    active: "Aktif",
+    used: "Kullanıldı",
+    waiting: "Bekliyor",
+    freeAnalysisDesc:
+      "E-posta doğrulaması tamamlanınca 1 ücretsiz analiz hakkı tanımlanır.",
+    contactBonus: "İletişim bonusu",
+    granted: "Tanımlandı",
+    contactBonusDesc:
+      "WhatsApp veya Telegram doğrulamasından biri yeterlidir. Bonus yalnızca 1 kez verilir.",
+    emailVerification: "E-posta doğrulama",
+    registeredEmail: "Kayıtlı e-posta",
+    whatsappVerification: "WhatsApp doğrulama",
+    phoneNotAdded: "Telefon numarası henüz eklenmedi.",
+    telegramVerification: "Telegram doğrulama",
+    telegramWebhookPending: "Telegram bot doğrulaması webhook aşamasında bağlanacak.",
+    verified: "Doğrulandı",
+    pending: "Bekliyor",
+    gain: "Kazanım",
+    completed: "Tamamlandı",
+    codeSend: "Kod Gönder",
+    whatsappVerify: "WhatsApp ile Doğrula",
+    telegramVerify: "Telegram ile Doğrula",
+    nextStageNote:
+      "Kod gönderme ve doğrulama route’ları bir sonraki aşamada bağlanacak. Bu alan deploy öncesi arayüz olarak hazırlandı.",
+    freeAnalysisReward: "1 ücretsiz analiz hakkı",
+    usdBonusReward: "1 USD bakiye bonusu",
+    noRepeatBonusReward: "WhatsApp doğrulandıysa tekrar bonus verilmez",
+    totalOrders: "Toplam sipariş",
+    totalOrdersDesc: "Ana ekranda son 5 sipariş görünür.",
+    activeProcess: "Aktif işlem",
+    completedOrders: "Tamamlanan",
+    analysisRequest: "Analiz talebi",
+    pendingCount: "Bekleyen",
+    balanceMovements: "Bakiye hareketleri",
+    latestBalanceTransactions: "Son bakiye işlemleri",
+    latestFiveBalanceDesc: "Bu alanda sadece son 5 bakiye hareketi gösterilir.",
+    noBalanceTransaction: "Henüz bakiye hareketi yok.",
+    noBalanceTransactionDesc:
+      "Bakiye yükleme, sipariş ödemesi veya iade işlemleri olduğunda burada görünecek.",
+    noDescription: "Açıklama yok.",
+    amount: "Tutar",
+    finalBalance: "Son bakiye",
+    analysisHistory: "Analiz geçmişi",
+    yourAnalysisRequests: "Analiz taleplerin",
+    latestFiveAnalysisDesc: "Bu alanda son 5 analiz talebi gösterilir.",
+    newAnalysisRequest: "Yeni Analiz Talebi",
+    noAnalysisRequest: "Henüz hesabına bağlı analiz talebi yok.",
+    noAnalysisRequestDesc:
+      "Giriş yapmış halde analiz talebi bıraktığında burada görünecek.",
+    analysisRequestButton: "Analiz Talebi Bırak",
+    free: "Ücretsiz",
+    userLabel: "Kullanıcı",
+    accountType: "Hesap türü",
+    content: "İçerik",
+    date: "Tarih",
+    analysisPrice: "Analiz fiyatı",
+    orderHistory: "Sipariş geçmişi",
+    latestOrders: "Son siparişlerin",
+    latestOrdersDesc:
+      "Bu alanda son 5 sipariş görünür. Eski siparişlerini tüm siparişler sayfasından görebilirsin.",
+    viewAllOrders: "Tüm Siparişleri Gör",
+    noOrder: "Henüz hesabına bağlı sipariş yok.",
+    noOrderDesc: "Giriş yapmış halde sipariş oluşturduğunda burada görünecek.",
+    firstOrderButton: "İlk Siparişi Oluştur",
+    order: "Sipariş",
+    service: "Hizmet",
+    total: "Tutar",
+    status: "Durum",
+    detail: "Detay",
+    orderNo: "Sipariş No",
+    target: "Hedef",
+    statusLabels: {
+      pending_payment: "Ödeme Onaylanıyor",
+      pending: "Sipariş Alındı",
+      processing: "İşleme Alındı",
+      in_progress: "Devam Ediyor",
+      completed: "Tamamlandı",
+      cancelled: "İptal Edildi",
+      refunded: "İade Edildi",
+      partial_refunded: "Kısmi Tamamlandı",
+      failed: "Başarısız",
+    },
+    transactionTypeLabels: {
+      topup: "Bakiye Yükleme",
+      balance_topup: "Bakiye Yükleme",
+      order_payment: "Sipariş Ödemesi",
+      order_refund: "Sipariş İadesi",
+      order_partial_refund: "Kısmi İade",
+      welcome_bonus: "Hoş Geldin Bonusu",
+      welcome_google_bonus: "Google Kayıt Bonusu",
+      contact_verification_bonus: "İletişim Doğrulama Bonusu",
+      email_verification_bonus: "E-posta Doğrulama Bonusu",
+    },
+  },
+
+  en: {
+    accountSubtitle: "User account",
+    home: "Home",
+    analysis: "Analysis",
+    packages: "Packages",
+    myAccount: "My Account",
+    welcomePrefix: "Welcome",
+    intro:
+      "Here you can track your balances, free analysis right, verification status, orders, analysis requests, and latest balance activity.",
+    createNewOrder: "Create New Order",
+    leaveAnalysisRequest: "Submit Analysis Request",
+    walletBalances: "Wallet Balances",
+    walletDesc:
+      "TL, USD, and RUB balances are kept separately. The order is paid from the wallet matching the currency used.",
+    shopWithBalance: "Shop with balance",
+    tlWallet: "TL Wallet",
+    usdWallet: "USD Wallet",
+    rubWallet: "RUB Wallet",
+    tlWalletDesc: "Used for orders created in TL.",
+    usdWalletDesc: "Used for orders created in USD.",
+    rubWalletDesc: "Used for orders created in RUB.",
+    freeAnalysisRight: "Free analysis right",
+    active: "Active",
+    used: "Used",
+    waiting: "Waiting",
+    freeAnalysisDesc:
+      "When email verification is completed, 1 free analysis right is assigned.",
+    contactBonus: "Contact bonus",
+    granted: "Granted",
+    contactBonusDesc:
+      "One WhatsApp or Telegram verification is enough. The bonus is given only once.",
+    emailVerification: "Email verification",
+    registeredEmail: "Registered email",
+    whatsappVerification: "WhatsApp verification",
+    phoneNotAdded: "Phone number has not been added yet.",
+    telegramVerification: "Telegram verification",
+    telegramWebhookPending: "Telegram bot verification will be connected in the webhook stage.",
+    verified: "Verified",
+    pending: "Pending",
+    gain: "Reward",
+    completed: "Completed",
+    codeSend: "Send Code",
+    whatsappVerify: "Verify with WhatsApp",
+    telegramVerify: "Verify with Telegram",
+    nextStageNote:
+      "Code sending and verification routes will be connected in the next stage. This area was prepared as a pre-deploy interface.",
+    freeAnalysisReward: "1 free analysis right",
+    usdBonusReward: "1 USD balance bonus",
+    noRepeatBonusReward: "No extra bonus is given if WhatsApp is already verified",
+    totalOrders: "Total orders",
+    totalOrdersDesc: "The latest 5 orders appear on the main account screen.",
+    activeProcess: "Active process",
+    completedOrders: "Completed",
+    analysisRequest: "Analysis request",
+    pendingCount: "Pending",
+    balanceMovements: "Balance activity",
+    latestBalanceTransactions: "Latest balance transactions",
+    latestFiveBalanceDesc: "Only the latest 5 balance transactions are shown here.",
+    noBalanceTransaction: "No balance activity yet.",
+    noBalanceTransactionDesc:
+      "Top-ups, order payments, or refunds will appear here when they happen.",
+    noDescription: "No description.",
+    amount: "Amount",
+    finalBalance: "Final balance",
+    analysisHistory: "Analysis history",
+    yourAnalysisRequests: "Your analysis requests",
+    latestFiveAnalysisDesc: "The latest 5 analysis requests are shown here.",
+    newAnalysisRequest: "New Analysis Request",
+    noAnalysisRequest: "No analysis request is linked to your account yet.",
+    noAnalysisRequestDesc:
+      "When you submit an analysis request while logged in, it will appear here.",
+    analysisRequestButton: "Submit Analysis Request",
+    free: "Free",
+    userLabel: "User",
+    accountType: "Account type",
+    content: "Content",
+    date: "Date",
+    analysisPrice: "Analysis price",
+    orderHistory: "Order history",
+    latestOrders: "Your latest orders",
+    latestOrdersDesc:
+      "The latest 5 orders appear here. You can view older orders from the all orders page.",
+    viewAllOrders: "View All Orders",
+    noOrder: "No order is linked to your account yet.",
+    noOrderDesc: "When you create an order while logged in, it will appear here.",
+    firstOrderButton: "Create First Order",
+    order: "Order",
+    service: "Service",
+    total: "Total",
+    status: "Status",
+    detail: "Detail",
+    orderNo: "Order No",
+    target: "Target",
+    statusLabels: {
+      pending_payment: "Payment Pending",
+      pending: "Order Received",
+      processing: "Processing",
+      in_progress: "In Progress",
+      completed: "Completed",
+      cancelled: "Cancelled",
+      refunded: "Refunded",
+      partial_refunded: "Partially Completed",
+      failed: "Failed",
+    },
+    transactionTypeLabels: {
+      topup: "Balance Top-up",
+      balance_topup: "Balance Top-up",
+      order_payment: "Order Payment",
+      order_refund: "Order Refund",
+      order_partial_refund: "Partial Refund",
+      welcome_bonus: "Welcome Bonus",
+      welcome_google_bonus: "Google Signup Bonus",
+      contact_verification_bonus: "Contact Verification Bonus",
+      email_verification_bonus: "Email Verification Bonus",
+    },
+  },
+
+  ru: {
+    accountSubtitle: "Аккаунт пользователя",
+    home: "Главная",
+    analysis: "Анализ",
+    packages: "Пакеты",
+    myAccount: "Мой аккаунт",
+    welcomePrefix: "Добро пожаловать",
+    intro:
+      "Здесь вы можете отслеживать балансы, право на бесплатный анализ, статус верификации, заказы, заявки на анализ и последние операции по балансу.",
+    createNewOrder: "Создать новый заказ",
+    leaveAnalysisRequest: "Оставить заявку на анализ",
+    walletBalances: "Балансы кошельков",
+    walletDesc:
+      "Балансы TL, USD и RUB хранятся отдельно. Заказ оплачивается из кошелька той валюты, в которой он создан.",
+    shopWithBalance: "Покупка с баланса",
+    tlWallet: "Кошелёк TL",
+    usdWallet: "Кошелёк USD",
+    rubWallet: "Кошелёк RUB",
+    tlWalletDesc: "Используется для заказов в TL.",
+    usdWalletDesc: "Используется для заказов в USD.",
+    rubWalletDesc: "Используется для заказов в RUB.",
+    freeAnalysisRight: "Право на бесплатный анализ",
+    active: "Активно",
+    used: "Использовано",
+    waiting: "Ожидает",
+    freeAnalysisDesc:
+      "После подтверждения e-mail назначается 1 право на бесплатный анализ.",
+    contactBonus: "Бонус за контакт",
+    granted: "Назначен",
+    contactBonusDesc:
+      "Достаточно одной верификации WhatsApp или Telegram. Бонус выдаётся только один раз.",
+    emailVerification: "Подтверждение e-mail",
+    registeredEmail: "Зарегистрированный e-mail",
+    whatsappVerification: "Подтверждение WhatsApp",
+    phoneNotAdded: "Номер телефона ещё не добавлен.",
+    telegramVerification: "Подтверждение Telegram",
+    telegramWebhookPending: "Подтверждение через Telegram-бот будет подключено на этапе webhook.",
+    verified: "Подтверждено",
+    pending: "Ожидает",
+    gain: "Бонус",
+    completed: "Завершено",
+    codeSend: "Отправить код",
+    whatsappVerify: "Подтвердить через WhatsApp",
+    telegramVerify: "Подтвердить через Telegram",
+    nextStageNote:
+      "Маршруты отправки кода и подтверждения будут подключены на следующем этапе. Этот блок подготовлен как интерфейс перед deploy.",
+    freeAnalysisReward: "1 бесплатный анализ",
+    usdBonusReward: "1 USD бонус на баланс",
+    noRepeatBonusReward: "Если WhatsApp уже подтверждён, повторный бонус не выдаётся",
+    totalOrders: "Всего заказов",
+    totalOrdersDesc: "На главном экране аккаунта видны последние 5 заказов.",
+    activeProcess: "Активный процесс",
+    completedOrders: "Завершено",
+    analysisRequest: "Заявка на анализ",
+    pendingCount: "Ожидает",
+    balanceMovements: "Операции по балансу",
+    latestBalanceTransactions: "Последние операции по балансу",
+    latestFiveBalanceDesc: "Здесь показываются только последние 5 операций по балансу.",
+    noBalanceTransaction: "Операций по балансу пока нет.",
+    noBalanceTransactionDesc:
+      "Пополнения, оплаты заказов или возвраты появятся здесь после выполнения.",
+    noDescription: "Нет описания.",
+    amount: "Сумма",
+    finalBalance: "Итоговый баланс",
+    analysisHistory: "История анализа",
+    yourAnalysisRequests: "Ваши заявки на анализ",
+    latestFiveAnalysisDesc: "Здесь показываются последние 5 заявок на анализ.",
+    newAnalysisRequest: "Новая заявка на анализ",
+    noAnalysisRequest: "К аккаунту пока не привязана заявка на анализ.",
+    noAnalysisRequestDesc:
+      "Когда вы оставите заявку на анализ в аккаунте, она появится здесь.",
+    analysisRequestButton: "Оставить заявку на анализ",
+    free: "Бесплатно",
+    userLabel: "Пользователь",
+    accountType: "Тип аккаунта",
+    content: "Контент",
+    date: "Дата",
+    analysisPrice: "Цена анализа",
+    orderHistory: "История заказов",
+    latestOrders: "Ваши последние заказы",
+    latestOrdersDesc:
+      "Здесь видны последние 5 заказов. Старые заказы можно посмотреть на странице всех заказов.",
+    viewAllOrders: "Посмотреть все заказы",
+    noOrder: "К аккаунту пока не привязан заказ.",
+    noOrderDesc: "Когда вы создадите заказ в аккаунте, он появится здесь.",
+    firstOrderButton: "Создать первый заказ",
+    order: "Заказ",
+    service: "Услуга",
+    total: "Сумма",
+    status: "Статус",
+    detail: "Детали",
+    orderNo: "№ заказа",
+    target: "Цель",
+    statusLabels: {
+      pending_payment: "Ожидает оплаты",
+      pending: "Заказ получен",
+      processing: "В обработке",
+      in_progress: "В процессе",
+      completed: "Завершено",
+      cancelled: "Отменено",
+      refunded: "Возврат выполнен",
+      partial_refunded: "Частично завершено",
+      failed: "Ошибка",
+    },
+    transactionTypeLabels: {
+      topup: "Пополнение баланса",
+      balance_topup: "Пополнение баланса",
+      order_payment: "Оплата заказа",
+      order_refund: "Возврат заказа",
+      order_partial_refund: "Частичный возврат",
+      welcome_bonus: "Приветственный бонус",
+      welcome_google_bonus: "Бонус за регистрацию Google",
+      contact_verification_bonus: "Бонус за подтверждение контакта",
+      email_verification_bonus: "Бонус за подтверждение e-mail",
+    },
+  },
 };
 
 const statusClasses: Record<string, string> = {
@@ -85,17 +518,30 @@ const statusClasses: Record<string, string> = {
   failed: "border-[#6b2232] bg-[#31101b]/70 text-[#f2c7d1]",
 };
 
-const transactionTypeLabels: Record<string, string> = {
-  topup: "Bakiye Yükleme",
-  balance_topup: "Bakiye Yükleme",
-  order_payment: "Sipariş Ödemesi",
-  order_refund: "Sipariş İadesi",
-  order_partial_refund: "Kısmi İade",
-  welcome_bonus: "Hoş Geldin Bonusu",
-  welcome_google_bonus: "Google Kayıt Bonusu",
-  contact_verification_bonus: "İletişim Doğrulama Bonusu",
-  email_verification_bonus: "E-posta Doğrulama Bonusu",
-};
+function normalizeLocale(value: unknown): LocaleCode | null {
+  const locale = String(value || "").trim().toLowerCase();
+
+  if (locale === "tr" || locale === "en" || locale === "ru") {
+    return locale;
+  }
+
+  return null;
+}
+
+async function getServerLocale(): Promise<LocaleCode> {
+  const cookieStore = await cookies();
+  const cookieLocale = normalizeLocale(cookieStore.get("medyatora_locale")?.value);
+
+  if (cookieLocale) return cookieLocale;
+
+  const headersList = await headers();
+  const acceptLanguage = String(headersList.get("accept-language") || "").toLowerCase();
+
+  if (acceptLanguage.startsWith("tr")) return "tr";
+  if (acceptLanguage.startsWith("ru")) return "ru";
+
+  return "en";
+}
 
 function formatMoney(value: string | number, currency: string) {
   const numberValue = Number(value || 0);
@@ -133,8 +579,8 @@ function formatDate(value: Date | string) {
   });
 }
 
-function getStatusLabel(status: string) {
-  return statusLabels[status] || status;
+function getStatusLabel(status: string, t: AccountText) {
+  return t.statusLabels[status] || status;
 }
 
 function getStatusClass(status: string) {
@@ -143,9 +589,9 @@ function getStatusClass(status: string) {
   );
 }
 
-function getTransactionTypeLabel(type: string | null | undefined) {
+function getTransactionTypeLabel(type: string | null | undefined, t: AccountText) {
   if (!type) return "-";
-  return transactionTypeLabels[type] || type;
+  return t.transactionTypeLabels[type] || type;
 }
 
 function getTransactionAmountClass(value: string | number) {
@@ -163,12 +609,14 @@ function VerificationCard({
   status,
   reward,
   actionLabel,
+  t,
 }: {
   title: string;
   description: string;
   status: "verified" | "pending";
   reward: string;
   actionLabel: string;
+  t: AccountText;
 }) {
   const verified = status === "verified";
 
@@ -192,13 +640,13 @@ function VerificationCard({
               : "border-[#6b5b2a]/60 bg-[#211d11]/70 text-[#e7d9a4]"
           }`}
         >
-          {verified ? "Doğrulandı" : "Bekliyor"}
+          {verified ? t.verified : t.pending}
         </span>
       </div>
 
       <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-4">
         <p className="text-xs font-black uppercase tracking-[0.16em] text-white/38">
-          Kazanım
+          {t.gain}
         </p>
         <p className="mt-2 text-sm font-bold text-white">{reward}</p>
       </div>
@@ -208,13 +656,12 @@ function VerificationCard({
         disabled
         className="mt-4 w-full cursor-not-allowed rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-3 text-sm font-black text-white/42"
       >
-        {verified ? "Tamamlandı" : actionLabel}
+        {verified ? t.completed : actionLabel}
       </button>
 
       {!verified && (
         <p className="mt-3 text-xs leading-5 text-white/38">
-          Kod gönderme ve doğrulama route’ları bir sonraki aşamada bağlanacak.
-          Bu alan deploy öncesi arayüz olarak hazırlandı.
+          {t.nextStageNote}
         </p>
       )}
     </div>
@@ -227,6 +674,9 @@ export default async function AccountPage() {
   if (!user) {
     redirect("/");
   }
+
+  const locale = await getServerLocale();
+  const t = texts[locale] || texts.tr;
 
   const pool = getMysqlPool();
 
@@ -378,37 +828,25 @@ export default async function AccountPage() {
               <div className="text-lg font-black tracking-tight text-white">
                 MedyaTora
               </div>
-              <div className="text-xs text-white/45">Kullanıcı hesabı</div>
+              <div className="text-xs text-white/45">{t.accountSubtitle}</div>
             </div>
           </Link>
 
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-end">
             <nav className="flex flex-wrap items-center gap-2 text-sm font-semibold text-white/70">
-              <Link
-                href="/"
-                className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-2 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white"
-              >
-                Ana Sayfa
+              <Link href="/" className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-2 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white">
+                {t.home}
               </Link>
 
-              <Link
-                href="/analiz"
-                className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-2 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white"
-              >
-                Analiz
+              <Link href="/analiz" className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-2 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white">
+                {t.analysis}
               </Link>
 
-              <Link
-                href="/paketler"
-                className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-2 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white"
-              >
-                Paketler
+              <Link href="/paketler" className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-2 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white">
+                {t.packages}
               </Link>
 
-              <Link
-                href="/smmtora"
-                className="rounded-full border border-white/12 bg-white px-3 py-2 font-black text-black transition hover:bg-white/90"
-              >
+              <Link href="/smmtora" className="rounded-full border border-white/12 bg-white px-3 py-2 font-black text-black transition hover:bg-white/90">
                 SMMTora
               </Link>
             </nav>
@@ -425,32 +863,24 @@ export default async function AccountPage() {
             <div className="relative grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.24em] text-white/45">
-                  Hesabım
+                  {t.myAccount}
                 </p>
 
                 <h1 className="mt-3 text-4xl font-black tracking-tight md:text-5xl">
-                  Hoş geldin, {user.full_name || user.email}
+                  {t.welcomePrefix}, {user.full_name || user.email}
                 </h1>
 
                 <p className="mt-4 max-w-2xl text-sm leading-7 text-white/60 md:text-base">
-                  Bu alanda bakiyelerini, ücretsiz analiz hakkını, doğrulama
-                  durumunu, siparişlerini, analiz taleplerini ve son bakiye
-                  hareketlerini takip edebilirsin.
+                  {t.intro}
                 </p>
 
                 <div className="mt-6 flex flex-wrap gap-3">
-                  <Link
-                    href="/smmtora"
-                    className="rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:-translate-y-0.5 hover:bg-white/90"
-                  >
-                    Yeni Sipariş Oluştur
+                  <Link href="/smmtora" className="rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:-translate-y-0.5 hover:bg-white/90">
+                    {t.createNewOrder}
                   </Link>
 
-                  <Link
-                    href="/analiz"
-                    className="rounded-2xl border border-white/10 bg-white/[0.05] px-5 py-3 text-sm font-bold text-white/80 transition hover:-translate-y-0.5 hover:bg-white/[0.1] hover:text-white"
-                  >
-                    Analiz Talebi Bırak
+                  <Link href="/analiz" className="rounded-2xl border border-white/10 bg-white/[0.05] px-5 py-3 text-sm font-bold text-white/80 transition hover:-translate-y-0.5 hover:bg-white/[0.1] hover:text-white">
+                    {t.leaveAnalysisRequest}
                   </Link>
                 </div>
               </div>
@@ -460,56 +890,52 @@ export default async function AccountPage() {
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <p className="text-xs font-black uppercase tracking-[0.18em] text-white/40">
-                        Cüzdan Bakiyeleri
+                        {t.walletBalances}
                       </p>
                       <p className="mt-2 text-sm leading-6 text-white/55">
-                        TL, USD ve RUB bakiyeleri ayrı tutulur. Sipariş hangi
-                        para birimiyle oluşturulursa ödeme o cüzdandan düşer.
+                        {t.walletDesc}
                       </p>
                     </div>
 
-                    <Link
-                      href="/smmtora"
-                      className="inline-flex shrink-0 items-center justify-center rounded-2xl bg-white px-4 py-2 text-xs font-black text-black transition hover:-translate-y-0.5 hover:bg-white/90"
-                    >
-                      Bakiye ile alışveriş
+                    <Link href="/smmtora" className="inline-flex shrink-0 items-center justify-center rounded-2xl bg-white px-4 py-2 text-xs font-black text-black transition hover:-translate-y-0.5 hover:bg-white/90">
+                      {t.shopWithBalance}
                     </Link>
                   </div>
 
                   <div className="mt-5 grid gap-3 sm:grid-cols-3">
                     <div className="rounded-3xl border border-white/10 bg-black/25 p-4">
                       <div className="mb-3 inline-flex rounded-full border border-white/10 bg-white/[0.055] px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-white/62">
-                        TL Cüzdanı
+                        {t.tlWallet}
                       </div>
                       <p className="text-2xl font-black text-white">
                         {formatMoney(user.balance_tl, "TL")}
                       </p>
                       <p className="mt-2 text-xs leading-5 text-white/45">
-                        TL ile verilen siparişlerde kullanılır.
+                        {t.tlWalletDesc}
                       </p>
                     </div>
 
                     <div className="rounded-3xl border border-white/10 bg-black/25 p-4">
                       <div className="mb-3 inline-flex rounded-full border border-white/10 bg-white/[0.055] px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-white/62">
-                        USD Cüzdanı
+                        {t.usdWallet}
                       </div>
                       <p className="text-2xl font-black text-white">
                         {formatMoney(user.balance_usd, "USD")}
                       </p>
                       <p className="mt-2 text-xs leading-5 text-white/45">
-                        USD ile verilen siparişlerde kullanılır.
+                        {t.usdWalletDesc}
                       </p>
                     </div>
 
                     <div className="rounded-3xl border border-white/10 bg-black/25 p-4">
                       <div className="mb-3 inline-flex rounded-full border border-white/10 bg-white/[0.055] px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-white/62">
-                        RUB Cüzdanı
+                        {t.rubWallet}
                       </div>
                       <p className="text-2xl font-black text-white">
                         {formatMoney(user.balance_rub, "RUB")}
                       </p>
                       <p className="mt-2 text-xs leading-5 text-white/45">
-                        RUB ile verilen siparişlerde kullanılır.
+                        {t.rubWalletDesc}
                       </p>
                     </div>
                   </div>
@@ -517,31 +943,29 @@ export default async function AccountPage() {
 
                 <div className="rounded-3xl border border-white/10 bg-white/[0.045] p-5">
                   <p className="text-xs font-black uppercase tracking-[0.18em] text-white/40">
-                    Ücretsiz analiz hakkı
+                    {t.freeAnalysisRight}
                   </p>
                   <p className="mt-3 text-2xl font-black text-white">
                     {freeAnalysisGranted && !user.free_analysis_used
-                      ? "Aktif"
+                      ? t.active
                       : user.free_analysis_used
-                        ? "Kullanıldı"
-                        : "Bekliyor"}
+                        ? t.used
+                        : t.waiting}
                   </p>
                   <p className="mt-2 text-sm leading-6 text-white/55">
-                    E-posta doğrulaması tamamlanınca 1 ücretsiz analiz hakkı
-                    tanımlanır.
+                    {t.freeAnalysisDesc}
                   </p>
                 </div>
 
                 <div className="rounded-3xl border border-white/10 bg-white/[0.045] p-5">
                   <p className="text-xs font-black uppercase tracking-[0.18em] text-white/40">
-                    İletişim bonusu
+                    {t.contactBonus}
                   </p>
                   <p className="mt-3 text-2xl font-black text-white">
-                    {contactBonusGranted ? "Tanımlandı" : "Bekliyor"}
+                    {contactBonusGranted ? t.granted : t.waiting}
                   </p>
                   <p className="mt-2 text-sm leading-6 text-white/55">
-                    WhatsApp veya Telegram doğrulamasından biri yeterlidir.
-                    Bonus yalnızca 1 kez verilir.
+                    {t.contactBonusDesc}
                   </p>
                 </div>
               </div>
@@ -551,44 +975,54 @@ export default async function AccountPage() {
 
         <section className="grid gap-4 lg:grid-cols-3">
           <VerificationCard
-            title="E-posta doğrulama"
-            description={`Kayıtlı e-posta: ${user.email}`}
+            title={t.emailVerification}
+            description={`${t.registeredEmail}: ${user.email}`}
             status={emailVerified ? "verified" : "pending"}
-            reward="1 ücretsiz analiz hakkı"
-            actionLabel="Kod Gönder"
+            reward={t.freeAnalysisReward}
+            actionLabel={t.codeSend}
+            t={t}
           />
 
           <VerificationCard
-            title="WhatsApp doğrulama"
-            description={user.phone_number || "Telefon numarası henüz eklenmedi."}
+            title={t.whatsappVerification}
+            description={user.phone_number || t.phoneNotAdded}
             status={contactVerified ? "verified" : "pending"}
-            reward="1 USD bakiye bonusu"
-            actionLabel="WhatsApp ile Doğrula"
+            reward={t.usdBonusReward}
+            actionLabel={t.whatsappVerify}
+            t={t}
           />
 
           <VerificationCard
-            title="Telegram doğrulama"
-            description="Telegram bot doğrulaması webhook aşamasında bağlanacak."
+            title={t.telegramVerification}
+            description={t.telegramWebhookPending}
             status={contactVerified ? "verified" : "pending"}
-            reward="WhatsApp doğrulandıysa tekrar bonus verilmez"
-            actionLabel="Telegram ile Doğrula"
+            reward={t.noRepeatBonusReward}
+            actionLabel={t.telegramVerify}
+            t={t}
           />
         </section>
+
+        <ContactVerificationCard
+          initialPhoneNumber={user.phone_number}
+          initialWhatsappVerifiedAt={user.whatsapp_verified_at}
+          initialTelegramVerifiedAt={user.telegram_verified_at}
+          initialContactBonusGrantedAt={user.contact_bonus_granted_at}
+        />
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-[28px] border border-white/10 bg-[#080a0d]/92 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.26)]">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-white/40">
-              Toplam sipariş
+              {t.totalOrders}
             </p>
             <p className="mt-3 text-3xl font-black text-white">{totalOrders}</p>
             <p className="mt-2 text-sm text-white/45">
-              Ana ekranda son 5 sipariş görünür.
+              {t.totalOrdersDesc}
             </p>
           </div>
 
           <div className="rounded-[28px] border border-white/10 bg-[#080a0d]/92 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.26)]">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-white/40">
-              Aktif işlem
+              {t.activeProcess}
             </p>
             <p className="mt-3 text-3xl font-black text-white">
               {activeOrders}
@@ -597,7 +1031,7 @@ export default async function AccountPage() {
 
           <div className="rounded-[28px] border border-white/10 bg-[#080a0d]/92 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.26)]">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-white/40">
-              Tamamlanan
+              {t.completedOrders}
             </p>
             <p className="mt-3 text-3xl font-black text-white">
               {completedOrders}
@@ -606,13 +1040,13 @@ export default async function AccountPage() {
 
           <div className="rounded-[28px] border border-white/10 bg-[#080a0d]/92 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.26)]">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-white/40">
-              Analiz talebi
+              {t.analysisRequest}
             </p>
             <p className="mt-3 text-3xl font-black text-white">
               {totalAnalysisRequests}
             </p>
             <p className="mt-2 text-sm text-white/45">
-              Bekleyen: {pendingAnalysisRequests}
+              {t.pendingCount}: {pendingAnalysisRequests}
             </p>
           </div>
         </section>
@@ -620,40 +1054,34 @@ export default async function AccountPage() {
         <section className="rounded-[34px] border border-white/10 bg-[#080a0d]/92 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.36)] ring-1 ring-white/[0.025] backdrop-blur-xl md:p-6">
           <div className="mb-5">
             <p className="text-xs font-black uppercase tracking-[0.22em] text-white/40">
-              Bakiye hareketleri
+              {t.balanceMovements}
             </p>
             <h2 className="mt-2 text-2xl font-black text-white">
-              Son bakiye işlemleri
+              {t.latestBalanceTransactions}
             </h2>
             <p className="mt-2 text-sm text-white/45">
-              Bu alanda sadece son 5 bakiye hareketi gösterilir.
+              {t.latestFiveBalanceDesc}
             </p>
           </div>
 
           {balanceTransactions.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-white/15 bg-white/[0.04] p-8 text-center">
               <p className="text-lg font-bold text-white">
-                Henüz bakiye hareketi yok.
+                {t.noBalanceTransaction}
               </p>
               <p className="mt-2 text-sm leading-6 text-white/55">
-                Bakiye yükleme, sipariş ödemesi veya iade işlemleri olduğunda
-                burada görünecek.
+                {t.noBalanceTransactionDesc}
               </p>
             </div>
           ) : (
             <div className="grid gap-3">
               {balanceTransactions.map((transaction) => (
-                <div
-                  key={transaction.id}
-                  className="rounded-3xl border border-white/10 bg-white/[0.045] p-4 transition hover:bg-white/[0.07]"
-                >
+                <div key={transaction.id} className="rounded-3xl border border-white/10 bg-white/[0.045] p-4 transition hover:bg-white/[0.07]">
                   <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-sm font-black text-white md:text-base">
-                          {getTransactionTypeLabel(
-                            transaction.transaction_type
-                          )}
+                          {getTransactionTypeLabel(transaction.transaction_type, t)}
                         </p>
 
                         <span className="inline-flex rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs font-bold text-white/55">
@@ -662,7 +1090,7 @@ export default async function AccountPage() {
                       </div>
 
                       <p className="mt-2 text-sm leading-6 text-white/55">
-                        {transaction.description || "Açıklama yok."}
+                        {transaction.description || t.noDescription}
                       </p>
 
                       <p className="mt-1 text-xs text-white/40">
@@ -671,23 +1099,12 @@ export default async function AccountPage() {
                     </div>
 
                     <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-right">
-                      <p className="text-xs text-white/40">Tutar</p>
-                      <p
-                        className={`mt-1 text-lg font-black ${getTransactionAmountClass(
-                          transaction.amount
-                        )}`}
-                      >
-                        {formatSignedMoney(
-                          transaction.amount,
-                          transaction.currency
-                        )}
+                      <p className="text-xs text-white/40">{t.amount}</p>
+                      <p className={`mt-1 text-lg font-black ${getTransactionAmountClass(transaction.amount)}`}>
+                        {formatSignedMoney(transaction.amount, transaction.currency)}
                       </p>
                       <p className="mt-1 text-xs text-white/40">
-                        Son bakiye:{" "}
-                        {formatMoney(
-                          transaction.balance_after,
-                          transaction.currency
-                        )}
+                        {t.finalBalance}: {formatMoney(transaction.balance_after, transaction.currency)}
                       </p>
                     </div>
                   </div>
@@ -701,82 +1118,64 @@ export default async function AccountPage() {
           <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.22em] text-white/40">
-                Analiz geçmişi
+                {t.analysisHistory}
               </p>
               <h2 className="mt-2 text-2xl font-black text-white">
-                Analiz taleplerin
+                {t.yourAnalysisRequests}
               </h2>
               <p className="mt-2 text-sm text-white/45">
-                Bu alanda son 5 analiz talebi gösterilir.
+                {t.latestFiveAnalysisDesc}
               </p>
             </div>
 
-            <Link
-              href="/analiz"
-              className="rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-bold text-white transition hover:bg-white/[0.1]"
-            >
-              Yeni Analiz Talebi
+            <Link href="/analiz" className="rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-bold text-white transition hover:bg-white/[0.1]">
+              {t.newAnalysisRequest}
             </Link>
           </div>
 
           {analysisRequests.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-white/15 bg-white/[0.04] p-8 text-center">
               <p className="text-lg font-bold text-white">
-                Henüz hesabına bağlı analiz talebi yok.
+                {t.noAnalysisRequest}
               </p>
               <p className="mt-2 text-sm leading-6 text-white/55">
-                Giriş yapmış halde analiz talebi bıraktığında burada görünecek.
+                {t.noAnalysisRequestDesc}
               </p>
-              <Link
-                href="/analiz"
-                className="mt-5 inline-flex rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:-translate-y-0.5 hover:bg-white/90"
-              >
-                Analiz Talebi Bırak
+              <Link href="/analiz" className="mt-5 inline-flex rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:-translate-y-0.5 hover:bg-white/90">
+                {t.analysisRequestButton}
               </Link>
             </div>
           ) : (
             <div className="grid gap-3">
               {analysisRequests.map((item) => (
-                <div
-                  key={item.id}
-                  className="rounded-3xl border border-white/10 bg-white/[0.045] p-5 transition hover:bg-white/[0.07]"
-                >
+                <div key={item.id} className="rounded-3xl border border-white/10 bg-white/[0.045] p-5 transition hover:bg-white/[0.07]">
                   <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-lg font-black text-white">
-                          Analiz #{item.id}
+                          {t.analysis} #{item.id}
                         </p>
 
-                        <span
-                          className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${getStatusClass(
-                            item.status
-                          )}`}
-                        >
-                          {getStatusLabel(item.status)}
+                        <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${getStatusClass(item.status)}`}>
+                          {getStatusLabel(item.status, t)}
                         </span>
 
                         {Boolean(item.is_free_analysis) && (
                           <span className="inline-flex rounded-full border border-white/12 bg-white/[0.06] px-3 py-1 text-xs font-bold text-white/72">
-                            Ücretsiz
+                            {t.free}
                           </span>
                         )}
                       </div>
 
                       <div className="mt-3 grid gap-1 text-sm text-white/55">
-                        <p>
-                          Kullanıcı: {item.username || item.account_link || "-"}
-                        </p>
-                        <p>
-                          Hesap türü: {item.account_type || "-"} · İçerik:{" "}
-                          {item.content_type || "-"}
-                        </p>
-                        <p>Tarih: {formatDate(item.created_at)}</p>
+                        <p>{t.userLabel}: {item.username || item.account_link || "-"}</p>
+                        <p>{t.accountType}: {item.account_type || "-"} · {t.content}: {item.content_type || "-"}</p>
+                        <p>{t.date}: {formatDate(item.created_at)}</p>
                       </div>
                     </div>
 
                     <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-right">
-                      <p className="text-xs text-white/40">Analiz fiyatı</p>
+                      <p className="text-xs text-white/40">{t.analysisPrice}</p>
                       <p className="mt-1 text-lg font-black text-white">
                         {formatMoney(item.package_price, item.currency || "USD")}
                       </p>
@@ -792,64 +1191,54 @@ export default async function AccountPage() {
           <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.22em] text-white/40">
-                Sipariş geçmişi
+                {t.orderHistory}
               </p>
               <h2 className="mt-2 text-2xl font-black text-white">
-                Son siparişlerin
+                {t.latestOrders}
               </h2>
               <p className="mt-2 text-sm text-white/45">
-                Bu alanda son 5 sipariş görünür. Eski siparişlerini tüm
-                siparişler sayfasından görebilirsin.
+                {t.latestOrdersDesc}
               </p>
             </div>
 
-            <Link
-              href="/hesabim/siparisler"
-              className="rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-bold text-white transition hover:bg-white/[0.1]"
-            >
-              Tüm Siparişleri Gör
+            <Link href="/hesabim/siparisler" className="rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-bold text-white transition hover:bg-white/[0.1]">
+              {t.viewAllOrders}
             </Link>
           </div>
 
           {orders.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-white/15 bg-white/[0.04] p-8 text-center">
               <p className="text-lg font-bold text-white">
-                Henüz hesabına bağlı sipariş yok.
+                {t.noOrder}
               </p>
               <p className="mt-2 text-sm leading-6 text-white/55">
-                Giriş yapmış halde sipariş oluşturduğunda burada görünecek.
+                {t.noOrderDesc}
               </p>
-              <Link
-                href="/smmtora"
-                className="mt-5 inline-flex rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:-translate-y-0.5 hover:bg-white/90"
-              >
-                İlk Siparişi Oluştur
+              <Link href="/smmtora" className="mt-5 inline-flex rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:-translate-y-0.5 hover:bg-white/90">
+                {t.firstOrderButton}
               </Link>
             </div>
           ) : (
             <div className="overflow-hidden rounded-3xl border border-white/10">
               <div className="hidden grid-cols-[1.1fr_1.5fr_0.75fr_0.85fr_0.9fr_0.55fr] gap-4 border-b border-white/10 bg-white/[0.035] px-4 py-3 text-xs font-bold uppercase tracking-wide text-white/40 lg:grid">
-                <div>Sipariş</div>
-                <div>Hizmet</div>
-                <div>Tutar</div>
-                <div>Durum</div>
-                <div>Tarih</div>
-                <div>Detay</div>
+                <div>{t.order}</div>
+                <div>{t.service}</div>
+                <div>{t.total}</div>
+                <div>{t.status}</div>
+                <div>{t.date}</div>
+                <div>{t.detail}</div>
               </div>
 
               <div className="divide-y divide-white/10">
                 {orders.map((order) => (
-                  <div
-                    key={order.id}
-                    className="grid gap-4 px-4 py-4 transition hover:bg-white/[0.035] lg:grid-cols-[1.1fr_1.5fr_0.75fr_0.85fr_0.9fr_0.55fr] lg:items-center"
-                  >
+                  <div key={order.id} className="grid gap-4 px-4 py-4 transition hover:bg-white/[0.035] lg:grid-cols-[1.1fr_1.5fr_0.75fr_0.85fr_0.9fr_0.55fr] lg:items-center">
                     <div>
-                      <p className="text-xs text-white/40">Sipariş No</p>
+                      <p className="text-xs text-white/40">{t.orderNo}</p>
                       <p className="mt-1 font-bold text-white">
                         {order.order_number}
                       </p>
                       <p className="mt-1 text-xs text-white/45">
-                        Hedef: {order.target_username || "-"}
+                        {t.target}: {order.target_username || "-"}
                       </p>
                     </div>
 
@@ -858,8 +1247,7 @@ export default async function AccountPage() {
                         {order.service_title}
                       </p>
                       <p className="mt-1 text-xs text-white/45">
-                        {order.platform} / {order.category} ·{" "}
-                        {Number(order.quantity).toLocaleString("tr-TR")}
+                        {order.platform} / {order.category} · {Number(order.quantity).toLocaleString("tr-TR")}
                       </p>
                     </div>
 
@@ -870,12 +1258,8 @@ export default async function AccountPage() {
                     </div>
 
                     <div>
-                      <span
-                        className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${getStatusClass(
-                          order.status
-                        )}`}
-                      >
-                        {getStatusLabel(order.status)}
+                      <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${getStatusClass(order.status)}`}>
+                        {getStatusLabel(order.status, t)}
                       </span>
                     </div>
 
@@ -886,11 +1270,8 @@ export default async function AccountPage() {
                     </div>
 
                     <div>
-                      <Link
-                        href={`/hesabim/siparisler/${order.order_number}`}
-                        className="inline-flex rounded-2xl bg-white px-4 py-2 text-center text-xs font-black text-black transition hover:bg-white/90"
-                      >
-                        Detay
+                      <Link href={`/hesabim/siparisler/${order.order_number}`} className="inline-flex rounded-2xl bg-white px-4 py-2 text-center text-xs font-black text-black transition hover:bg-white/90">
+                        {t.detail}
                       </Link>
                     </div>
                   </div>

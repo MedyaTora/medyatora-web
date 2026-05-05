@@ -627,9 +627,9 @@ function OrderBeforeNotice({ t }: { t: ReturnType<typeof getDictionary> }) {
             key={item.title}
             className="rounded-2xl border border-white/10 bg-black/20 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.055]"
           >
-           <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white/82">
+         <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white/82">
   <item.icon />
-       </div>
+        </div>
 
             <p className="text-sm font-bold text-white">{item.title}</p>
             <p className="mt-2 text-sm leading-6 text-white/60">{item.text}</p>
@@ -745,6 +745,19 @@ export default function SmmToraPage() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       window.localStorage.setItem("medyatora_locale", selectedLocale);
+      document.cookie = `medyatora_locale=${selectedLocale}; path=/; max-age=31536000; SameSite=Lax`;
+  
+      window.dispatchEvent(
+        new CustomEvent("medyatora_locale_change", {
+          detail: { locale: selectedLocale },
+        })
+      );
+  
+      window.dispatchEvent(
+        new CustomEvent("medyatora_locale_changed", {
+          detail: { locale: selectedLocale },
+        })
+      );
     }
   }, [selectedLocale]);
 
@@ -1504,7 +1517,7 @@ export default function SmmToraPage() {
         })}
       </div>
 
-      <UserMenu />
+      <UserMenu showLocaleSwitcher={false} />
     </div>
   </div>
 </header>

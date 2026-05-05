@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import {
   FaArrowRight,
   FaBoxesStacked,
@@ -7,6 +10,171 @@ import {
   FaWhatsapp,
 } from "react-icons/fa6";
 import UserMenu from "./components/auth/UserMenu";
+
+type LocaleCode = "tr" | "en" | "ru";
+
+const homeText: Record<
+  LocaleCode,
+  {
+    brandSubtitle: string;
+    heroBadge: string;
+    heroLine1: string;
+    heroLine2: string;
+    continue: string;
+    footerAnalysis: string;
+    footerPackages: string;
+    actionCards: {
+      title: string;
+      description: string;
+      eyebrow: string;
+      href: string;
+      icon: typeof FaChartLine;
+      primary: boolean;
+    }[];
+    trustItems: string[];
+  }
+> = {
+  tr: {
+    brandSubtitle: "Private Digital Authority",
+    heroBadge: "Premium sosyal medya sistemi",
+    heroLine1:
+      "Sosyal medya hesabın için analiz, hazır paketler ve gelişmiş servis paneli.",
+    heroLine2:
+      "Daha güven veren, daha profesyonel ve daha sade bir dijital görünüm için tek giriş noktası.",
+    continue: "Devam Et",
+    footerAnalysis: "Analiz",
+    footerPackages: "Paketler",
+    actionCards: [
+      {
+        title: "Analize Başla",
+        description:
+          "Hesabının neden ilerlemediğini, reklamlarının neden dönüşmediğini ve içeriklerinin neden keşfete düşmediğini analiz ettir.",
+        href: "/analiz",
+        eyebrow: "Profesyonel analiz",
+        icon: FaChartLine,
+        primary: true,
+      },
+      {
+        title: "Takipçi Al",
+        description:
+          "Instagram, TikTok, YouTube ve X için hazır paketleri hızlıca incele ve sipariş oluştur.",
+        href: "/paketler",
+        eyebrow: "Hızlı paketler",
+        icon: FaUserCheck,
+        primary: false,
+      },
+      {
+        title: "SMMTora’ya Git",
+        description:
+          "Geniş servis listesine, platform filtrelerine ve detaylı hizmet seçeneklerine ulaş.",
+        href: "/smmtora",
+        eyebrow: "Geniş servis paneli",
+        icon: FaBoxesStacked,
+        primary: false,
+      },
+    ],
+    trustItems: [
+      "KDV + vergiler dahil",
+      "Sipariş numarası ile takip",
+      "WhatsApp / Telegram destek",
+      "Güvenli işlem akışı",
+    ],
+  },
+
+  en: {
+    brandSubtitle: "Private Digital Authority",
+    heroBadge: "Premium social media system",
+    heroLine1:
+      "Analysis, ready-made packages, and an advanced service panel for your social media account.",
+    heroLine2:
+      "A single entry point for a more trusted, more professional, and cleaner digital presence.",
+    continue: "Continue",
+    footerAnalysis: "Analysis",
+    footerPackages: "Packages",
+    actionCards: [
+      {
+        title: "Start Analysis",
+        description:
+          "Get your account reviewed to understand why it is not growing, why your ads are not converting, and why your content is not reaching more people.",
+        href: "/analiz",
+        eyebrow: "Professional analysis",
+        icon: FaChartLine,
+        primary: true,
+      },
+      {
+        title: "Buy Followers",
+        description:
+          "Quickly review ready-made packages for Instagram, TikTok, YouTube, and X, then create your order.",
+        href: "/paketler",
+        eyebrow: "Fast packages",
+        icon: FaUserCheck,
+        primary: false,
+      },
+      {
+        title: "Go to SMMTora",
+        description:
+          "Access the wider service list, platform filters, and detailed service options.",
+        href: "/smmtora",
+        eyebrow: "Advanced service panel",
+        icon: FaBoxesStacked,
+        primary: false,
+      },
+    ],
+    trustItems: [
+      "VAT + taxes included",
+      "Track with order number",
+      "WhatsApp / Telegram support",
+      "Secure order flow",
+    ],
+  },
+
+  ru: {
+    brandSubtitle: "Private Digital Authority",
+    heroBadge: "Премиальная система для соцсетей",
+    heroLine1:
+      "Анализ, готовые пакеты и расширенная панель услуг для вашего аккаунта в социальных сетях.",
+    heroLine2:
+      "Единая точка входа для более надёжного, профессионального и аккуратного цифрового образа.",
+    continue: "Продолжить",
+    footerAnalysis: "Анализ",
+    footerPackages: "Пакеты",
+    actionCards: [
+      {
+        title: "Начать анализ",
+        description:
+          "Проверьте аккаунт и узнайте, почему он не растёт, почему реклама не даёт результат и почему контент не получает больше охвата.",
+        href: "/analiz",
+        eyebrow: "Профессиональный анализ",
+        icon: FaChartLine,
+        primary: true,
+      },
+      {
+        title: "Купить подписчиков",
+        description:
+          "Быстро посмотрите готовые пакеты для Instagram, TikTok, YouTube и X, затем оформите заказ.",
+        href: "/paketler",
+        eyebrow: "Быстрые пакеты",
+        icon: FaUserCheck,
+        primary: false,
+      },
+      {
+        title: "Перейти в SMMTora",
+        description:
+          "Откройте расширенный список услуг, фильтры платформ и подробные варианты сервисов.",
+        href: "/smmtora",
+        eyebrow: "Расширенная панель услуг",
+        icon: FaBoxesStacked,
+        primary: false,
+      },
+    ],
+    trustItems: [
+      "НДС + налоги включены",
+      "Отслеживание по номеру заказа",
+      "Поддержка WhatsApp / Telegram",
+      "Безопасный процесс заказа",
+    ],
+  },
+};
 
 function LuxuryMonogram({
   size = 100,
@@ -72,44 +240,45 @@ function MinimalStars() {
   );
 }
 
-const actionCards = [
-  {
-    title: "Analize Başla",
-    description:
-      "Hesabının neden ilerlemediğini, reklamlarının neden dönüşmediğini ve içeriklerinin neden keşfete düşmediğini analiz ettir.",
-    href: "/analiz",
-    eyebrow: "Profesyonel analiz",
-    icon: FaChartLine,
-    primary: true,
-  },
-  {
-    title: "Takipçi Al",
-    description:
-      "Instagram, TikTok, YouTube ve X için hazır paketleri hızlıca incele ve sipariş oluştur.",
-    href: "/paketler",
-    eyebrow: "Hızlı paketler",
-    icon: FaUserCheck,
-    primary: false,
-  },
-  {
-    title: "SMMTora’ya Git",
-    description:
-      "Geniş servis listesine, platform filtrelerine ve detaylı hizmet seçeneklerine ulaş.",
-    href: "/smmtora",
-    eyebrow: "Geniş servis paneli",
-    icon: FaBoxesStacked,
-    primary: false,
-  },
-];
+function detectInitialLocale(): LocaleCode {
+  if (typeof window === "undefined") return "tr";
 
-const trustItems = [
-  "KDV + vergiler dahil",
-  "Sipariş numarası ile takip",
-  "WhatsApp / Telegram destek",
-  "Güvenli işlem akışı",
-];
+  const saved = window.localStorage.getItem("medyatora_locale");
+
+  if (saved === "tr" || saved === "en" || saved === "ru") {
+    return saved;
+  }
+
+  const browserLang = (navigator.language || "").toLowerCase();
+
+  if (browserLang.startsWith("tr")) return "tr";
+  if (browserLang.startsWith("ru")) return "ru";
+
+  return "en";
+}
 
 export default function Home() {
+  const [selectedLocale, setSelectedLocale] = useState<LocaleCode>("tr");
+
+  useEffect(() => {
+    setSelectedLocale(detectInitialLocale());
+
+    function handleLocaleChanged() {
+      setSelectedLocale(detectInitialLocale());
+    }
+
+    window.addEventListener("medyatora_locale_changed", handleLocaleChanged);
+
+    return () => {
+      window.removeEventListener("medyatora_locale_changed", handleLocaleChanged);
+    };
+  }, []);
+
+  const t = useMemo(
+    () => homeText[selectedLocale] || homeText.tr,
+    [selectedLocale]
+  );
+
   return (
     <main className="mt-premium-page">
       <div className="mt-top-fade" />
@@ -130,7 +299,7 @@ export default function Home() {
               </p>
 
               <p className="mt-1 hidden text-[9px] uppercase tracking-[0.3em] text-white/35 sm:block">
-                Private Digital Authority
+                {t.brandSubtitle}
               </p>
             </div>
           </Link>
@@ -144,7 +313,7 @@ export default function Home() {
           <div className="mx-auto w-full max-w-6xl">
             <div className="mx-auto max-w-4xl text-center">
               <div className="mx-auto mb-6 inline-flex border border-white/10 bg-white/[0.045] px-5 py-2 text-[9px] font-black uppercase tracking-[0.3em] text-white/55 shadow-[0_12px_45px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:text-xs sm:tracking-[0.38em]">
-                Premium sosyal medya sistemi
+                {t.heroBadge}
               </div>
 
               <div className="mx-auto mb-7 flex h-20 w-20 items-center justify-center text-white drop-shadow-[0_0_38px_rgba(255,255,255,0.18)] sm:h-28 sm:w-28">
@@ -159,17 +328,15 @@ export default function Home() {
               </div>
 
               <p className="mx-auto mt-5 max-w-2xl text-xs font-medium uppercase leading-7 tracking-[0.16em] text-white/52 sm:mt-7 sm:text-sm sm:tracking-[0.22em]">
-                Sosyal medya hesabın için analiz, hazır paketler ve gelişmiş
-                servis paneli.
+                {t.heroLine1}
               </p>
 
               <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-white/55 sm:text-base">
-                Daha güven veren, daha profesyonel ve daha sade bir dijital
-                görünüm için tek giriş noktası.
+                {t.heroLine2}
               </p>
 
               <div className="mx-auto mt-8 grid max-w-5xl gap-4 md:mt-10 md:grid-cols-3">
-                {actionCards.map((card) => {
+                {t.actionCards.map((card) => {
                   const Icon = card.icon;
 
                   return (
@@ -202,7 +369,7 @@ export default function Home() {
                         </p>
 
                         <div className="mt-5 inline-flex items-center gap-2 text-sm font-black text-white">
-                          Devam Et
+                          {t.continue}
                           <FaArrowRight className="transition group-hover:translate-x-1" />
                         </div>
                       </div>
@@ -212,7 +379,7 @@ export default function Home() {
               </div>
 
               <div className="mx-auto mt-8 grid max-w-4xl gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                {trustItems.map((item) => (
+                {t.trustItems.map((item) => (
                   <div
                     key={item}
                     className="border border-white/10 bg-white/[0.04] px-4 py-3 text-center text-xs font-semibold text-white/52 backdrop-blur-xl"
@@ -230,11 +397,11 @@ export default function Home() {
 
           <div className="flex flex-wrap items-center justify-center gap-4">
             <Link href="/analiz" className="transition hover:text-white/70">
-              Analiz
+              {t.footerAnalysis}
             </Link>
 
             <Link href="/paketler" className="transition hover:text-white/70">
-              Paketler
+              {t.footerPackages}
             </Link>
 
             <Link href="/smmtora" className="transition hover:text-white/70">

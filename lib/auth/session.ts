@@ -11,7 +11,7 @@ function sha256(value: string) {
   return crypto.createHash("sha256").update(value).digest("hex");
 }
 
-function createRawSessionToken() {
+export function createSessionToken() {
   return crypto.randomBytes(32).toString("hex");
 }
 
@@ -36,7 +36,7 @@ export async function createUserSession({
 }) {
   const pool = getMysqlPool();
 
-  const rawToken = createRawSessionToken();
+  const rawToken = createSessionToken();
   const tokenHash = hashSessionToken(rawToken);
   const expiresAt = getSessionExpiryDate();
 
