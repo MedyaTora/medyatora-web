@@ -81,8 +81,18 @@ function normalizeName(value: unknown) {
   return name.slice(0, 120);
 }
 
+const PRODUCTION_SITE_URL = "https://medyatora.store";
+
+function getSiteBaseUrl(request: Request) {
+  if (process.env.NODE_ENV === "production") {
+    return PRODUCTION_SITE_URL;
+  }
+
+  return new URL(request.url).origin;
+}
+
 function redirectWithError(request: Request, message: string) {
-  const url = new URL("/", request.url);
+  const url = new URL("/", getSiteBaseUrl(request));
   url.searchParams.set("auth_error", message);
 
   return NextResponse.redirect(url);
@@ -344,7 +354,9 @@ export async function GET(request: NextRequest) {
       userAgent: request.headers.get("user-agent"),
     });
 
-    const response = NextResponse.redirect(new URL("/hesabim", request.url));
+    const response = NextResponse.redirect(
+        new URL("/hesabim", getSiteBaseUrl(request))
+      );
 
     response.cookies.set({
       name: GOOGLE_OAUTH_STATE_COOKIE,
