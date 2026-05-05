@@ -2,7 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { FaShieldHalved, FaUserCheck, FaXmark } from "react-icons/fa6";
+import {
+  FaGoogle,
+  FaShieldHalved,
+  FaUserCheck,
+  FaXmark,
+} from "react-icons/fa6";
 import { detectBrowserLocale, type Locale } from "@/lib/i18n";
 
 type PreferredCurrency = "TL" | "USD" | "RUB";
@@ -54,6 +59,8 @@ const authText: Record<
     registerDesc: string;
     loginTab: string;
     registerTab: string;
+    googleButton: string;
+    orText: string;
     fullName: string;
     fullNamePlaceholder: string;
     email: string;
@@ -93,6 +100,8 @@ const authText: Record<
       "Hesabını oluştur, ücretsiz analiz ve kullanıcı paneli özelliklerinden yararlan.",
     loginTab: "Giriş Yap",
     registerTab: "Üye Ol",
+    googleButton: "Google ile devam et",
+    orText: "veya e-posta ile devam et",
     fullName: "Ad Soyad",
     fullNamePlaceholder: "Adını ve soyadını yaz",
     email: "E-posta",
@@ -124,7 +133,8 @@ const authText: Record<
     freeAnalysisTitle: "Free analysis right",
     freeAnalysisDesc: "Your analysis requests will be linked to your account.",
     secureSessionTitle: "Secure session",
-    secureSessionDesc: "Session information is stored with a secure browser cookie.",
+    secureSessionDesc:
+      "Session information is stored with a secure browser cookie.",
     accountEyebrow: "MedyaTora account",
     loginTitle: "Login",
     registerTitle: "Sign up",
@@ -133,6 +143,8 @@ const authText: Record<
       "Create your account and use free analysis and user panel features.",
     loginTab: "Login",
     registerTab: "Sign Up",
+    googleButton: "Continue with Google",
+    orText: "or continue with email",
     fullName: "Full Name",
     fullNamePlaceholder: "Enter your full name",
     email: "Email",
@@ -168,11 +180,14 @@ const authText: Record<
     accountEyebrow: "Аккаунт MedyaTora",
     loginTitle: "Войти",
     registerTitle: "Регистрация",
-    loginDesc: "Войдите в аккаунт, чтобы продолжить операции с балансом и заказами.",
+    loginDesc:
+      "Войдите в аккаунт, чтобы продолжить операции с балансом и заказами.",
     registerDesc:
       "Создайте аккаунт и используйте бесплатный анализ и функции личного кабинета.",
     loginTab: "Войти",
     registerTab: "Регистрация",
+    googleButton: "Продолжить с Google",
+    orText: "или продолжить через e-mail",
     fullName: "Имя и фамилия",
     fullNamePlaceholder: "Введите имя и фамилию",
     email: "E-mail",
@@ -270,7 +285,10 @@ export default function AuthModal({
 
     return () => {
       window.removeEventListener("medyatora_locale_change", handleLocaleChange);
-      window.removeEventListener("medyatora_locale_changed", handleLocaleChange);
+      window.removeEventListener(
+        "medyatora_locale_changed",
+        handleLocaleChange
+      );
     };
   }, []);
 
@@ -301,6 +319,10 @@ export default function AuthModal({
   }, [open, onClose]);
 
   if (!mounted || !open) return null;
+
+  function handleGoogleLogin() {
+    window.location.href = "/api/auth/google/start";
+  }
 
   async function handleSubmit() {
     setError("");
@@ -497,6 +519,25 @@ export default function AuthModal({
               >
                 {t.registerTab}
               </button>
+            </div>
+
+            <div className="mb-5">
+              <button
+                type="button"
+                onClick={handleGoogleLogin}
+                className="flex w-full items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white px-5 py-3.5 text-sm font-black text-black transition hover:-translate-y-0.5 hover:bg-emerald-300"
+              >
+                <FaGoogle className="text-base" />
+                {t.googleButton}
+              </button>
+
+              <div className="mt-4 flex items-center gap-3">
+                <div className="h-px flex-1 bg-white/10" />
+                <span className="text-center text-[11px] font-bold uppercase tracking-[0.18em] text-white/35">
+                  {t.orText}
+                </span>
+                <div className="h-px flex-1 bg-white/10" />
+              </div>
             </div>
 
             <div className="space-y-3">
