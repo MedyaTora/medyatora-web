@@ -707,18 +707,13 @@ export default function PaketlerPage() {
   }
 
   return (
-    <main className="mt-premium-page">
-      <div className="mt-top-fade" />
-      <div className="mt-bottom-fade" />
-  
+    <main className="mt-premium-page text-white">
       <div className="mt-premium-inner">
         <section className="relative overflow-hidden">
-
-          
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_34%),linear-gradient(to_bottom,rgba(255,255,255,0.02),transparent_28%,transparent_72%,rgba(255,255,255,0.02))]" />
-
-        <div className="relative mx-auto max-w-6xl px-6 py-10 md:py-16">
-          <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_34%),linear-gradient(to_bottom,rgba(255,255,255,0.02),transparent_28%,transparent_72%,rgba(255,255,255,0.02))]" />
+  
+          <div className="relative mx-auto max-w-6xl px-6 py-10 md:py-16">
+            <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
             <a
               href="/"
               className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/75 transition hover:bg-white/[0.08] hover:text-white"

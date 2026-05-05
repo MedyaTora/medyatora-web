@@ -1,288 +1,496 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState, type ChangeEvent, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import type { IconType } from "react-icons";
 import {
   FaArrowLeft,
   FaArrowRight,
+  FaBuilding,
   FaCheck,
   FaCircleQuestion,
   FaInstagram,
+  FaPaperPlane,
   FaTiktok,
-  FaWhatsapp,
+  FaUserTie,
+  FaXTwitter,
   FaYoutube,
 } from "react-icons/fa6";
-import { FaXTwitter } from "react-icons/fa6";
 
-type PlatformSlug = "instagram" | "tiktok" | "youtube" | "x";
-type ContactType = "WhatsApp" | "Telegram" | "";
+type PlatformKey = "instagram" | "tiktok" | "youtube" | "x";
+type ContactType = "WhatsApp" | "Telegram" | "Instagram" | "E-posta" | "";
 type CurrencyCode = "TL" | "USD" | "RUB";
-type PaymentMethod = "turkey_bank" | "support" | "";
 
-type AuthUser = {
-  id: number;
-  email: string;
-  full_name: string | null;
-  email_verified: boolean;
-  free_analysis_used: boolean;
+type OptionCard = {
+  value: string;
+  title: string;
+  description: string;
+  icon?: IconType;
 };
 
-const ANALYSIS_PRICES: Record<CurrencyCode, number> = {
-  TL: 1000,
-  USD: 15,
-  RUB: 1800,
+type PlatformOption = {
+  key: PlatformKey;
+  title: string;
+  description: string;
+  icon: IconType;
 };
 
-const platforms = [
+const ANALYSIS_PAYMENT_PATH = "/analiz/odeme";
+
+const platformOptions: PlatformOption[] = [
   {
-    slug: "instagram" as const,
+    key: "instagram",
     title: "Instagram",
-    description: "Reels, profil güveni, reklam dönüşümü ve satış analizi.",
+    description:
+      "Profil güveni, Reels düzeni, içerik dili, DM ve satış dönüşümü incelenir.",
     icon: FaInstagram,
-    color: "from-pink-500/20 via-rose-500/10 to-orange-400/10",
   },
   {
-    slug: "tiktok" as const,
+    key: "tiktok",
     title: "TikTok",
-    description: "Video tutma gücü, keşfet performansı ve takipçi dönüşümü.",
+    description:
+      "İlk saniye etkisi, video akışı, izlenme potansiyeli ve takipçi dönüşümü incelenir.",
     icon: FaTiktok,
-    color: "from-cyan-400/20 via-pink-500/10 to-white/5",
   },
   {
-    slug: "youtube" as const,
+    key: "youtube",
     title: "YouTube",
-    description: "Shorts, uzun video, izlenme süresi ve abone dönüşümü.",
+    description:
+      "Kanal görünümü, başlıklar, kapaklar, Shorts yapısı, izlenme süresi ve abone dönüşümü incelenir.",
     icon: FaYoutube,
-    color: "from-red-500/20 via-rose-500/10 to-white/5",
   },
   {
-    slug: "x" as const,
+    key: "x",
     title: "X / Twitter",
-    description: "Görüntülenme, etkileşim, profil güveni ve DM dönüşümü.",
+    description:
+      "Profil algısı, paylaşım dili, görünürlük, etkileşim ve yönlendirme gücü incelenir.",
     icon: FaXTwitter,
-    color: "from-white/15 via-sky-400/10 to-white/5",
   },
 ];
 
-function formatMoney(value: number, currency: CurrencyCode) {
-  if (currency === "TL") {
-    return `${value.toLocaleString("tr-TR")} TL`;
-  }
+const accountTypeOptions: OptionCard[] = [
+  {
+    value: "İşletme / Marka Hesabı",
+    title: "İşletme / Marka",
+    description:
+      "Ürün, hizmet veya marka güveni oluşturmak isteyen hesaplar için uygundur.",
+    icon: FaBuilding,
+  },
+  {
+    value: "E-ticaret / Satış Hesabı",
+    title: "E-ticaret / Satış",
+    description:
+      "Ürün satışı, reklam dönüşümü, DM siparişi veya site trafiği hedefleyen hesaplar için.",
+  },
+  {
+    value: "İçerik Üretici / Kişisel Marka",
+    title: "Kişisel Marka / Creator",
+    description:
+      "Uzmanlık, görünürlük, takipçi büyümesi ve içerik disiplini hedefleyen hesaplar için.",
+    icon: FaUserTie,
+  },
+  {
+    value: "Hizmet Sağlayıcı / Uzman Hesabı",
+    title: "Uzman / Hizmet",
+    description:
+      "Danışmanlık, klinik, emlak, güzellik, ajans, eğitim veya profesyonel hizmet sunan hesaplar için.",
+  },
+  {
+    value: "Medya / Haber / Eğlence Kanalı",
+    title: "Medya / Kanal",
+    description:
+      "Film, haber, mizah, bilgi, içerik derleme, reels veya shorts temelli sayfalar için.",
+  },
+  {
+    value: "Topluluk / Proje / Organizasyon",
+    title: "Topluluk / Proje",
+    description:
+      "Etkinlik, topluluk, organizasyon, kulüp veya proje hesabı olarak kullanılan yapılar için.",
+  },
+  {
+    value: "Yeni Açılmış Hesap",
+    title: "Yeni Hesap",
+    description:
+      "Henüz düzeni oturmamış, doğru başlangıç ve sağlam kurulum isteyen hesaplar için.",
+  },
+  {
+    value: "Diğer",
+    title: "Diğer",
+    description:
+      "Yukarıdakilere tam uymuyorsa bu seçeneği seçip detayları not alanında belirtebilirsiniz.",
+  },
+];
 
-  if (currency === "RUB") {
-    return `${value.toLocaleString("tr-TR")} RUB`;
-  }
+const goalOptions: OptionCard[] = [
+  {
+    value: "Profil güveni ve profesyonel görünüm kazanmak",
+    title: "Profil güveni",
+    description:
+      "Hesabımın ilk bakışta daha güçlü, düzenli ve güven veren bir yapıya kavuşmasını istiyorum.",
+  },
+  {
+    value: "Daha fazla görünürlük ve erişim elde etmek",
+    title: "Görünürlük",
+    description:
+      "Paylaşımlarımın daha çok kişiye ulaşmasını ve keşfet / önerilen alanlarda güçlenmesini istiyorum.",
+  },
+  {
+    value: "Takipçi, abone veya topluluk büyümesini artırmak",
+    title: "Büyüme",
+    description:
+      "Hesabın kitlesini daha sağlıklı ve daha istikrarlı biçimde büyütmek istiyorum.",
+  },
+  {
+    value: "Satış, mesaj veya müşteri dönüşümünü iyileştirmek",
+    title: "Dönüşüm",
+    description:
+      "İzlenme veya trafik geliyor ama mesaj, satış ya da müşteri dönüşümü yeterli değil.",
+  },
+  {
+    value: "İçerik düzeni ve paylaşım stratejisi oluşturmak",
+    title: "İçerik düzeni",
+    description:
+      "Ne paylaşacağımı, hangi formatta ilerleyeceğimi ve nasıl bir sistem kuracağımı netleştirmek istiyorum.",
+  },
+  {
+    value: "Reklam performansını destekleyecek hesap yapısı kurmak",
+    title: "Reklam desteği",
+    description:
+      "Reklam veriyorum veya vermeyi düşünüyorum; önce hesabımın buna ne kadar hazır olduğunu görmek istiyorum.",
+  },
+  {
+    value: "Hesabımdaki açıkları profesyonel analizle görmek",
+    title: "Genel analiz",
+    description:
+      "Profil, içerik, güven algısı, dönüşüm ve büyüme tarafındaki açıkları görmek istiyorum.",
+  },
+];
 
-  return `${value.toFixed(2)} USD`;
-}
+const currentStatusOptions = [
+  "Yeni başladım, hesabın temel düzenini doğru kurmak istiyorum",
+  "Hesabım aktif ama profesyonel görünmediğini düşünüyorum",
+  "Düzenli paylaşım yapıyorum fakat büyüme zayıf ilerliyor",
+  "İçerik üretiyorum ama beklediğim görünürlüğü alamıyorum",
+  "İzlenme alıyorum ancak etkileşim düşük kalıyor",
+  "Mesaj geliyor ama satışa ya da müşteriye dönüşmüyor",
+  "Reklam veriyorum ama sonuçlardan memnun değilim",
+  "Hesapta neyin eksik olduğunu net göremiyorum",
+  "Marka / işletme hesabım var ama güven algısını güçlendirmek istiyorum",
+];
 
-function getPlatformTitle(slug: PlatformSlug) {
-  return platforms.find((item) => item.slug === slug)?.title || slug;
-}
+const contentStyleOptions = [
+  "Ürün / hizmet tanıtımı içerikleri",
+  "Reels / Shorts / kısa video ağırlıklı içerikler",
+  "Bilgilendirici / eğitici içerikler",
+  "Kişisel marka / uzmanlık içerikleri",
+  "Kampanya / satış / reklam odaklı içerikler",
+  "Hikâye anlatımı / vlog / yaşam tarzı içerikleri",
+  "Medya / haber / eğlence içerikleri",
+  "Karışık içerik yapısı",
+  "Henüz net bir içerik düzenim yok",
+];
 
-function TextAreaField({
-  label,
-  placeholder,
-  value,
-  onChange,
-  required,
+const problemOptions = [
+  "Profil ilk bakışta yeterince güven vermiyor",
+  "İçerikler dikkat çekmiyor veya ilk saniyede kullanıcıyı tutmuyor",
+  "Paylaşımlar düzenli olsa da görünürlük zayıf kalıyor",
+  "Takipçi / abone artışı yavaş ilerliyor",
+  "İzlenme geliyor ama etkileşim düşük",
+  "Etkileşim geliyor ama satış / mesaj / müşteri dönüşümü düşük",
+  "Reklam veriyorum ama dönüşler tatmin etmiyor",
+  "Marka dili, görsel düzen veya içerik yapısı dağınık duruyor",
+  "Hesapta neyin eksik olduğunu bilmiyorum, profesyonel yorum istiyorum",
+];
+
+const contactTypes: ContactType[] = [
+  "WhatsApp",
+  "Telegram",
+  "Instagram",
+  "E-posta",
+];
+
+const priceMap: Record<CurrencyCode, string> = {
+  TL: "1000 TL",
+  USD: "15 USD",
+  RUB: "1800 RUB",
+};
+
+function FieldLabel({
+  children,
+  required = false,
 }: {
-  label: string;
-  placeholder: string;
-  value: string;
-  onChange: (value: string) => void;
+  children: ReactNode;
   required?: boolean;
 }) {
   return (
-    <label className="block">
-      <span className="mb-2 block text-sm font-bold text-white/85">
-        {label}
-        {required ? <span className="text-emerald-300"> *</span> : null}
-      </span>
-
-      <textarea
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder=""
-        className="min-h-[110px] w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm leading-6 text-white outline-none placeholder:text-white/30 transition focus:border-emerald-400"
-      />
+    <label className="mb-2 block text-[11px] font-black uppercase tracking-[0.22em] text-white/42">
+      {children}
+      {required && <span className="ml-1 text-white/70">*</span>}
     </label>
   );
 }
 
-function InputField({
-  label,
-  placeholder,
+function PremiumInput({
   value,
   onChange,
-  required,
+  placeholder,
+  type = "text",
 }: {
-  label: string;
-  placeholder: string;
   value: string;
-  onChange: (value: string) => void;
-  required?: boolean;
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  placeholder: string;
+  type?: string;
 }) {
   return (
-    <label className="block">
-      <span className="mb-2 block text-sm font-bold text-white/85">
-        {label}
-        {required ? <span className="text-emerald-300"> *</span> : null}
-      </span>
+    <input
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      type={type}
+      className="w-full rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3.5 text-sm font-semibold text-white outline-none placeholder:text-white/28 transition focus:border-white/25 focus:bg-white/[0.065]"
+    />
+  );
+}
 
-      <input
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-        className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none placeholder:text-white/30 transition focus:border-emerald-400"
-      />
-    </label>
+function PremiumTextarea({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (event: ChangeEvent<HTMLTextAreaElement>) => void;
+  placeholder: string;
+}) {
+  return (
+    <textarea
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      rows={5}
+      className="min-h-[130px] w-full resize-none rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3.5 text-sm font-semibold leading-7 text-white outline-none placeholder:text-white/28 transition focus:border-white/25 focus:bg-white/[0.065]"
+    />
+  );
+}
+
+function PremiumSelect({
+  value,
+  onChange,
+  children,
+}: {
+  value: string;
+  onChange: (event: ChangeEvent<HTMLSelectElement>) => void;
+  children: ReactNode;
+}) {
+  return (
+    <select
+      value={value}
+      onChange={onChange}
+      className="w-full rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3.5 text-sm font-semibold text-white outline-none transition focus:border-white/25 focus:bg-white/[0.065]"
+    >
+      {children}
+    </select>
+  );
+}
+
+function ChoiceCard({
+  title,
+  description,
+  active,
+  icon: Icon,
+  onClick,
+}: {
+  title: string;
+  description: string;
+  active: boolean;
+  icon?: IconType;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`group relative overflow-hidden rounded-[26px] border p-5 text-left transition hover:-translate-y-0.5 ${
+        active
+          ? "border-white/28 bg-[linear-gradient(180deg,rgba(255,255,255,0.13),rgba(255,255,255,0.08))] text-white shadow-[0_18px_40px_rgba(0,0,0,0.28)]"
+          : "border-white/10 bg-white/[0.035] text-white hover:border-white/18 hover:bg-white/[0.055]"
+      }`}
+    >
+      <div
+        className={`mb-4 flex h-11 w-11 items-center justify-center rounded-2xl border text-base ${
+          active
+            ? "border-white/18 bg-black/45 text-white"
+            : "border-white/10 bg-black/25 text-white"
+        }`}
+      >
+        {Icon ? <Icon /> : <FaCircleQuestion />}
+      </div>
+
+      <h4 className="text-lg font-black">{title}</h4>
+
+      <p className={`mt-2 text-sm leading-6 ${active ? "text-white/72" : "text-white/58"}`}>
+        {description}
+      </p>
+
+      {active && (
+        <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/12 bg-black/45 px-3 py-1 text-xs font-black text-white">
+          Seçili <FaCheck />
+        </div>
+      )}
+    </button>
+  );
+}
+
+function StepPill({
+  step,
+  currentStep,
+  label,
+}: {
+  step: number;
+  currentStep: number;
+  label: string;
+}) {
+  const active = currentStep === step;
+  const done = currentStep > step;
+
+  return (
+    <div
+      className={`rounded-full border px-3 py-2 text-[11px] font-black uppercase tracking-[0.14em] transition ${
+        active
+          ? "border-white/28 bg-white/[0.12] text-white"
+          : done
+            ? "border-white/18 bg-white/[0.07] text-white"
+            : "border-white/10 bg-white/[0.03] text-white/38"
+      }`}
+    >
+      {step}. {label}
+    </div>
+  );
+}
+
+function MiniInfoCard({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-[22px] border border-white/10 bg-white/[0.04] p-4">
+      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/38">
+        {label}
+      </p>
+      <p className="mt-2 text-lg font-black leading-7 text-white">{value}</p>
+    </div>
   );
 }
 
 export default function AnalysisForm() {
+  const router = useRouter();
+
   const [step, setStep] = useState(1);
-  const [infoOpen, setInfoOpen] = useState(false);
 
-  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [selectedPlatform, setSelectedPlatform] =
+    useState<PlatformKey>("instagram");
+  const [accountType, setAccountType] = useState("");
+  const [mainGoal, setMainGoal] = useState("");
 
-  const [platform, setPlatform] = useState<PlatformSlug>("instagram");
+  const [accountUsername, setAccountUsername] = useState("");
+  const [accountLink, setAccountLink] = useState("");
+  const [currentStatus, setCurrentStatus] = useState("");
+  const [contentStyle, setContentStyle] = useState("");
+  const [mainProblem, setMainProblem] = useState("");
+  const [extraNote, setExtraNote] = useState("");
 
-  const [form, setForm] = useState({
-    full_name: "",
-    username: "",
-    account_link: "",
-    target_audience: "",
-    account_goal: "",
-    monthly_reach: "",
-    posting_frequency: "",
-    viral_content: "",
-    ad_budget: "",
-    sales_problem: "",
-    ai_content_usage: "",
-    competitor_accounts: "",
-    main_question: "",
-    contact_type: "" as ContactType,
-    contact_value: "",
-  });
+  const [fullName, setFullName] = useState("");
+  const [contactType, setContactType] = useState<ContactType>("WhatsApp");
+  const [contactValue, setContactValue] = useState("");
 
-  const [currency, setCurrency] = useState<CurrencyCode>("TL");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("");
+  const [selectedCurrency, setSelectedCurrency] =
+    useState<CurrencyCode>("TL");
 
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  const hasFreeAnalysisRight = Boolean(
-    authUser && authUser.email_verified && !authUser.free_analysis_used
-  );
+  const selectedPlatformTitle = useMemo(() => {
+    return (
+      platformOptions.find((platform) => platform.key === selectedPlatform)
+        ?.title || "Instagram"
+    );
+  }, [selectedPlatform]);
 
-  const emailNotVerified = Boolean(authUser && !authUser.email_verified);
-  const freeRightUsed = Boolean(authUser && authUser.email_verified && authUser.free_analysis_used);
+  const currentPrice = priceMap[selectedCurrency];
 
-  const price = ANALYSIS_PRICES[currency];
-
-  useEffect(() => {
-    async function loadAuthUser() {
-      try {
-        const res = await fetch("/api/auth/me", {
-          method: "GET",
-          credentials: "include",
-          cache: "no-store",
-        });
-
-        const data = await res.json();
-
-        if (data.ok && data.user) {
-          setAuthUser({
-            id: Number(data.user.id),
-            email: String(data.user.email || ""),
-            full_name: data.user.full_name || null,
-            email_verified: Boolean(data.user.email_verified),
-            free_analysis_used: Boolean(data.user.free_analysis_used),
-          });
-        } else {
-          setAuthUser(null);
-        }
-      } catch {
-        setAuthUser(null);
-      }
-    }
-
-    loadAuthUser();
-  }, []);
-
-  const canGoStep2 = Boolean(platform);
-
-  const canGoStep3 =
-    form.full_name.trim().length >= 2 &&
-    (form.username.trim().length >= 2 || form.account_link.trim().length >= 5) &&
-    form.target_audience.trim().length >= 3 &&
-    form.account_goal.trim().length >= 3;
-
-  const canGoStep4 =
-    form.monthly_reach.trim().length >= 2 &&
-    form.posting_frequency.trim().length >= 2 &&
-    form.sales_problem.trim().length >= 3 &&
-    form.main_question.trim().length >= 3;
-
-  const canSubmit =
-    form.contact_type &&
-    form.contact_value.trim().length >= 3 &&
-    (hasFreeAnalysisRight || paymentMethod);
-
-  const progressText = useMemo(() => {
-    if (step === 1) return "1 / 4 · Platform";
-    if (step === 2) return "2 / 4 · Hesap Bilgileri";
-    if (step === 3) return "3 / 4 · Analiz Soruları";
-    return "4 / 4 · İletişim ve Onay";
-  }, [step]);
-
-  function updateForm<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
-    setForm((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
-  }
-
-  function buildMainProblemText() {
-    return [
-      `Analiz Platformu: ${getPlatformTitle(platform)}`,
-      "",
-      "HESAP HEDEFİ VE KİTLE",
-      `Hedef kitle: ${form.target_audience || "-"}`,
-      `Hesabın amacı / satılan ürün-hizmet: ${form.account_goal || "-"}`,
-      "",
-      "PERFORMANS VE REKLAM",
-      `Aylık erişim: ${form.monthly_reach || "-"}`,
-      `Paylaşım sıklığı: ${form.posting_frequency || "-"}`,
-      `Keşfete düşen / patlayan içerik: ${form.viral_content || "-"}`,
-      `Reklam bütçesi: ${form.ad_budget || "-"}`,
-      `Reklam / satış dönüşüm problemi: ${form.sales_problem || "-"}`,
-      "",
-      "İÇERİK VE GÜVEN",
-      `AI içerik kullanımı: ${form.ai_content_usage || "-"}`,
-      `Rakip / örnek hesaplar: ${form.competitor_accounts || "-"}`,
-    ].join("\n");
-  }
-
-  function buildMainMissingText() {
-    return [
-      "ANALİZDEN BEKLENEN CEVAP",
-      form.main_question || "-",
-      "",
-      "ÖZET",
-      `${getPlatformTitle(platform)} hesabı için içerik, erişim, reklam dönüşümü, hedef kitle, profil güveni ve satış süreci incelenecek.`,
-    ].join("\n");
-  }
-
-  async function handleSubmit() {
-    if (!canSubmit) return;
-
-    setLoading(true);
-    setMessage("");
+  function nextStep() {
     setError("");
 
+    if (step === 1 && !selectedPlatform) {
+      setError("Lütfen analiz edilecek platformu seçin.");
+      return;
+    }
+
+    if (step === 2 && (!accountType || !mainGoal)) {
+      setError("Lütfen hesap tipini ve ana hedefinizi seçin.");
+      return;
+    }
+
+    if (
+      step === 3 &&
+      (!accountUsername.trim() ||
+        !currentStatus ||
+        !contentStyle ||
+        !mainProblem)
+    ) {
+      setError(
+        "Lütfen hesap bilgisi, mevcut durum, içerik yapısı ve ana sorun alanlarını doldurun."
+      );
+      return;
+    }
+
+    setStep((prev) => Math.min(prev + 1, 4));
+  }
+
+  function previousStep() {
+    setError("");
+    setStep((prev) => Math.max(prev - 1, 1));
+  }
+
+  async function submitAnalysisAndGoToPayment() {
+    setError("");
+
+    if (!fullName.trim()) {
+      setError("Ad soyad boş bırakılamaz.");
+      return;
+    }
+
+    if (!contactType || !contactValue.trim()) {
+      setError("İletişim kanalı ve iletişim bilginiz gereklidir.");
+      return;
+    }
+
+    if (!accountUsername.trim()) {
+      setError("Kullanıcı adı veya hesap bilgisi gereklidir.");
+      return;
+    }
+
+    setLoading(true);
+
     try {
+      const analysisNote = [
+        `Platform: ${selectedPlatformTitle}`,
+        `Hesap tipi: ${accountType}`,
+        `Ana hedef: ${mainGoal}`,
+        `Hesap bilgisi: ${accountUsername}`,
+        accountLink ? `Hesap linki: ${accountLink}` : "",
+        `Mevcut durum: ${currentStatus}`,
+        `İçerik yapısı: ${contentStyle}`,
+        `Ana sorun: ${mainProblem}`,
+        extraNote ? `Ek not: ${extraNote}` : "",
+        `Seçilen para birimi: ${selectedCurrency}`,
+        `Fiyat etiketi: ${currentPrice}`,
+      ]
+        .filter(Boolean)
+        .join("\n");
+
       const res = await fetch("/api/analysis-request", {
         method: "POST",
         headers: {
@@ -290,513 +498,453 @@ export default function AnalysisForm() {
         },
         credentials: "include",
         body: JSON.stringify({
-          full_name: form.full_name,
-          username: form.username,
-          account_link: form.account_link,
-          account_type: getPlatformTitle(platform),
-          content_type: form.account_goal,
-          daily_post_count: form.posting_frequency,
-          coupon_code: "",
-          main_problem: buildMainProblemText(),
-          main_missing: buildMainMissingText(),
-          contact_type: form.contact_type,
-          contact_value: form.contact_value,
+          full_name: fullName.trim(),
+          contact_type: contactType,
+          contact_value: contactValue.trim(),
 
-          analysis_platform: platform,
-          analysis_currency: currency,
-          payment_method: hasFreeAnalysisRight ? "free_analysis_right" : paymentMethod,
-          analysis_price: hasFreeAnalysisRight ? 0 : price,
+          platform: selectedPlatform,
+          account_username: accountUsername.trim(),
+          account_link: accountLink.trim(),
+
+          account_type: accountType,
+          content_type: contentStyle,
+          daily_post_count: currentStatus,
+          main_problem: mainProblem,
+          main_missing: analysisNote,
+
+          goal: mainGoal,
+          extra_note: extraNote.trim(),
+          selected_currency: selectedCurrency,
+          selected_price: currentPrice,
         }),
       });
 
-      const result = await res.json();
+      const data = await res.json();
 
-      if (!res.ok || !result.success) {
-        throw new Error(result.error || "Analiz başvurusu oluşturulamadı.");
+      if (!res.ok || data.success === false) {
+        throw new Error(data.error || "Analiz başvurusu oluşturulamadı.");
       }
 
-      setMessage(
-        "Analiz başvurunuz oluşturuldu. 24 saat içerisinde ekibimiz sizinle iletişime geçecektir."
-      );
+      const requestId =
+        data.requestId ||
+        data.analysisRequestId ||
+        data.analysis_request_id ||
+        data.id ||
+        "";
 
-      setStep(1);
-      setForm({
-        full_name: "",
-        username: "",
-        account_link: "",
-        target_audience: "",
-        account_goal: "",
-        monthly_reach: "",
-        posting_frequency: "",
-        viral_content: "",
-        ad_budget: "",
-        sales_problem: "",
-        ai_content_usage: "",
-        competitor_accounts: "",
-        main_question: "",
-        contact_type: "",
-        contact_value: "",
+      const params = new URLSearchParams({
+        source: "analysis",
+        currency: selectedCurrency,
+        price: currentPrice,
+        platform: selectedPlatformTitle,
       });
-      setPaymentMethod("");
+
+      if (requestId) {
+        params.set("request_id", String(requestId));
+      }
+
+      router.push(`${ANALYSIS_PAYMENT_PATH}?${params.toString()}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Bir hata oluştu.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Başvuru oluşturulurken bir hata oluştu."
+      );
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <section className="rounded-[34px] border border-white/10 bg-[#111827]/90 p-5 shadow-[0_24px_100px_rgba(0,0,0,0.36)] ring-1 ring-white/[0.025] backdrop-blur-xl md:p-7">
-      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-xs font-bold text-emerald-300">
-            Profesyonel Hesap Analizi
-          </div>
+    <div className="relative overflow-hidden rounded-[34px] border border-white/10 bg-[#080a0d] p-5 shadow-[0_28px_100px_rgba(0,0,0,0.45)] ring-1 ring-white/[0.025] md:p-7">
+      <div className="pointer-events-none absolute -right-32 -top-32 h-80 w-80 rounded-full bg-white/[0.03] blur-[90px]" />
+      <div className="pointer-events-none absolute -bottom-40 left-1/4 h-80 w-80 rounded-full bg-white/[0.025] blur-[100px]" />
 
-          <h2 className="text-3xl font-black tracking-tight text-white md:text-4xl">
-            Analize Başla
-          </h2>
-
-          <p className="mt-3 max-w-2xl text-sm leading-7 text-white/65">
-            İçeriklerim keşfete düşmüyor, reklam veriyorum ama ürün satamıyorum,
-            profilime gelen kişi takip etmiyor veya mesajlar satışa dönüşmüyor
-            diyorsan hesabını birlikte inceleyelim.
-          </p>
+      <div className="relative">
+        <div className="mb-6 flex flex-wrap gap-2">
+          <StepPill step={1} currentStep={step} label="Platform" />
+          <StepPill step={2} currentStep={step} label="Hedef" />
+          <StepPill step={3} currentStep={step} label="Detay" />
+          <StepPill step={4} currentStep={step} label="Tamamla" />
         </div>
 
-        <button
-          type="button"
-          onClick={() => setInfoOpen((prev) => !prev)}
-          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-sky-400/20 bg-sky-400/10 px-4 py-3 text-sm font-black text-sky-200 transition hover:bg-sky-400/15"
-        >
-          <FaCircleQuestion />
-          Analizde nelere bakıyoruz?
-        </button>
-      </div>
+        <div className="mb-7 grid gap-5 lg:grid-cols-[1fr_0.82fr]">
+          <div>
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-white/72">
+              <span className="h-1.5 w-1.5 rounded-full bg-white/85" />
+              Profesyonel Hesap Analizi
+            </div>
 
-      {infoOpen && (
-        <div className="mb-6 rounded-[28px] border border-sky-400/20 bg-sky-400/10 p-5">
-          <div className="grid gap-4 lg:grid-cols-2">
-            <div>
-              <p className="text-sm font-black text-white">
-                Bu analiz özellikle şu problemler için hazırlanır:
+            <h2 className="text-4xl font-black tracking-tight text-white md:text-5xl">
+              Analize Başla
+            </h2>
+
+            <p className="mt-4 max-w-3xl text-sm leading-7 text-white/64 md:text-base">
+              Sosyal medya hesabınızın neden yeterli büyüme, güven veya dönüşüm
+              sağlayamadığını profesyonel bakışla inceliyoruz. Profil görünümü,
+              içerik düzeni, ilk saniye etkisi, anlatım dili, hedef kitle uyumu,
+              reklam sonrası dönüşüm süreci ve genel hesap algısı birlikte
+              değerlendirilir.
+            </p>
+
+            <div className="mt-6 grid gap-3 md:grid-cols-3">
+              <MiniInfoCard
+                label="İnceleme odağı"
+                value="Hook, içerik yapısı, profil algısı ve dönüşüm akışı"
+              />
+              <MiniInfoCard
+                label="Süreç"
+                value="Form tamamlanır, başvuru ekibe düşer, analiz manuel incelenir"
+              />
+              <MiniInfoCard
+                label="Sonuç"
+                value="Eksikler, iyileştirme alanları ve profesyonel geri bildirim paylaşılır"
+              />
+            </div>
+          </div>
+
+          <div className="rounded-[28px] border border-white/10 bg-white/[0.045] p-5">
+            <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-black/25 text-white">
+              <FaCircleQuestion />
+            </div>
+
+            <h3 className="text-xl font-black text-white">
+              Analizde neleri inceliyoruz?
+            </h3>
+
+            <div className="mt-4 space-y-3 text-sm leading-6 text-white/62">
+              <p>• Profilinizin ilk bakışta ne kadar güven verdiğini</p>
+              <p>• İçeriklerinizin kullanıcıyı ilk saniyede ne kadar yakaladığını</p>
+              <p>• Video, görsel ve açıklama dilinizin hedef kitlenizle uyumunu</p>
+              <p>• Paylaşım düzeninizin büyüme açısından yeterli olup olmadığını</p>
+              <p>• Reklam, DM, web sitesi veya satış akışında kopma yaşanan noktaları</p>
+              <p>• Gerekli görülürse hesabınız için uygun iyileştirme alanlarını</p>
+            </div>
+          </div>
+        </div>
+
+        {step === 1 && (
+          <>
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-white/42">
+              Platform seçimi
+            </p>
+
+            <h3 className="mt-2 text-3xl font-black text-white">
+              Hangi platformu analiz ettirmek istiyorsunuz?
+            </h3>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              {platformOptions.map((platform) => (
+                <ChoiceCard
+                  key={platform.key}
+                  title={platform.title}
+                  description={platform.description}
+                  icon={platform.icon}
+                  active={selectedPlatform === platform.key}
+                  onClick={() => setSelectedPlatform(platform.key)}
+                />
+              ))}
+            </div>
+          </>
+        )}
+
+        {step === 2 && (
+          <>
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-white/42">
+              Hesap amacı
+            </p>
+
+            <h3 className="mt-2 text-3xl font-black text-white">
+              Hesabınız ne için kullanılıyor?
+            </h3>
+
+            <p className="mt-3 max-w-3xl text-sm leading-7 text-white/60">
+              Hesabınız işletme, marka, içerik sayfası, proje, medya kanalı,
+              e-ticaret veya kişisel marka olabilir. Size en yakın yapıyı seçin.
+            </p>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              {accountTypeOptions.map((option) => (
+                <ChoiceCard
+                  key={option.value}
+                  title={option.title}
+                  description={option.description}
+                  icon={option.icon}
+                  active={accountType === option.value}
+                  onClick={() => setAccountType(option.value)}
+                />
+              ))}
+            </div>
+
+            <div className="mt-8">
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-white/42">
+                Ana hedef
               </p>
 
-              <div className="mt-4 grid gap-2">
-                {[
-                  "İçeriklerim keşfete düşmüyor.",
-                  "Reklam alsam bile ürün satamıyorum.",
-                  "Profilime giren kişi takip etmiyor.",
-                  "Mesaj geliyor ama satın almaya dönüşmüyor.",
-                  "Videolar izleniyor ama güven ve satış oluşturmuyor.",
-                ].map((item) => (
-                  <div
-                    key={item}
-                    className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white/75"
-                  >
-                    {item}
-                  </div>
+              <h3 className="mt-2 text-3xl font-black text-white">
+                Bu analizden ne bekliyorsunuz?
+              </h3>
+
+              <div className="mt-6 grid gap-4 md:grid-cols-2">
+                {goalOptions.map((option) => (
+                  <ChoiceCard
+                    key={option.value}
+                    title={option.title}
+                    description={option.description}
+                    active={mainGoal === option.value}
+                    onClick={() => setMainGoal(option.value)}
+                  />
                 ))}
               </div>
             </div>
+          </>
+        )}
 
-            <div>
-              <p className="text-sm font-black text-white">
-                Ekibimiz hangi alanları inceler?
-              </p>
+        {step === 3 && (
+          <>
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-white/42">
+              Hesap detayları
+            </p>
 
-              <p className="mt-4 text-sm leading-7 text-white/70">
-                Hedef kitleniz, içerik düzeniniz, reklam bütçeniz, satış
-                süreciniz, AI içerik kullanımı, profil güveni ve platform
-                algoritmasına uyumunuz değerlendirilir.
-              </p>
+            <h3 className="mt-2 text-3xl font-black text-white">
+              Hesabınızı daha iyi anlayalım
+            </h3>
 
-              <p className="mt-3 text-sm leading-7 text-white/70">
-                Analiz şu an <b>Instagram, TikTok, YouTube ve X / Twitter</b>{" "}
-                hesapları için hazırlanır. Başvuru ekibimiz tarafından manuel
-                incelenir; eksikler, düzeltme önerileri ve gerekirse hesabınıza
-                özel ek paket önerileri iletilir.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              <div>
+                <FieldLabel required>Kullanıcı adı veya hesap adı</FieldLabel>
+                <PremiumInput
+                  value={accountUsername}
+                  onChange={(e) => setAccountUsername(e.target.value)}
+                  placeholder="@kullaniciadi veya hesap adı"
+                />
+              </div>
 
-      <div className="mb-5 grid gap-3 md:grid-cols-3">
-        <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/35">
-            Durum
-          </p>
-          <p className="mt-2 text-sm font-black text-white">{progressText}</p>
-        </div>
+              <div>
+                <FieldLabel>Hesap linki</FieldLabel>
+                <PremiumInput
+                  value={accountLink}
+                  onChange={(e) => setAccountLink(e.target.value)}
+                  placeholder="https://..."
+                />
+              </div>
 
-        <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-100/70">
-            Ücretsiz Hak
-          </p>
-          <p className="mt-2 text-sm font-black text-white">
-            {hasFreeAnalysisRight
-              ? "1 ücretsiz analiz hakkınız hazır"
-              : emailNotVerified
-                ? "E-posta doğrulaması bekleniyor"
-                : freeRightUsed
-                  ? "Ücretsiz analiz hakkı kullanıldı"
-                  : "Üyelik + e-posta doğrulama ile kazanılır"}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/35">
-            Standart Analiz
-          </p>
-          <p className="mt-2 text-sm font-black text-white">
-            1000 TL / 15 USD / 1800 RUB
-          </p>
-        </div>
-      </div>
-
-      {step === 1 && (
-        <div>
-          <h3 className="mb-4 text-2xl font-black text-white">
-            Hangi platformu analiz ettirmek istiyorsunuz?
-          </h3>
-
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            {platforms.map((item) => {
-              const Icon = item.icon;
-              const active = platform === item.slug;
-
-              return (
-                <button
-                  key={item.slug}
-                  type="button"
-                  onClick={() => setPlatform(item.slug)}
-                  className={`rounded-3xl border bg-gradient-to-br p-5 text-left transition hover:-translate-y-0.5 ${
-                    active
-                      ? "border-emerald-400/70 from-emerald-400/20 to-white/[0.04]"
-                      : `border-white/10 ${item.color} hover:border-white/20`
-                  }`}
+              <div>
+                <FieldLabel required>Mevcut durum</FieldLabel>
+                <PremiumSelect
+                  value={currentStatus}
+                  onChange={(e) => setCurrentStatus(e.target.value)}
                 >
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-black/25 text-xl text-white">
-                    <Icon />
-                  </div>
+                  <option value="" className="bg-[#111318]">
+                    Mevcut durumu seçin
+                  </option>
+                  {currentStatusOptions.map((item) => (
+                    <option key={item} value={item} className="bg-[#111318]">
+                      {item}
+                    </option>
+                  ))}
+                </PremiumSelect>
+              </div>
 
-                  <p className="text-lg font-black text-white">{item.title}</p>
-                  <p className="mt-2 text-sm leading-6 text-white/60">
-                    {item.description}
+              <div>
+                <FieldLabel required>İçerik yapısı</FieldLabel>
+                <PremiumSelect
+                  value={contentStyle}
+                  onChange={(e) => setContentStyle(e.target.value)}
+                >
+                  <option value="" className="bg-[#111318]">
+                    İçerik yapısını seçin
+                  </option>
+                  {contentStyleOptions.map((item) => (
+                    <option key={item} value={item} className="bg-[#111318]">
+                      {item}
+                    </option>
+                  ))}
+                </PremiumSelect>
+              </div>
+
+              <div className="md:col-span-2">
+                <FieldLabel required>Ana sorun alanı</FieldLabel>
+                <PremiumSelect
+                  value={mainProblem}
+                  onChange={(e) => setMainProblem(e.target.value)}
+                >
+                  <option value="" className="bg-[#111318]">
+                    Ana sorunu seçin
+                  </option>
+                  {problemOptions.map((item) => (
+                    <option key={item} value={item} className="bg-[#111318]">
+                      {item}
+                    </option>
+                  ))}
+                </PremiumSelect>
+              </div>
+
+              <div className="md:col-span-2">
+                <FieldLabel>Ek not</FieldLabel>
+                <PremiumTextarea
+                  value={extraNote}
+                  onChange={(e) => setExtraNote(e.target.value)}
+                  placeholder="Özellikle bakılmasını istediğiniz bir konu varsa buraya yazabilirsiniz."
+                />
+              </div>
+            </div>
+          </>
+        )}
+
+        {step === 4 && (
+          <>
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-white/42">
+              Başvuru tamamlama
+            </p>
+
+            <h3 className="mt-2 text-3xl font-black text-white">
+              Analizi bitir ve ödemeye geç
+            </h3>
+
+            <p className="mt-3 max-w-3xl text-sm leading-7 text-white/62">
+              Başvurunuz tamamlandıktan sonra ödeme ekranına yönlendirilirsiniz.
+              Ödeme tarafı SMMTora akışıyla uyumlu şekilde sonraki aşamada
+              ilerler.
+            </p>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-3">
+              <MiniInfoCard label="Platform" value={selectedPlatformTitle} />
+              <MiniInfoCard label="Hesap tipi" value={accountType || "-"} />
+              <MiniInfoCard label="Ana hedef" value={mainGoal || "-"} />
+            </div>
+
+            <div className="mt-6 rounded-[28px] border border-white/10 bg-black/20 p-5">
+              <h4 className="text-2xl font-black text-white">
+                İletişim ve başvuru onayı
+              </h4>
+
+              <div className="mt-5 grid gap-4 md:grid-cols-3">
+                <div>
+                  <FieldLabel required>Ad soyad</FieldLabel>
+                  <PremiumInput
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Adınız ve soyadınız"
+                  />
+                </div>
+
+                <div>
+                  <FieldLabel required>İletişim kanalı</FieldLabel>
+                  <PremiumSelect
+                    value={contactType}
+                    onChange={(e) => setContactType(e.target.value as ContactType)}
+                  >
+                    <option value="" className="bg-[#111318]">
+                      İletişim kanalı seçin
+                    </option>
+                    {contactTypes.map((item) => (
+                      <option key={item} value={item} className="bg-[#111318]">
+                        {item}
+                      </option>
+                    ))}
+                  </PremiumSelect>
+                </div>
+
+                <div>
+                  <FieldLabel required>İletişim bilginiz</FieldLabel>
+                  <PremiumInput
+                    value={contactValue}
+                    onChange={(e) => setContactValue(e.target.value)}
+                    placeholder="+90 5xx..., @kullanici veya e-posta"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 rounded-[28px] border border-white/10 bg-white/[0.035] p-5">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-white/38">
+                    Ödeme aşaması
                   </p>
+                  <h4 className="mt-2 text-2xl font-black text-white">
+                    Sonraki ekranda ödeme akışına geçeceksiniz
+                  </h4>
+                  <p className="mt-2 max-w-2xl text-sm leading-7 text-white/60">
+                    Burada sadece para birimini belirliyorsunuz. Analizi
+                    tamamladıktan sonra ödeme ekranına yönlendirilirsiniz.
+                  </p>
+                </div>
 
-                  {active && (
-                    <span className="mt-4 inline-flex rounded-full bg-emerald-400 px-3 py-1 text-xs font-black text-black">
-                      Seçili
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
+                <div className="rounded-2xl border border-white/10 bg-black/25 px-5 py-4">
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-white/38">
+                    Seçili etiket
+                  </p>
+                  <p className="mt-1 text-xl font-black text-white">
+                    {currentPrice}
+                  </p>
+                </div>
+              </div>
 
-      {step === 2 && (
-        <div>
-          <h3 className="mb-4 text-2xl font-black text-white">
-            Hesap bilgilerini yaz
-          </h3>
+              <div className="mt-5 flex flex-wrap gap-3">
+                {(["TL", "USD", "RUB"] as CurrencyCode[]).map((currency) => {
+                  const active = selectedCurrency === currency;
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <InputField
-              label="Ad soyad"
-              required
-              value={form.full_name}
-              onChange={(value) => updateForm("full_name", value)}
-              placeholder="Örn: Yusuf Uysal"
-            />
-
-            <InputField
-              label="Kullanıcı adı"
-              required
-              value={form.username}
-              onChange={(value) => updateForm("username", value)}
-              placeholder="@kullaniciadi"
-            />
-
-            <InputField
-              label="Hesap linki"
-              value={form.account_link}
-              onChange={(value) => updateForm("account_link", value)}
-              placeholder="https://instagram.com/..."
-            />
-
-            <InputField
-              label="Hedef kitleniz kim?"
-              required
-              value={form.target_audience}
-              onChange={(value) => updateForm("target_audience", value)}
-              placeholder="Örn: 20-35 yaş kadın, Türkiye, cilt bakımıyla ilgilenen kitle"
-            />
-          </div>
-
-          <div className="mt-4">
-            <TextAreaField
-              label="Hesabın amacı nedir, ne satıyorsunuz veya neyi büyütmek istiyorsunuz?"
-              required
-              value={form.account_goal}
-              onChange={(value) => updateForm("account_goal", value)}
-              placeholder="Örn: Cilt bakım ürünleri satıyoruz. Aylık 50 satış hedefliyoruz ama reklamdan gelen kişiler satın almıyor."
-            />
-          </div>
-        </div>
-      )}
-
-      {step === 3 && (
-        <div>
-          <h3 className="mb-4 text-2xl font-black text-white">
-            Kısa analiz soruları
-          </h3>
-
-          <div className="grid gap-4">
-            <TextAreaField
-              label="Aylık ortalama hesap erişiminiz kaç?"
-              required
-              value={form.monthly_reach}
-              onChange={(value) => updateForm("monthly_reach", value)}
-              placeholder="Örn: Son 30 günde yaklaşık 80.000 erişim aldım ama satışa dönüşmüyor."
-            />
-
-            <TextAreaField
-              label="Günde veya haftada kaç içerik paylaşıyorsunuz?"
-              required
-              value={form.posting_frequency}
-              onChange={(value) => updateForm("posting_frequency", value)}
-              placeholder="Örn: Haftada 4 Reels, her gün story, bazen 2-3 gün boş kalıyor."
-            />
-
-            <TextAreaField
-              label="Hiç keşfete düşen, normalden çok izlenen veya patlayan içeriğiniz oldu mu?"
-              value={form.viral_content}
-              onChange={(value) => updateForm("viral_content", value)}
-              placeholder="Örn: Bir videom 200.000 izlendi ama takipçi ve satış çok az geldi."
-            />
-
-            <TextAreaField
-              label="Reklama aylık ne kadar bütçe ayırıyorsunuz?"
-              value={form.ad_budget}
-              onChange={(value) => updateForm("ad_budget", value)}
-              placeholder="Örn: Aylık 5.000 TL reklam veriyoruz veya hiç reklam vermiyoruz."
-            />
-
-            <TextAreaField
-              label="Reklam alsanız bile satış, mesaj veya talep dönüşümünde nerede sorun yaşıyorsunuz?"
-              required
-              value={form.sales_problem}
-              onChange={(value) => updateForm("sales_problem", value)}
-              placeholder="Örn: Tıklama geliyor ama WhatsApp’a geçen az oluyor. Mesaj atanlar da fiyat sorup kayboluyor."
-            />
-
-            <TextAreaField
-              label="Videolarınızda veya görsellerinizde AI içerik kullanıyor musunuz?"
-              value={form.ai_content_usage}
-              onChange={(value) => updateForm("ai_content_usage", value)}
-              placeholder="Örn: AI seslendirme kullanıyorum, bazı videolarda AI görsel var. Doğal durup durmadığından emin değilim."
-            />
-
-            <TextAreaField
-              label="Rakip veya örnek aldığınız hesap var mı?"
-              value={form.competitor_accounts}
-              onChange={(value) => updateForm("competitor_accounts", value)}
-              placeholder="Örn: Rakip hesap linkleri veya örnek aldığınız 1-3 profil."
-            />
-
-            <TextAreaField
-              label="Bu analizden sonra en çok hangi konuda net cevap almak istiyorsunuz?"
-              required
-              value={form.main_question}
-              onChange={(value) => updateForm("main_question", value)}
-              placeholder="Örn: Neden satış alamıyorum, neden keşfete düşmüyorum, reklam bütçem neden boşa gidiyor?"
-            />
-          </div>
-        </div>
-      )}
-
-      {step === 4 && (
-        <div>
-          <h3 className="mb-4 text-2xl font-black text-white">
-            İletişim ve analiz onayı
-          </h3>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="block">
-              <span className="mb-2 block text-sm font-bold text-white/85">
-                İletişim kanalı <span className="text-emerald-300">*</span>
-              </span>
-
-              <select
-                value={form.contact_type}
-                onChange={(event) =>
-                  updateForm("contact_type", event.target.value as ContactType)
-                }
-                className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-emerald-400"
-              >
-                <option value="" className="bg-[#111827]">
-                  WhatsApp veya Telegram seç
-                </option>
-                <option value="WhatsApp" className="bg-[#111827]">
-                  WhatsApp
-                </option>
-                <option value="Telegram" className="bg-[#111827]">
-                  Telegram
-                </option>
-              </select>
-            </label>
-
-            <InputField
-              label="İletişim bilginiz"
-              required
-              value={form.contact_value}
-              onChange={(value) => updateForm("contact_value", value)}
-              placeholder={
-                form.contact_type === "Telegram"
-                  ? "@kullaniciadi"
-                  : "+90 5xx xxx xx xx"
-              }
-            />
-          </div>
-
-          <div className="mt-5 rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-5">
-            {hasFreeAnalysisRight ? (
-              <>
-                <p className="text-lg font-black text-white">
-                  Ücretsiz analiz hakkınız kullanılacak
-                </p>
-                <p className="mt-2 text-sm leading-6 text-white/65">
-                  E-posta doğrulamanız tamamlandığı için hesabınıza tanımlanan
-                  1 ücretsiz analiz hakkı bu başvuruda kullanılacaktır.
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="text-lg font-black text-white">
-                  Standart analiz başvurusu
-                </p>
-                <p className="mt-2 text-sm leading-6 text-white/65">
-                  E-posta doğrulaması yapılmış ücretsiz analiz hakkınız yoksa
-                  başvuru standart analiz ücretiyle oluşturulur.
-                </p>
-
-                <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                  {(["TL", "USD", "RUB"] as CurrencyCode[]).map((item) => (
+                  return (
                     <button
-                      key={item}
+                      key={currency}
                       type="button"
-                      onClick={() => setCurrency(item)}
-                      className={`rounded-2xl border px-4 py-3 text-left transition ${
-                        currency === item
-                          ? "border-emerald-400 bg-emerald-400/15"
-                          : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
+                      onClick={() => setSelectedCurrency(currency)}
+                      className={`rounded-full border px-4 py-2.5 text-sm font-black transition ${
+                        active
+                          ? "border-white/28 bg-white/[0.13] text-white"
+                          : "border-white/10 bg-white/[0.035] text-white/72 hover:border-white/18 hover:bg-white/[0.055]"
                       }`}
                     >
-                      <p className="text-xs font-black text-white/40">{item}</p>
-                      <p className="mt-1 text-sm font-black text-white">
-                        {formatMoney(ANALYSIS_PRICES[item], item)}
-                      </p>
+                      {priceMap[currency]}
                     </button>
-                  ))}
-                </div>
-
-                <div className="mt-4 grid gap-3 md:grid-cols-2">
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod("turkey_bank")}
-                    className={`rounded-2xl border p-4 text-left transition ${
-                      paymentMethod === "turkey_bank"
-                        ? "border-emerald-400 bg-emerald-400/15"
-                        : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
-                    }`}
-                  >
-                    <p className="text-sm font-black text-white">Havale / EFT</p>
-                    <p className="mt-1 text-xs leading-5 text-white/55">
-                      Ödeme sonrası dekont kontrol edilir.
-                    </p>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod("support")}
-                    className={`rounded-2xl border p-4 text-left transition ${
-                      paymentMethod === "support"
-                        ? "border-sky-400 bg-sky-400/15"
-                        : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
-                    }`}
-                  >
-                    <p className="text-sm font-black text-white">
-                      Destek ile ödeme
-                    </p>
-                    <p className="mt-1 text-xs leading-5 text-white/55">
-                      Alternatif ödeme için ekip sizinle iletişime geçer.
-                    </p>
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-
-          <div className="mt-4 rounded-2xl border border-sky-400/20 bg-sky-400/10 p-4 text-sm leading-6 text-sky-50">
-            Sipariş oluşturulduktan sonra 24 saat içerisinde ekibimiz sizinle
-            iletişime geçecektir.
-          </div>
-        </div>
-      )}
-
-      {error && (
-        <div className="mt-5 rounded-2xl border border-rose-400/25 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">
-          {error}
-        </div>
-      )}
-
-      {message && (
-        <div className="mt-5 rounded-2xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">
-          {message}
-        </div>
-      )}
-
-      <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <button
-          type="button"
-          onClick={() => setStep((prev) => Math.max(prev - 1, 1))}
-          disabled={step === 1}
-          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-bold text-white/75 transition hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          <FaArrowLeft />
-          Geri
-        </button>
-
-        {step < 4 ? (
-          <button
-            type="button"
-            onClick={() => setStep((prev) => Math.min(prev + 1, 4))}
-            disabled={
-              (step === 1 && !canGoStep2) ||
-              (step === 2 && !canGoStep3) ||
-              (step === 3 && !canGoStep4)
-            }
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Devam Et
-            <FaArrowRight />
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={!canSubmit || loading}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-black text-black transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {loading ? "Oluşturuluyor..." : "Analiz Başvurusunu Oluştur"}
-            <FaCheck />
-          </button>
+                  );
+                })}
+              </div>
+            </div>
+          </>
         )}
+
+        {error && (
+          <div className="mt-6 rounded-2xl border border-[#6b2232] bg-[#31101b]/70 px-4 py-3 text-sm font-semibold text-[#f2c7d1]">
+            {error}
+          </div>
+        )}
+
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <button
+            type="button"
+            onClick={previousStep}
+            disabled={step === 1 || loading}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-black text-white transition hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <FaArrowLeft />
+            Geri
+          </button>
+
+          {step < 4 ? (
+            <button
+              type="button"
+              onClick={nextStep}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white/[0.92] px-6 py-3 text-sm font-black text-black transition hover:bg-white"
+            >
+              Devam Et
+              <FaArrowRight />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={submitAnalysisAndGoToPayment}
+              disabled={loading}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white/[0.92] px-6 py-3 text-sm font-black text-black transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loading ? "Analiz oluşturuluyor..." : "Analizi Bitir ve Ödemeye Geç"}
+              {loading ? <FaPaperPlane /> : <FaCheck />}
+            </button>
+          )}
+        </div>
       </div>
-    </section>
+    </div>
   );
 }
