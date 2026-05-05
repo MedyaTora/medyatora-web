@@ -20,6 +20,7 @@ import {
 } from "react-icons/fa6";
 
 type LocaleCode = "tr" | "en" | "ru";
+type CurrencyCode = "TL" | "USD" | "RUB";
 type PlatformSlug = "instagram" | "tiktok" | "youtube" | "x" | "telegram";
 type ContactType = "Telegram" | "WhatsApp" | "Instagram" | "E-posta" | "";
 type PaymentMethod = "turkey_bank" | "support" | "balance" | "";
@@ -63,6 +64,7 @@ type CreatedPaymentInfo = {
   orderNumbers: string[];
   fullName: string;
   totalAmount: number;
+  currency: CurrencyCode;
   paymentMethod: PaymentMethod;
 };
 
@@ -161,6 +163,8 @@ type PackagePageText = {
   goTelegram: string;
   sendWhatsapp: string;
   ok: string;
+  currency: string;
+  selectedCurrency: string;
   paymentLabels: Record<Exclude<PaymentMethod, "">, string>;
   supportMessage: (
     info: CreatedPaymentInfo,
@@ -195,6 +199,13 @@ const TURKEY_BANK_ACCOUNT_NAME =
 const TURKEY_BANK_IBAN = "TR48 0001 0001 3349 7700 5150 01";
 
 const localeOptions: LocaleCode[] = ["tr", "en", "ru"];
+const currencyOptions: CurrencyCode[] = ["TL", "USD", "RUB"];
+
+const PACKAGE_CURRENCY_RATE: Record<CurrencyCode, number> = {
+  TL: 1,
+  USD: 0.03,
+  RUB: 2.65,
+};
 
 const contactTypes: ContactType[] = [
   "Telegram",
@@ -283,10 +294,10 @@ const pageText: Record<LocaleCode, PackagePageText> = {
     contactValuePlaceholder: "İletişim bilgisi",
     paymentMethod: "Ödeme yöntemi",
     paymentDesc:
-      "Paketler şu an TL üzerinden satılır. Bakiye ödemesi yalnızca TL bakiyeden düşer.",
+      "Paketler seçtiğin para birimi üzerinden gösterilir. Bakiye ödemesi yalnızca seçili para birimindeki bakiyeden düşer.",
     bankTransfer: "Havale / EFT",
     bankTransferDesc: "Dekont sonrası ödeme kontrol edilir.",
-    tlBalance: "TL Bakiyesi",
+    tlBalance: "Bakiye",
     balanceLoginRequired: "Bakiye ile ödeme için giriş yapmalısın.",
     supportPayment: "Destek ile ödeme",
     supportPaymentDesc: "Alternatif ödeme için destek ekibiyle ilerle.",
@@ -328,6 +339,8 @@ const pageText: Record<LocaleCode, PackagePageText> = {
     goTelegram: "Telegram’a Git",
     sendWhatsapp: "WhatsApp’a Gönder",
     ok: "Tamam",
+    currency: "Para Birimi",
+    selectedCurrency: "Seçili Para Birimi",
     paymentLabels: {
       turkey_bank: "Türkiye Banka Havalesi / EFT",
       balance: "MedyaTora Bakiyesi",
@@ -352,12 +365,14 @@ const pageText: Record<LocaleCode, PackagePageText> = {
       },
       {
         title: "Sipariş Takibi",
-        description: "Siparişini hesabından ve sipariş numarasıyla takip edebilirsin.",
+        description:
+          "Siparişini hesabından ve sipariş numarasıyla takip edebilirsin.",
         icon: FaUserCheck,
       },
       {
         title: "Güvenli Bilgilendirme",
-        description: "Ödeme, iade ve işlem detayları sipariş öncesi açıkça gösterilir.",
+        description:
+          "Ödeme, iade ve işlem detayları sipariş öncesi açıkça gösterilir.",
         icon: FaShieldHalved,
       },
     ],
@@ -365,7 +380,8 @@ const pageText: Record<LocaleCode, PackagePageText> = {
       {
         slug: "instagram",
         title: "Instagram",
-        description: "Takipçi, beğeni, Reels izlenme, yorum ve kaydetme paketleri.",
+        description:
+          "Takipçi, beğeni, Reels izlenme, yorum ve kaydetme paketleri.",
         icon: FaInstagram,
         gradient: "from-white/[0.08] via-white/[0.035] to-white/[0.02]",
         glow: "bg-white/[0.06]",
@@ -388,7 +404,8 @@ const pageText: Record<LocaleCode, PackagePageText> = {
           {
             slug: "yorum",
             title: "Yorum",
-            description: "Gönderilerde daha canlı bir etkileşim görünümü için.",
+            description:
+              "Gönderilerde daha canlı bir etkileşim görünümü için.",
           },
           {
             slug: "kaydetme",
@@ -423,7 +440,8 @@ const pageText: Record<LocaleCode, PackagePageText> = {
           {
             slug: "begeni",
             title: "Beğeni",
-            description: "Videolardaki etkileşim görüntüsünü artırmak için.",
+            description:
+              "Videolardaki etkileşim görüntüsünü artırmak için.",
           },
           {
             slug: "izlenme",
@@ -448,7 +466,8 @@ const pageText: Record<LocaleCode, PackagePageText> = {
           {
             slug: "favori",
             title: "Favori",
-            description: "Videoların favori / kayıt görünümünü güçlendirmek için.",
+            description:
+              "Videoların favori / kayıt görünümünü güçlendirmek için.",
           },
         ],
       },
@@ -478,12 +497,14 @@ const pageText: Record<LocaleCode, PackagePageText> = {
           {
             slug: "begeni",
             title: "Beğeni",
-            description: "Videolardaki olumlu etkileşim görünümü için.",
+            description:
+              "Videolardaki olumlu etkileşim görünümü için.",
           },
           {
             slug: "yorum",
             title: "Yorum",
-            description: "Video altında daha aktif bir topluluk görünümü için.",
+            description:
+              "Video altında daha aktif bir topluluk görünümü için.",
           },
           {
             slug: "canli_yayin",
@@ -495,7 +516,8 @@ const pageText: Record<LocaleCode, PackagePageText> = {
       {
         slug: "x",
         title: "X / Twitter",
-        description: "Takipçi, beğeni, görüntülenme, retweet ve yorum paketleri.",
+        description:
+          "Takipçi, beğeni, görüntülenme, retweet ve yorum paketleri.",
         icon: FaXTwitter,
         gradient: "from-white/[0.08] via-white/[0.035] to-white/[0.02]",
         glow: "bg-white/[0.06]",
@@ -528,14 +550,16 @@ const pageText: Record<LocaleCode, PackagePageText> = {
           {
             slug: "bookmark",
             title: "Yer İmi / Kaydetme",
-            description: "Paylaşımların daha değerli görünmesini destekler.",
+            description:
+              "Paylaşımların daha değerli görünmesini destekler.",
           },
         ],
       },
       {
         slug: "telegram",
         title: "Telegram",
-        description: "Üye, gönderi izlenme, reaksiyon ve paylaşım paketleri.",
+        description:
+          "Üye, gönderi izlenme, reaksiyon ve paylaşım paketleri.",
         icon: FaTelegram,
         gradient: "from-white/[0.08] via-white/[0.035] to-white/[0.02]",
         glow: "bg-white/[0.06]",
@@ -548,7 +572,8 @@ const pageText: Record<LocaleCode, PackagePageText> = {
           {
             slug: "izlenme",
             title: "Gönderi İzlenme",
-            description: "Telegram gönderilerinin görüntülenmesini artırmak için.",
+            description:
+              "Telegram gönderilerinin görüntülenmesini artırmak için.",
           },
           {
             slug: "reaksiyon",
@@ -586,7 +611,8 @@ const pageText: Record<LocaleCode, PackagePageText> = {
       {
         slug: "turk",
         title: "Türk Kitle",
-        description: "Türkiye odaklı daha kaliteli görünüm isteyenler için.",
+        description:
+          "Türkiye odaklı daha kaliteli görünüm isteyenler için.",
         badge: "TR",
         colorClass: packageCardClass,
       },
@@ -606,7 +632,6 @@ const pageText: Record<LocaleCode, PackagePageText> = {
       },
     ],
   },
-
   en: {
     home: "MedyaTora Home",
     analysis: "Analysis",
@@ -667,13 +692,14 @@ const pageText: Record<LocaleCode, PackagePageText> = {
     contactValuePlaceholder: "Contact information",
     paymentMethod: "Payment method",
     paymentDesc:
-      "Packages are currently sold in TL. Balance payments are deducted only from the TL balance.",
+      "Packages are shown in the selected currency. Balance payments are deducted only from the selected currency balance.",
     bankTransfer: "Bank Transfer / EFT",
     bankTransferDesc: "Payment is checked after the receipt is sent.",
-    tlBalance: "TL Balance",
+    tlBalance: "Balance",
     balanceLoginRequired: "You must log in to pay with balance.",
     supportPayment: "Pay with support",
-    supportPaymentDesc: "Continue with the support team for alternative payment options.",
+    supportPaymentDesc:
+      "Continue with the support team for alternative payment options.",
     bankInfo: "Bank details",
     receiver: "Receiver",
     iban: "IBAN",
@@ -713,6 +739,8 @@ const pageText: Record<LocaleCode, PackagePageText> = {
     goTelegram: "Go to Telegram",
     sendWhatsapp: "Send on WhatsApp",
     ok: "OK",
+    currency: "Currency",
+    selectedCurrency: "Selected Currency",
     paymentLabels: {
       turkey_bank: "Turkey Bank Transfer / EFT",
       balance: "MedyaTora Balance",
@@ -726,7 +754,8 @@ const pageText: Record<LocaleCode, PackagePageText> = {
     highlights: [
       {
         title: "Fast Package Selection",
-        description: "Move quickly by choosing the platform, category, and package type.",
+        description:
+          "Move quickly by choosing the platform, category, and package type.",
         icon: FaBoxesStacked,
       },
       {
@@ -737,12 +766,14 @@ const pageText: Record<LocaleCode, PackagePageText> = {
       },
       {
         title: "Order Tracking",
-        description: "You can track your order from your account and with your order number.",
+        description:
+          "You can track your order from your account and with your order number.",
         icon: FaUserCheck,
       },
       {
         title: "Clear Information",
-        description: "Payment, refund, and process details are shown clearly before ordering.",
+        description:
+          "Payment, refund, and process details are shown clearly before ordering.",
         icon: FaShieldHalved,
       },
     ],
@@ -863,12 +894,14 @@ const pageText: Record<LocaleCode, PackagePageText> = {
           {
             slug: "begeni",
             title: "Likes",
-            description: "For a stronger positive engagement appearance on videos.",
+            description:
+              "For a stronger positive engagement appearance on videos.",
           },
           {
             slug: "yorum",
             title: "Comments",
-            description: "For a more active community appearance under videos.",
+            description:
+              "For a more active community appearance under videos.",
           },
           {
             slug: "canli_yayin",
@@ -971,7 +1004,8 @@ const pageText: Record<LocaleCode, PackagePageText> = {
       {
         slug: "turk",
         title: "Turkish Audience",
-        description: "For users who want a Turkey-focused higher-quality appearance.",
+        description:
+          "For users who want a Turkey-focused higher-quality appearance.",
         badge: "TR",
         colorClass: packageCardClass,
       },
@@ -1036,7 +1070,8 @@ const pageText: Record<LocaleCode, PackagePageText> = {
     getSupport: "Получить поддержку",
     usernameRequired: "Чтобы продолжить, нужно указать целевой username.",
     wideServiceList: "Широкий список услуг",
-    wideServiceTitle: "Для большего количества платформ и услуг перейдите в SMMTora",
+    wideServiceTitle:
+      "Для большего количества платформ и услуг перейдите в SMMTora",
     wideServiceDesc:
       "Здесь находится быстрый поток пакетов. Чтобы увидеть все услуги, детальные фильтры и расширенный список платформ, используйте SMMTora.",
     goSmmtora: "Перейти в SMMTora",
@@ -1052,13 +1087,14 @@ const pageText: Record<LocaleCode, PackagePageText> = {
     contactValuePlaceholder: "Контактная информация",
     paymentMethod: "Способ оплаты",
     paymentDesc:
-      "Пакеты сейчас продаются в TL. Оплата с баланса списывается только с TL-баланса.",
+      "Пакеты отображаются в выбранной валюте. Оплата с баланса списывается только с баланса выбранной валюты.",
     bankTransfer: "Банковский перевод / EFT",
     bankTransferDesc: "Платёж проверяется после отправки чека.",
-    tlBalance: "Баланс TL",
+    tlBalance: "Баланс",
     balanceLoginRequired: "Для оплаты с баланса необходимо войти в аккаунт.",
     supportPayment: "Оплата через поддержку",
-    supportPaymentDesc: "Для альтернативной оплаты продолжите с командой поддержки.",
+    supportPaymentDesc:
+      "Для альтернативной оплаты продолжите с командой поддержки.",
     bankInfo: "Банковские реквизиты",
     receiver: "Получатель",
     iban: "IBAN",
@@ -1098,6 +1134,8 @@ const pageText: Record<LocaleCode, PackagePageText> = {
     goTelegram: "Перейти в Telegram",
     sendWhatsapp: "Отправить в WhatsApp",
     ok: "ОК",
+    currency: "Валюта",
+    selectedCurrency: "Выбранная валюта",
     paymentLabels: {
       turkey_bank: "Банковский перевод / EFT в Турции",
       balance: "Баланс MedyaTora",
@@ -1111,22 +1149,26 @@ const pageText: Record<LocaleCode, PackagePageText> = {
     highlights: [
       {
         title: "Быстрый выбор пакета",
-        description: "Быстро продолжайте, выбрав платформу, категорию и тип пакета.",
+        description:
+          "Быстро продолжайте, выбрав платформу, категорию и тип пакета.",
         icon: FaBoxesStacked,
       },
       {
         title: "Высокий дневной лимит",
-        description: "Обрабатываются заказы от минимума 100 до дневного максимума 5 000 000.",
+        description:
+          "Обрабатываются заказы от минимума 100 до дневного максимума 5 000 000.",
         icon: FaChartLine,
       },
       {
         title: "Отслеживание заказа",
-        description: "Вы можете отслеживать заказ в аккаунте и по номеру заказа.",
+        description:
+          "Вы можете отслеживать заказ в аккаунте и по номеру заказа.",
         icon: FaUserCheck,
       },
       {
         title: "Понятная информация",
-        description: "Оплата, возврат и детали процесса ясно показываются до заказа.",
+        description:
+          "Оплата, возврат и детали процесса ясно показываются до заказа.",
         icon: FaShieldHalved,
       },
     ],
@@ -1134,7 +1176,8 @@ const pageText: Record<LocaleCode, PackagePageText> = {
       {
         slug: "instagram",
         title: "Instagram",
-        description: "Пакеты подписчиков, лайков, просмотров Reels, комментариев и сохранений.",
+        description:
+          "Пакеты подписчиков, лайков, просмотров Reels, комментариев и сохранений.",
         icon: FaInstagram,
         gradient: "from-white/[0.08] via-white/[0.035] to-white/[0.02]",
         glow: "bg-white/[0.06]",
@@ -1179,7 +1222,8 @@ const pageText: Record<LocaleCode, PackagePageText> = {
       {
         slug: "tiktok",
         title: "TikTok",
-        description: "Пакеты подписчиков, лайков, просмотров, комментариев и репостов.",
+        description:
+          "Пакеты подписчиков, лайков, просмотров, комментариев и репостов.",
         icon: FaTiktok,
         gradient: "from-white/[0.08] via-white/[0.035] to-white/[0.02]",
         glow: "bg-white/[0.06]",
@@ -1217,14 +1261,16 @@ const pageText: Record<LocaleCode, PackagePageText> = {
           {
             slug: "favori",
             title: "Избранное",
-            description: "Для усиления вида избранного/сохранений у видео.",
+            description:
+              "Для усиления вида избранного/сохранений у видео.",
           },
         ],
       },
       {
         slug: "youtube",
         title: "YouTube",
-        description: "Пакеты подписчиков, просмотров, лайков, комментариев и Shorts.",
+        description:
+          "Пакеты подписчиков, просмотров, лайков, комментариев и Shorts.",
         icon: FaYoutube,
         gradient: "from-white/[0.08] via-white/[0.035] to-white/[0.02]",
         glow: "bg-white/[0.06]",
@@ -1247,12 +1293,14 @@ const pageText: Record<LocaleCode, PackagePageText> = {
           {
             slug: "begeni",
             title: "Лайки",
-            description: "Для более сильного положительного вовлечения на видео.",
+            description:
+              "Для более сильного положительного вовлечения на видео.",
           },
           {
             slug: "yorum",
             title: "Комментарии",
-            description: "Для более активного вида сообщества под видео.",
+            description:
+              "Для более активного вида сообщества под видео.",
           },
           {
             slug: "canli_yayin",
@@ -1264,7 +1312,8 @@ const pageText: Record<LocaleCode, PackagePageText> = {
       {
         slug: "x",
         title: "X / Twitter",
-        description: "Пакеты подписчиков, лайков, просмотров, ретвитов и комментариев.",
+        description:
+          "Пакеты подписчиков, лайков, просмотров, ретвитов и комментариев.",
         icon: FaXTwitter,
         gradient: "from-white/[0.08] via-white/[0.035] to-white/[0.02]",
         glow: "bg-white/[0.06]",
@@ -1287,7 +1336,8 @@ const pageText: Record<LocaleCode, PackagePageText> = {
           {
             slug: "retweet",
             title: "Ретвиты",
-            description: "Чтобы публикации выглядели более распространяемыми.",
+            description:
+              "Чтобы публикации выглядели более распространяемыми.",
           },
           {
             slug: "yorum",
@@ -1304,7 +1354,8 @@ const pageText: Record<LocaleCode, PackagePageText> = {
       {
         slug: "telegram",
         title: "Telegram",
-        description: "Пакеты участников, просмотров постов, реакций и репостов.",
+        description:
+          "Пакеты участников, просмотров постов, реакций и репостов.",
         icon: FaTelegram,
         gradient: "from-white/[0.08] via-white/[0.035] to-white/[0.02]",
         glow: "bg-white/[0.06]",
@@ -1312,7 +1363,8 @@ const pageText: Record<LocaleCode, PackagePageText> = {
           {
             slug: "uye",
             title: "Участники",
-            description: "Для увеличения числа участников канала или группы.",
+            description:
+              "Для увеличения числа участников канала или группы.",
           },
           {
             slug: "izlenme",
@@ -1488,15 +1540,116 @@ function MobileLanguageSwitcher({
   );
 }
 
+function MobileCurrencySwitcher({
+  selectedCurrency,
+  onChange,
+}: {
+  selectedCurrency: CurrencyCode;
+  onChange: (currency: CurrencyCode) => void;
+}) {
+  return (
+    <div className="flex h-9 w-fit items-center overflow-hidden rounded-full border border-white/10 bg-white/[0.05] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] lg:hidden">
+      {currencyOptions.map((currency) => (
+        <button
+          key={currency}
+          type="button"
+          onClick={() => onChange(currency)}
+          className={`h-7 rounded-full px-2.5 text-[10px] font-black uppercase transition ${
+            selectedCurrency === currency
+              ? "bg-white text-black"
+              : "text-white/60 hover:bg-white/[0.08] hover:text-white"
+          }`}
+        >
+          {currency}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function DesktopCurrencySwitcher({
+  selectedLocale,
+  selectedCurrency,
+  onChange,
+}: {
+  selectedLocale: LocaleCode;
+  selectedCurrency: CurrencyCode;
+  onChange: (currency: CurrencyCode) => void;
+}) {
+  const t = pageText[selectedLocale] || pageText.tr;
+
+  return (
+    <div className="hidden items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.035] p-1.5 lg:flex">
+      <span className="px-2 text-[10px] font-black uppercase tracking-[0.16em] text-white/38">
+        {t.currency}
+      </span>
+
+      {currencyOptions.map((currency) => (
+        <button
+          key={currency}
+          type="button"
+          onClick={() => onChange(currency)}
+          className={`rounded-xl px-3 py-2 text-xs font-black transition ${
+            selectedCurrency === currency
+              ? "bg-white text-black"
+              : "text-white/62 hover:bg-white/[0.08] hover:text-white"
+          }`}
+        >
+          {currency}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function formatNumber(value: number) {
   return value.toLocaleString("tr-TR");
 }
 
-function formatMoney(value: number) {
-  return `${Number(value || 0).toLocaleString("tr-TR", {
+function convertPackagePrice(valueTl: number, currency: CurrencyCode) {
+  return Number(valueTl || 0) * PACKAGE_CURRENCY_RATE[currency];
+}
+
+function formatMoney(valueTl: number, currency: CurrencyCode = "TL") {
+  const converted = convertPackagePrice(valueTl, currency);
+
+  if (currency === "TL") {
+    return `${Math.round(converted).toLocaleString("tr-TR")} TL`;
+  }
+
+  return `${converted.toLocaleString("tr-TR", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  })} TL`;
+  })} ${currency}`;
+}
+
+function getBalanceByCurrency(user: AuthUser | null, currency: CurrencyCode) {
+  if (!user) return 0;
+  if (currency === "USD") return Number(user.balance_usd || 0);
+  if (currency === "RUB") return Number(user.balance_rub || 0);
+  return Number(user.balance_tl || 0);
+}
+
+function formatWalletBalance(value: number, currency: CurrencyCode) {
+  const safeValue = Number(value || 0);
+
+  if (currency === "TL") {
+    return `${safeValue.toLocaleString("tr-TR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })} TL`;
+  }
+
+  return `${safeValue.toLocaleString("tr-TR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })} ${currency}`;
+}
+
+function getBalancePaymentTitle(currency: CurrencyCode, locale: LocaleCode) {
+  if (locale === "en") return `${currency} Balance`;
+  if (locale === "ru") return `Баланс ${currency}`;
+  return `${currency} Bakiyesi`;
 }
 
 function clampQuantity(value: number) {
@@ -1506,6 +1659,7 @@ function clampQuantity(value: number) {
 
 export default function PaketlerPage() {
   const [selectedLocale, setSelectedLocale] = useState<LocaleCode>("tr");
+  const [selectedCurrency, setSelectedCurrency] = useState<CurrencyCode>("TL");
 
   useEffect(() => {
     setSelectedLocale(detectInitialLocale());
@@ -1706,7 +1860,7 @@ export default function PaketlerPage() {
   function getOrderSupportMessage(paymentInfo: CreatedPaymentInfo) {
     return t.supportMessage(
       paymentInfo,
-      formatMoney(paymentInfo.totalAmount),
+      formatMoney(paymentInfo.totalAmount, paymentInfo.currency),
       getPaymentMethodLabel(paymentInfo.paymentMethod)
     );
   }
@@ -1752,6 +1906,10 @@ export default function PaketlerPage() {
           contact_type: contactType,
           contact_value: contactValue.trim(),
           payment_method: paymentMethod,
+          currency: selectedCurrency,
+          selected_currency: selectedCurrency,
+          selected_price: formatMoney(estimatedPrice, selectedCurrency),
+          total_price: convertPackagePrice(estimatedPrice, selectedCurrency),
         }),
       });
 
@@ -1770,7 +1928,8 @@ export default function PaketlerPage() {
       setCreatedPaymentInfo({
         orderNumbers,
         fullName: fullName.trim(),
-        totalAmount: Number(data.totalPrice || estimatedPrice),
+        totalAmount: Number(data.totalPriceTl || estimatedPrice),
+        currency: selectedCurrency,
         paymentMethod,
       });
 
@@ -1786,898 +1945,953 @@ export default function PaketlerPage() {
   }
 
   return (
+
     <main className="mt-premium-page text-white">
-      <div className="mt-premium-inner">
-        <section className="relative overflow-hidden">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_34%),linear-gradient(to_bottom,rgba(255,255,255,0.02),transparent_28%,transparent_72%,rgba(255,255,255,0.02))]" />
+    <div className="mt-premium-inner">
+      <section className="relative overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_34%),linear-gradient(to_bottom,rgba(255,255,255,0.02),transparent_28%,transparent_72%,rgba(255,255,255,0.02))]" />
 
-          <div className="relative mx-auto max-w-6xl px-6 py-10 md:py-16">
-            <header className="mb-8 flex flex-col gap-4 rounded-[28px] border border-white/10 bg-[#080a0d]/92 p-4 shadow-[0_18px_70px_rgba(0,0,0,0.36)] ring-1 ring-white/[0.025] backdrop-blur-xl lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex items-center justify-between gap-3">
-                <Link
-                  href="/"
-                  className="inline-flex w-fit items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-black text-white/72 transition hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
-                >
-                  ← {t.home}
-                </Link>
+        <div className="relative mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-16">
+          <header className="mb-8 flex flex-col gap-4 rounded-[28px] border border-white/10 bg-[#080a0d]/92 p-4 shadow-[0_18px_70px_rgba(0,0,0,0.36)] ring-1 ring-white/[0.025] backdrop-blur-xl lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <Link
+                href="/"
+                className="inline-flex w-fit items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-black text-white/72 transition hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
+              >
+                ← {t.home}
+              </Link>
 
+              <div className="flex flex-wrap items-center gap-2">
                 <MobileLanguageSwitcher
                   selectedLocale={selectedLocale}
                   onChange={handleLocaleChange}
                 />
-              </div>
 
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-end">
-                <nav className="flex flex-wrap gap-2">
-                  <Link
-                    href="/analiz"
-                    className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-white/70 transition hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
-                  >
-                    {t.analysis}
-                  </Link>
-
-                  <Link
-                    href="/smmtora"
-                    className="rounded-2xl border border-white/12 bg-white px-4 py-2.5 text-sm font-black text-black shadow-[0_14px_34px_rgba(255,255,255,0.08)] transition hover:bg-white/90"
-                  >
-                    SMMTora
-                  </Link>
-
-                  <a
-                    href={getWhatsappLink()}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-white/70 transition hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
-                  >
-                    {t.whatsappSupport}
-                  </a>
-                </nav>
-
-                <UserMenu />
-              </div>
-            </header>
-
-            <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
-              <div>
-                <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-white/72">
-                  <span className="h-1.5 w-1.5 rounded-full bg-white/80" />
-                  {t.heroBadge}
-                </div>
-
-                <h1 className="mb-5 text-4xl font-bold leading-tight tracking-tight md:text-6xl">
-                  {t.heroTitle}
-                </h1>
-
-                <p className="mb-8 max-w-2xl text-lg leading-8 text-white/70 md:text-xl">
-                  {t.heroDesc}
-                </p>
-
-                <div className="flex flex-col gap-4 sm:flex-row">
-                  <a
-                    href="#package-builder"
-                    className="rounded-2xl bg-white px-6 py-3 text-center font-semibold text-black transition hover:bg-white/90"
-                  >
-                    {t.createPackage}
-                  </a>
-
-                  <a
-                    href="/smmtora"
-                    className="rounded-2xl border border-white/20 px-6 py-3 text-center font-semibold text-white transition hover:bg-white/10"
-                  >
-                    {t.goSingleServices}
-                  </a>
-                </div>
-              </div>
-
-              <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur md:p-8">
-                <p className="mb-4 text-sm uppercase tracking-[0.2em] text-white/45">
-                  {t.selectedPackageSummary}
-                </p>
-
-                <div className="rounded-3xl border border-white/10 bg-white/[0.055] p-5">
-                  <div className="mb-4 inline-flex rounded-full bg-white px-3 py-1 text-xs font-bold text-black">
-                    {selectedPackageType.badge}
-                  </div>
-
-                  <h3 className="mb-3 text-2xl font-bold">
-                    {selectedPlatform.title} {selectedCategory.title}
-                  </h3>
-
-                  <p className="mb-5 text-sm leading-6 text-white/65">
-                    {selectedPackageType.title} {t.package} ·{" "}
-                    {formatNumber(quantity)}
-                  </p>
-
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
-                      <p className="text-xs text-white/40">{t.minimum}</p>
-                      <p className="mt-1 font-black text-white">
-                        {formatNumber(MIN_QUANTITY)}
-                      </p>
-                    </div>
-
-                    <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
-                      <p className="text-xs text-white/40">{t.dailyMaximum}</p>
-                      <p className="mt-1 font-black text-white">
-                        {formatNumber(MAX_QUANTITY)}
-                      </p>
-                    </div>
-
-                    <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
-                      <p className="text-xs text-white/40">{t.unit}</p>
-                      <p className="mt-1 font-black text-white">
-                        {formatMoney(selectedPricePer1000)} {t.per1000}
-                      </p>
-                    </div>
-
-                    <div className="rounded-2xl border border-white/12 bg-white/[0.065] px-4 py-3">
-                      <p className="text-xs text-white/45">{t.estimatedTotal}</p>
-                      <p className="mt-1 font-black text-white">
-                        {formatMoney(estimatedPrice)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <p className="mt-5 text-xs leading-5 text-white/45">
-                    {t.taxIncludedNote}
-                  </p>
-                </div>
+                <MobileCurrencySwitcher
+                  selectedCurrency={selectedCurrency}
+                  onChange={setSelectedCurrency}
+                />
               </div>
             </div>
-          </div>
-        </section>
 
-        <section
-          id="package-builder"
-          className="mx-auto max-w-6xl scroll-mt-8 px-6 pb-14"
-        >
-          <div className="mb-7">
-            <p className="mb-2 text-sm uppercase tracking-[0.2em] text-white/50">
-              {t.packageBuilder}
-            </p>
-
-            <h2 className="text-3xl font-bold md:text-4xl">
-              {t.choosePlatform}
-            </h2>
-
-            <p className="mt-3 max-w-3xl leading-7 text-white/65">
-              {t.builderDesc}
-            </p>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            {platforms.map((platform) => {
-              const Icon = platform.icon;
-              const active = selectedPlatform.slug === platform.slug;
-
-              return (
-                <button
-                  key={platform.slug}
-                  type="button"
-                  onClick={() => handlePlatformSelect(platform.slug)}
-                  className={`group relative overflow-hidden rounded-[28px] border bg-gradient-to-br p-5 text-left transition hover:-translate-y-1 hover:shadow-[0_18px_60px_rgba(0,0,0,0.35)] ${
-                    active
-                      ? "border-white/28 from-white/[0.13] to-white/[0.045]"
-                      : `border-white/10 ${platform.gradient} hover:border-white/20`
-                  }`}
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-end">
+              <nav className="flex flex-wrap gap-2">
+                <Link
+                  href="/analiz"
+                  className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-white/70 transition hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
                 >
-                  <div
-                    className={`pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full ${platform.glow} blur-3xl transition group-hover:scale-125`}
-                  />
+                  {t.analysis}
+                </Link>
 
-                  <div className="relative">
-                    <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/15 bg-black/30 text-white">
-                      <Icon className="h-7 w-7" />
-                    </div>
+                <Link
+                  href="/smmtora"
+                  className="rounded-2xl border border-white/12 bg-white px-4 py-2.5 text-sm font-black text-black shadow-[0_14px_34px_rgba(255,255,255,0.08)] transition hover:bg-white/90"
+                >
+                  SMMTora
+                </Link>
 
-                    <h3 className="mb-2 text-xl font-bold">{platform.title}</h3>
+                <a
+                  href={getWhatsappLink()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-white/70 transition hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
+                >
+                  {t.whatsappSupport}
+                </a>
+              </nav>
 
-                    <p className="min-h-[72px] text-sm leading-6 text-white/65">
-                      {platform.description}
-                    </p>
-
-                    {active ? (
-                      <span className="mt-4 inline-flex rounded-full bg-white px-3 py-1 text-xs font-black text-black">
-                        {t.selected}
-                      </span>
-                    ) : (
-                      <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-white">
-                        {t.select}
-                        <FaArrowRight className="transition group-hover:translate-x-1" />
-                      </span>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_0.85fr]">
-            <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-5 md:p-6">
-              <p className="mb-2 text-sm uppercase tracking-[0.2em] text-white/50">
-                {t.categorySelection}
-              </p>
-
-              <h3 className="mb-4 text-2xl font-bold">
-                {selectedPlatform.title} {t.whatDoYouWant}
-              </h3>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                {selectedPlatform.categories.map((category) => {
-                  const active = selectedCategory.slug === category.slug;
-
-                  return (
-                    <button
-                      key={category.slug}
-                      type="button"
-                      onClick={() => setSelectedCategorySlug(category.slug)}
-                      className={`rounded-3xl border p-4 text-left transition hover:-translate-y-0.5 ${
-                        active
-                          ? "border-white/28 bg-white/[0.095]"
-                          : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
-                      }`}
-                    >
-                      <p className="font-black text-white">{category.title}</p>
-                      <p className="mt-2 text-sm leading-6 text-white/55">
-                        {category.description}
-                      </p>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-5 md:p-6">
-              <p className="mb-2 text-sm uppercase tracking-[0.2em] text-white/50">
-                {t.quantitySelection}
-              </p>
-
-              <h3 className="mb-4 text-2xl font-bold">{t.selectQuantity}</h3>
-
-              <input
-                value={String(quantity)}
-                onChange={(event) => handleQuantityInput(event.target.value)}
-                inputMode="numeric"
-                className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-lg font-black text-white outline-none transition focus:border-white/28"
+              <DesktopCurrencySwitcher
+                selectedLocale={selectedLocale}
+                selectedCurrency={selectedCurrency}
+                onChange={setSelectedCurrency}
               />
 
-              <p className="mt-2 text-xs leading-5 text-white/45">
-                {t.minDailyMax
-                  .replace("{min}", formatNumber(MIN_QUANTITY))
-                  .replace("{max}", formatNumber(MAX_QUANTITY))}
+              <UserMenu />
+            </div>
+          </header>
+
+          <div className="grid items-center gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-10">
+            <div>
+              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-white/72">
+                <span className="h-1.5 w-1.5 rounded-full bg-white/80" />
+                {t.heroBadge}
+              </div>
+
+              <h1 className="mb-5 text-4xl font-bold leading-tight tracking-tight md:text-6xl">
+                {t.heroTitle}
+              </h1>
+
+              <p className="mb-8 max-w-2xl text-base leading-8 text-white/70 md:text-xl">
+                {t.heroDesc}
               </p>
 
-              <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-4">
-                {quickQuantities.map((item) => (
-                  <button
-                    key={item}
-                    type="button"
-                    onClick={() => setQuantity(item)}
-                    className={`rounded-2xl border px-3 py-2 text-xs font-black transition hover:-translate-y-0.5 ${
-                      quantity === item
-                        ? "border-white bg-white text-black"
-                        : "border-white/10 bg-black/20 text-white/75 hover:bg-white/[0.06]"
-                    }`}
-                  >
-                    {formatNumber(item)}
-                  </button>
-                ))}
+              <div className="flex flex-col gap-4 sm:flex-row">
+                <a
+                  href="#package-builder"
+                  className="rounded-2xl bg-white px-6 py-3 text-center font-semibold text-black transition hover:bg-white/90"
+                >
+                  {t.createPackage}
+                </a>
+
+                <a
+                  href="/smmtora"
+                  className="rounded-2xl border border-white/20 px-6 py-3 text-center font-semibold text-white transition hover:bg-white/10"
+                >
+                  {t.goSingleServices}
+                </a>
+              </div>
+            </div>
+
+            <div className="rounded-[32px] border border-white/10 bg-white/[0.04] p-5 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur md:p-8">
+              <p className="mb-4 text-sm uppercase tracking-[0.2em] text-white/45">
+                {t.selectedPackageSummary}
+              </p>
+
+              <div className="rounded-3xl border border-white/10 bg-white/[0.055] p-5">
+                <div className="mb-4 flex flex-wrap items-center gap-2">
+                  <span className="inline-flex rounded-full bg-white px-3 py-1 text-xs font-bold text-black">
+                    {selectedPackageType.badge}
+                  </span>
+
+                  <span className="inline-flex rounded-full border border-white/10 bg-black/25 px-3 py-1 text-xs font-bold text-white/72">
+                    {selectedCurrency}
+                  </span>
+                </div>
+
+                <h3 className="mb-3 text-2xl font-bold">
+                  {selectedPlatform.title} {selectedCategory.title}
+                </h3>
+
+                <p className="mb-5 text-sm leading-6 text-white/65">
+                  {selectedPackageType.title} {t.package} ·{" "}
+                  {formatNumber(quantity)}
+                </p>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+                    <p className="text-xs text-white/40">{t.minimum}</p>
+                    <p className="mt-1 font-black text-white">
+                      {formatNumber(MIN_QUANTITY)}
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+                    <p className="text-xs text-white/40">
+                      {t.dailyMaximum}
+                    </p>
+                    <p className="mt-1 font-black text-white">
+                      {formatNumber(MAX_QUANTITY)}
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+                    <p className="text-xs text-white/40">{t.unit}</p>
+                    <p className="mt-1 font-black text-white">
+                      {formatMoney(selectedPricePer1000, selectedCurrency)}{" "}
+                      {t.per1000}
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-white/12 bg-white/[0.065] px-4 py-3">
+                    <p className="text-xs text-white/45">
+                      {t.estimatedTotal}
+                    </p>
+                    <p className="mt-1 font-black text-white">
+                      {formatMoney(estimatedPrice, selectedCurrency)}
+                    </p>
+                  </div>
+                </div>
+
+                <p className="mt-5 text-xs leading-5 text-white/45">
+                  {t.taxIncludedNote}
+                </p>
               </div>
             </div>
           </div>
+        </div>
+      </section>
 
-          <div className="mt-5 rounded-[28px] border border-white/10 bg-white/[0.04] p-5 md:p-6">
+      <section
+        id="package-builder"
+        className="mx-auto max-w-6xl scroll-mt-8 px-4 pb-14 sm:px-6"
+      >
+        <div className="mb-7">
+          <p className="mb-2 text-sm uppercase tracking-[0.2em] text-white/50">
+            {t.packageBuilder}
+          </p>
+
+          <h2 className="text-3xl font-bold md:text-4xl">
+            {t.choosePlatform}
+          </h2>
+
+          <p className="mt-3 max-w-3xl leading-7 text-white/65">
+            {t.builderDesc}
+          </p>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          {platforms.map((platform) => {
+            const Icon = platform.icon;
+            const active = selectedPlatform.slug === platform.slug;
+
+            return (
+              <button
+                key={platform.slug}
+                type="button"
+                onClick={() => handlePlatformSelect(platform.slug)}
+                className={`group relative overflow-hidden rounded-[28px] border bg-gradient-to-br p-5 text-left transition hover:-translate-y-1 hover:shadow-[0_18px_60px_rgba(0,0,0,0.35)] ${
+                  active
+                    ? "border-white/28 from-white/[0.13] to-white/[0.045]"
+                    : `border-white/10 ${platform.gradient} hover:border-white/20`
+                }`}
+              >
+                <div
+                  className={`pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full ${platform.glow} blur-3xl transition group-hover:scale-125`}
+                />
+
+                <div className="relative">
+                  <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/15 bg-black/30 text-white">
+                    <Icon className="h-7 w-7" />
+                  </div>
+
+                  <h3 className="mb-2 text-xl font-bold">
+                    {platform.title}
+                  </h3>
+
+                  <p className="min-h-[72px] text-sm leading-6 text-white/65">
+                    {platform.description}
+                  </p>
+
+                  {active ? (
+                    <span className="mt-4 inline-flex rounded-full bg-white px-3 py-1 text-xs font-black text-black">
+                      {t.selected}
+                    </span>
+                  ) : (
+                    <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-white">
+                      {t.select}
+                      <FaArrowRight className="transition group-hover:translate-x-1" />
+                    </span>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_0.85fr]">
+          <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-5 md:p-6">
             <p className="mb-2 text-sm uppercase tracking-[0.2em] text-white/50">
-              {t.packageTypeSelection}
+              {t.categorySelection}
             </p>
 
-            <h3 className="mb-4 text-2xl font-bold">{t.whatPackage}</h3>
+            <h3 className="mb-4 text-2xl font-bold">
+              {selectedPlatform.title} {t.whatDoYouWant}
+            </h3>
 
-            <div className="grid gap-3 md:grid-cols-5">
-              {packageTypes.map((type) => {
-                const active = selectedPackageType.slug === type.slug;
+            <div className="grid gap-3 sm:grid-cols-2">
+              {selectedPlatform.categories.map((category) => {
+                const active = selectedCategory.slug === category.slug;
 
                 return (
                   <button
-                    key={type.slug}
+                    key={category.slug}
                     type="button"
-                    onClick={() => setSelectedPackageTypeSlug(type.slug)}
-                    className={`relative overflow-hidden rounded-3xl border p-4 text-left transition hover:-translate-y-0.5 ${
+                    onClick={() => setSelectedCategorySlug(category.slug)}
+                    className={`rounded-3xl border p-4 text-left transition hover:-translate-y-0.5 ${
                       active
-                        ? type.colorClass
+                        ? "border-white/28 bg-white/[0.095]"
                         : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
                     }`}
                   >
-                    <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-white/10 blur-3xl" />
-
-                    <div className="relative">
-                      <span className="mb-3 inline-flex rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-[10px] font-black uppercase tracking-wide text-white/55">
-                        {type.badge}
-                      </span>
-
-                      <p className="font-black text-white">{type.title}</p>
-
-                      <p className="mt-2 text-sm leading-6 text-white/55">
-                        {type.description}
-                      </p>
-
-                      <p
-                        className={`mt-3 text-sm font-black ${
-                          active ? "text-white" : "text-white/78"
-                        }`}
-                      >
-                        {formatMoney(getTypePricePer1000(type.slug))} {t.per1000}
-                      </p>
-                    </div>
+                    <p className="font-black text-white">
+                      {category.title}
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-white/55">
+                      {category.description}
+                    </p>
                   </button>
                 );
               })}
             </div>
           </div>
 
-          <div className="mt-5 rounded-[28px] border border-white/10 bg-white/[0.04] p-5 md:p-6">
+          <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-5 md:p-6">
             <p className="mb-2 text-sm uppercase tracking-[0.2em] text-white/50">
-              {t.targetInfo}
+              {t.quantitySelection}
             </p>
 
-            <h3 className="mb-4 text-2xl font-bold">{t.targetTitle}</h3>
+            <h3 className="mb-4 text-2xl font-bold">{t.selectQuantity}</h3>
 
-            <div className="grid gap-3 md:grid-cols-2">
-              <input
-                value={targetUsername}
-                onChange={(event) => setTargetUsername(event.target.value)}
-                placeholder={t.targetUsernamePlaceholder}
-                className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none placeholder:text-white/35 transition focus:border-white/28"
-              />
+            <input
+              value={String(quantity)}
+              onChange={(event) => handleQuantityInput(event.target.value)}
+              inputMode="numeric"
+              className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-lg font-black text-white outline-none transition focus:border-white/28"
+            />
 
-              <input
-                value={targetLink}
-                onChange={(event) => setTargetLink(event.target.value)}
-                placeholder={t.targetLinkPlaceholder}
-                className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none placeholder:text-white/35 transition focus:border-white/28"
-              />
+            <p className="mt-2 text-xs leading-5 text-white/45">
+              {t.minDailyMax
+                .replace("{min}", formatNumber(MIN_QUANTITY))
+                .replace("{max}", formatNumber(MAX_QUANTITY))}
+            </p>
+
+            <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-4">
+              {quickQuantities.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => setQuantity(item)}
+                  className={`rounded-2xl border px-3 py-2 text-xs font-black transition hover:-translate-y-0.5 ${
+                    quantity === item
+                      ? "border-white bg-white text-black"
+                      : "border-white/10 bg-black/20 text-white/75 hover:bg-white/[0.06]"
+                  }`}
+                >
+                  {formatNumber(item)}
+                </button>
+              ))}
             </div>
+          </div>
+        </div>
 
-            <textarea
-              value={orderNote}
-              onChange={(event) => setOrderNote(event.target.value)}
-              placeholder={t.orderNotePlaceholder}
-              className="mt-3 min-h-[90px] w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none placeholder:text-white/35 transition focus:border-white/28"
+        <div className="mt-5 rounded-[28px] border border-white/10 bg-white/[0.04] p-5 md:p-6">
+          <p className="mb-2 text-sm uppercase tracking-[0.2em] text-white/50">
+            {t.packageTypeSelection}
+          </p>
+
+          <h3 className="mb-4 text-2xl font-bold">{t.whatPackage}</h3>
+
+          <div className="grid gap-3 md:grid-cols-5">
+            {packageTypes.map((type) => {
+              const active = selectedPackageType.slug === type.slug;
+
+              return (
+                <button
+                  key={type.slug}
+                  type="button"
+                  onClick={() => setSelectedPackageTypeSlug(type.slug)}
+                  className={`relative overflow-hidden rounded-3xl border p-4 text-left transition hover:-translate-y-0.5 ${
+                    active
+                      ? type.colorClass
+                      : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
+                  }`}
+                >
+                  <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-white/10 blur-3xl" />
+
+                  <div className="relative">
+                    <span className="mb-3 inline-flex rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-[10px] font-black uppercase tracking-wide text-white/55">
+                      {type.badge}
+                    </span>
+
+                    <p className="font-black text-white">{type.title}</p>
+
+                    <p className="mt-2 text-sm leading-6 text-white/55">
+                      {type.description}
+                    </p>
+
+                    <p
+                      className={`mt-3 text-sm font-black ${
+                        active ? "text-white" : "text-white/78"
+                      }`}
+                    >
+                      {formatMoney(
+                        getTypePricePer1000(type.slug),
+                        selectedCurrency
+                      )}{" "}
+                      {t.per1000}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-[28px] border border-white/10 bg-white/[0.04] p-5 md:p-6">
+          <p className="mb-2 text-sm uppercase tracking-[0.2em] text-white/50">
+            {t.targetInfo}
+          </p>
+
+          <h3 className="mb-4 text-2xl font-bold">{t.targetTitle}</h3>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <input
+              value={targetUsername}
+              onChange={(event) => setTargetUsername(event.target.value)}
+              placeholder={t.targetUsernamePlaceholder}
+              className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none placeholder:text-white/35 transition focus:border-white/28"
+            />
+
+            <input
+              value={targetLink}
+              onChange={(event) => setTargetLink(event.target.value)}
+              placeholder={t.targetLinkPlaceholder}
+              className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none placeholder:text-white/35 transition focus:border-white/28"
             />
           </div>
 
-          <div className="mt-5 rounded-[28px] border border-white/12 bg-white/[0.055] p-5 md:p-6">
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <textarea
+            value={orderNote}
+            onChange={(event) => setOrderNote(event.target.value)}
+            placeholder={t.orderNotePlaceholder}
+            className="mt-3 min-h-[90px] w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none placeholder:text-white/35 transition focus:border-white/28"
+          />
+        </div>
+
+        <div className="mt-5 rounded-[28px] border border-white/12 bg-white/[0.055] p-5 md:p-6">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-white/45">
+                {t.orderSummary}
+              </p>
+
+              <h3 className="mt-2 text-2xl font-black text-white">
+                {selectedPlatform.title} {selectedCategory.title} ·{" "}
+                {selectedPackageType.title}
+              </h3>
+
+              <p className="mt-2 text-sm leading-6 text-white/65">
+                {t.quantity}:{" "}
+                <span className="font-black text-white">
+                  {formatNumber(quantity)}
+                </span>{" "}
+                · {t.estimatedTotal}:{" "}
+                <span className="font-black text-white">
+                  {formatMoney(estimatedPrice, selectedCurrency)}
+                </span>
+              </p>
+
+              <p className="mt-2 text-xs leading-5 text-white/45">
+                {t.taxIncludedNote}
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                disabled={!canOpenCheckout}
+                onClick={() => {
+                  setError("");
+                  setPaymentTermsAccepted(false);
+                  setCheckoutOpen(true);
+                }}
+                className="rounded-2xl bg-white px-6 py-3 text-center text-sm font-black text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {t.buyPackage}
+              </button>
+
+              <a
+                href={getWhatsappLink(
+                  t.packageInfoWhatsapp(
+                    selectedPlatform.title,
+                    selectedCategory.title,
+                    selectedPackageType.title,
+                    formatNumber(quantity)
+                  )
+                )}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/20 px-6 py-3 text-center text-sm font-bold text-white transition hover:bg-white/10"
+              >
+                <FaWhatsapp />
+                {t.getSupport}
+              </a>
+            </div>
+          </div>
+
+          {!canOpenCheckout && (
+            <div className="mt-4 rounded-2xl border border-[#6b5b2a]/60 bg-[#211d11]/70 px-4 py-3 text-sm text-[#e7d9a4]">
+              {t.usernameRequired}
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-4 pb-14 sm:px-6">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {highlights.map((item) => (
+            <div
+              key={item.title}
+              className="rounded-2xl border border-white/10 bg-white/[0.04] p-5"
+            >
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-black/20 text-lg text-white/82">
+                <item.icon />
+              </div>
+
+              <h3 className="mb-2 font-semibold">{item.title}</h3>
+              <p className="text-sm leading-6 text-white/65">
+                {item.description}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-4 pb-24 sm:px-6">
+        <div className="flex flex-col gap-6 rounded-[28px] border border-white/10 bg-gradient-to-br from-white/[0.1] to-white/[0.03] p-6 md:p-10 lg:flex-row lg:items-center lg:justify-between">
+          <div className="max-w-2xl">
+            <p className="mb-3 text-sm uppercase tracking-[0.2em] text-white/50">
+              {t.wideServiceList}
+            </p>
+
+            <h2 className="mb-3 text-3xl font-bold md:text-4xl">
+              {t.wideServiceTitle}
+            </h2>
+
+            <p className="leading-7 text-white/70">{t.wideServiceDesc}</p>
+          </div>
+
+          <div className="flex flex-col gap-4 sm:flex-row">
+            <a
+              href="/smmtora"
+              className="rounded-2xl bg-white px-6 py-3 text-center font-semibold text-black transition hover:bg-white/90"
+            >
+              {t.goSmmtora}
+            </a>
+
+            <a
+              href={CONTACT.telegram}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-2xl border border-white/20 px-6 py-3 text-center font-semibold text-white transition hover:bg-white/10"
+            >
+              {t.telegramSupport}
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <footer className="border-t border-white/10 px-4 py-10 sm:px-6">
+        <div className="mx-auto flex max-w-6xl flex-col gap-4 text-sm text-white/50 md:flex-row md:items-center md:justify-between">
+          <div>
+            <div className="font-semibold text-white">{t.footerTitle}</div>
+            <div>{t.footerDesc}</div>
+          </div>
+
+          <div className="flex flex-wrap gap-4">
+            <a href="/" className="transition hover:text-white">
+              MedyaTora
+            </a>
+
+            <a href="/smmtora" className="transition hover:text-white">
+              SMMTora
+            </a>
+
+            <a
+              href={CONTACT.instagram}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="transition hover:text-white"
+            >
+              Instagram
+            </a>
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    {checkoutOpen && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-3 backdrop-blur-sm sm:p-4">
+        <div className="flex max-h-[calc(100dvh-24px)] w-full max-w-2xl flex-col overflow-hidden rounded-[28px] border border-white/10 bg-[#121826]/95 shadow-[0_28px_120px_rgba(0,0,0,0.58)] ring-1 ring-white/[0.035] backdrop-blur-xl sm:max-h-[92vh] sm:rounded-[32px]">
+          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 py-3 sm:px-5">
+            <div>
+              <p className="text-sm font-black text-white">
+                {t.checkoutTitle}
+              </p>
+              <p className="mt-1 text-xs text-white/45">
+                {selectedPlatform.title} {selectedCategory.title} ·{" "}
+                {formatMoney(estimatedPrice, selectedCurrency)}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={closeCheckoutModal}
+              className="rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-bold text-white/75 transition hover:bg-white/10 hover:text-white"
+            >
+              {t.close}
+            </button>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
+            <div className="grid gap-3 md:grid-cols-2">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.22em] text-white/45">
-                  {t.orderSummary}
-                </p>
+                <input
+                  value={fullName}
+                  onChange={(event) => setFullName(event.target.value)}
+                  placeholder={t.payerFullNamePlaceholder}
+                  className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 transition focus:border-white/28"
+                />
 
-                <h3 className="mt-2 text-2xl font-black text-white">
-                  {selectedPlatform.title} {selectedCategory.title} ·{" "}
-                  {selectedPackageType.title}
-                </h3>
-
-                <p className="mt-2 text-sm leading-6 text-white/65">
-                  {t.quantity}:{" "}
-                  <span className="font-black text-white">
-                    {formatNumber(quantity)}
-                  </span>{" "}
-                  · {t.estimatedTotal}:{" "}
-                  <span className="font-black text-white">
-                    {formatMoney(estimatedPrice)}
-                  </span>
-                </p>
-
-                <p className="mt-2 text-xs leading-5 text-white/45">
-                  {t.taxIncludedNote}
+                <p className="mt-2 text-xs leading-5 text-amber-100/80">
+                  {t.receiptNameWarning}
                 </p>
               </div>
 
-              <div className="flex flex-col gap-3 sm:flex-row">
+              <input
+                value={phoneNumber}
+                onChange={(event) =>
+                  setPhoneNumber(event.target.value.replace(/[^\d+]/g, ""))
+                }
+                placeholder={t.phonePlaceholder}
+                inputMode="tel"
+                className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 transition focus:border-white/28"
+              />
+
+              <select
+                value={contactType}
+                onChange={(event) =>
+                  setContactType(event.target.value as ContactType)
+                }
+                className="w-full rounded-2xl border border-white/10 bg-[#121826] px-4 py-3 text-white outline-none transition focus:border-white/28"
+              >
+                <option value="" className="bg-[#121826]">
+                  {t.contactTypeSelect}
+                </option>
+                {contactTypes.map((item) => (
+                  <option key={item} value={item} className="bg-[#121826]">
+                    {item}
+                  </option>
+                ))}
+              </select>
+
+              <input
+                value={contactValue}
+                onChange={(event) => setContactValue(event.target.value)}
+                placeholder={t.contactValuePlaceholder}
+                className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 transition focus:border-white/28"
+              />
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.055] p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="text-sm font-bold text-white">
+                    {t.paymentMethod}
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-white/60">
+                    {t.paymentDesc}
+                  </p>
+                </div>
+
+                <span className="inline-flex w-fit rounded-full border border-white/10 bg-black/25 px-3 py-1 text-xs font-black text-white/72">
+                  {t.selectedCurrency}: {selectedCurrency}
+                </span>
+              </div>
+
+              <div className="mt-4 grid gap-3 md:grid-cols-3">
                 <button
                   type="button"
-                  disabled={!canOpenCheckout}
-                  onClick={() => {
-                    setError("");
-                    setPaymentTermsAccepted(false);
-                    setCheckoutOpen(true);
-                  }}
-                  className="rounded-2xl bg-white px-6 py-3 text-center text-sm font-black text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={() => setPaymentMethod("turkey_bank")}
+                  className={`rounded-2xl border p-4 text-left transition ${
+                    paymentMethod === "turkey_bank"
+                      ? "border-white/28 bg-white/[0.095]"
+                      : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
+                  }`}
                 >
-                  {t.buyPackage}
+                  <p className="text-sm font-bold text-white">
+                    {t.bankTransfer}
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-white/55">
+                    {t.bankTransferDesc}
+                  </p>
                 </button>
 
-                <a
-                  href={getWhatsappLink(
-                    t.packageInfoWhatsapp(
-                      selectedPlatform.title,
-                      selectedCategory.title,
-                      selectedPackageType.title,
-                      formatNumber(quantity)
-                    )
-                  )}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/20 px-6 py-3 text-center text-sm font-bold text-white transition hover:bg-white/10"
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod("balance")}
+                  disabled={!authUser}
+                  className={`rounded-2xl border p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                    paymentMethod === "balance"
+                      ? "border-white/28 bg-white/[0.095]"
+                      : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
+                  }`}
                 >
-                  <FaWhatsapp />
-                  {t.getSupport}
-                </a>
+                  <p className="text-sm font-bold text-white">
+                    {getBalancePaymentTitle(selectedCurrency, selectedLocale)}
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-white/55">
+                    {authUser
+                      ? `${formatWalletBalance(
+                          getBalanceByCurrency(authUser, selectedCurrency),
+                          selectedCurrency
+                        )}`
+                      : t.balanceLoginRequired}
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod("support")}
+                  className={`rounded-2xl border p-4 text-left transition ${
+                    paymentMethod === "support"
+                      ? "border-white/28 bg-white/[0.095]"
+                      : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
+                  }`}
+                >
+                  <p className="text-sm font-bold text-white">
+                    {t.supportPayment}
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-white/55">
+                    {t.supportPaymentDesc}
+                  </p>
+                </button>
+              </div>
+
+              {paymentMethod === "turkey_bank" && (
+                <div className="mt-4 rounded-2xl border border-white/12 bg-white/[0.055] p-4 text-sm leading-6 text-white/72">
+                  <p className="font-bold text-white">{t.bankInfo}</p>
+                  <p className="mt-2">
+                    <span className="font-bold text-white">
+                      {t.receiver}:
+                    </span>{" "}
+                    {TURKEY_BANK_ACCOUNT_NAME}
+                  </p>
+                  <p>
+                    <span className="font-bold text-white">{t.iban}:</span>{" "}
+                    {TURKEY_BANK_IBAN}
+                  </p>
+                  <p>
+                    <span className="font-bold text-white">
+                      {t.description}:
+                    </span>{" "}
+                    {t.yourOrderNumber}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-[#6b5b2a]/60 bg-[#211d11]/70 p-4 text-sm leading-6 text-[#e7d9a4]">
+              <p className="font-bold text-white">{t.paymentSecurity}</p>
+              <p className="mt-2">{t.paymentSecurityText}</p>
+
+              <p className="mt-4 font-bold text-white">
+                {t.refundContractApproval}
+              </p>
+              <p className="mt-2">{t.refundContractText}</p>
+
+              <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-black/20 p-3">
+                <input
+                  type="checkbox"
+                  checked={paymentTermsAccepted}
+                  onChange={(event) =>
+                    setPaymentTermsAccepted(event.target.checked)
+                  }
+                  className="mt-1 h-4 w-4 shrink-0 accent-white"
+                />
+
+                <span className="text-sm leading-6 text-white/80">
+                  {t.acceptPrefix ? `${t.acceptPrefix} ` : ""}
+                  <a
+                    href="/kullanim-sartlari"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-semibold text-white underline underline-offset-4 hover:text-white/80"
+                  >
+                    {t.terms}
+                  </a>
+                  ,{" "}
+                  <a
+                    href="/gizlilik-politikasi"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-semibold text-white underline underline-offset-4 hover:text-white/80"
+                  >
+                    {t.privacy}
+                  </a>
+                  ,{" "}
+                  <a
+                    href="/iade-politikasi"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-semibold text-white underline underline-offset-4 hover:text-white/80"
+                  >
+                    {t.refundPolicy}
+                  </a>{" "}
+                  {t.and}{" "}
+                  <a
+                    href="/mesafeli-satis-sozlesmesi"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-semibold text-white underline underline-offset-4 hover:text-white/80"
+                  >
+                    {t.distanceSales}
+                  </a>{" "}
+                  {t.acceptSuffix}
+                </span>
+              </label>
+
+              {!paymentTermsAccepted && (
+                <p className="mt-3 text-xs leading-5">
+                  {t.acceptanceRequired}
+                </p>
+              )}
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.055] p-4">
+              <div className="flex items-center justify-between gap-3 text-sm text-white/60">
+                <span>{t.package}</span>
+                <span className="text-right">
+                  {selectedPlatform.title} {selectedCategory.title}
+                </span>
+              </div>
+
+              <div className="mt-2 flex items-center justify-between gap-3 text-sm text-white/60">
+                <span>{t.packageType}</span>
+                <span className="text-right">{selectedPackageType.title}</span>
+              </div>
+
+              <div className="mt-2 flex items-center justify-between gap-3 text-sm text-white/60">
+                <span>{t.quantity}</span>
+                <span>{formatNumber(quantity)}</span>
+              </div>
+
+              <div className="mt-3 flex items-center justify-between gap-3 text-base font-black text-white">
+                <span>{t.total}</span>
+                <span>{formatMoney(estimatedPrice, selectedCurrency)}</span>
               </div>
             </div>
 
-            {!canOpenCheckout && (
-              <div className="mt-4 rounded-2xl border border-[#6b5b2a]/60 bg-[#211d11]/70 px-4 py-3 text-sm text-[#e7d9a4]">
-                {t.usernameRequired}
+            {error && (
+              <div className="mt-4 rounded-2xl border border-[#6b2232] bg-[#31101b]/70 px-4 py-3 text-sm text-[#f2c7d1]">
+                {error}
               </div>
             )}
           </div>
-        </section>
 
-        <section className="mx-auto max-w-6xl px-6 pb-14">
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {highlights.map((item) => (
-              <div
-                key={item.title}
-                className="rounded-2xl border border-white/10 bg-white/[0.04] p-5"
-              >
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-black/20 text-lg text-white/82">
-                  <item.icon />
-                </div>
-
-                <h3 className="mb-2 font-semibold">{item.title}</h3>
-                <p className="text-sm leading-6 text-white/65">
-                  {item.description}
-                </p>
-              </div>
-            ))}
+          <div className="shrink-0 border-t border-white/10 bg-[#121826]/95 px-4 py-3 backdrop-blur-xl sm:px-5">
+            <button
+              type="button"
+              onClick={submitPackageOrder}
+              disabled={!isCheckoutValid || loading}
+              className="w-full rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {loading ? t.creatingOrder : t.createOrder}
+            </button>
           </div>
-        </section>
-
-        <section className="mx-auto max-w-6xl px-6 pb-24">
-          <div className="flex flex-col gap-6 rounded-[28px] border border-white/10 bg-gradient-to-br from-white/[0.1] to-white/[0.03] p-8 md:p-10 lg:flex-row lg:items-center lg:justify-between">
-            <div className="max-w-2xl">
-              <p className="mb-3 text-sm uppercase tracking-[0.2em] text-white/50">
-                {t.wideServiceList}
-              </p>
-
-              <h2 className="mb-3 text-3xl font-bold md:text-4xl">
-                {t.wideServiceTitle}
-              </h2>
-
-              <p className="leading-7 text-white/70">{t.wideServiceDesc}</p>
-            </div>
-
-            <div className="flex flex-col gap-4 sm:flex-row">
-              <a
-                href="/smmtora"
-                className="rounded-2xl bg-white px-6 py-3 text-center font-semibold text-black transition hover:bg-white/90"
-              >
-                {t.goSmmtora}
-              </a>
-
-              <a
-                href={CONTACT.telegram}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-2xl border border-white/20 px-6 py-3 text-center font-semibold text-white transition hover:bg-white/10"
-              >
-                {t.telegramSupport}
-              </a>
-            </div>
-          </div>
-        </section>
-
-        <footer className="border-t border-white/10 px-6 py-10">
-          <div className="mx-auto flex max-w-6xl flex-col gap-4 text-sm text-white/50 md:flex-row md:items-center md:justify-between">
-            <div>
-              <div className="font-semibold text-white">{t.footerTitle}</div>
-              <div>{t.footerDesc}</div>
-            </div>
-
-            <div className="flex flex-wrap gap-4">
-              <a href="/" className="transition hover:text-white">
-                MedyaTora
-              </a>
-
-              <a href="/smmtora" className="transition hover:text-white">
-                SMMTora
-              </a>
-
-              <a
-                href={CONTACT.instagram}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="transition hover:text-white"
-              >
-                Instagram
-              </a>
-            </div>
-          </div>
-        </footer>
+        </div>
       </div>
+    )}
 
-      {checkoutOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-3 backdrop-blur-sm sm:p-4">
-          <div className="flex max-h-[calc(100dvh-24px)] w-full max-w-2xl flex-col overflow-hidden rounded-[28px] border border-white/10 bg-[#121826]/95 shadow-[0_28px_120px_rgba(0,0,0,0.58)] ring-1 ring-white/[0.035] backdrop-blur-xl sm:max-h-[92vh] sm:rounded-[32px]">
-            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 py-3 sm:px-5">
-              <div>
-                <p className="text-sm font-black text-white">{t.checkoutTitle}</p>
-                <p className="mt-1 text-xs text-white/45">
-                  {selectedPlatform.title} {selectedCategory.title} ·{" "}
-                  {formatMoney(estimatedPrice)}
-                </p>
-              </div>
+    {successOpen && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-3 backdrop-blur-sm sm:p-4">
+        <div className="flex max-h-[calc(100dvh-24px)] w-full max-w-2xl flex-col overflow-hidden rounded-[28px] border border-white/10 bg-[#121826]/95 shadow-[0_28px_120px_rgba(0,0,0,0.58)] ring-1 ring-white/[0.035] backdrop-blur-xl sm:max-h-[92vh] sm:rounded-[32px]">
+          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 py-3 sm:px-5">
+            <p className="text-sm font-black text-white/80">
+              {t.packageOrder}
+            </p>
 
-              <button
-                type="button"
-                onClick={closeCheckoutModal}
-                className="rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-bold text-white/75 transition hover:bg-white/10 hover:text-white"
-              >
-                {t.close}
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setSuccessOpen(false)}
+              className="rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-bold text-white/75 transition hover:bg-white/10 hover:text-white"
+            >
+              {t.close}
+            </button>
+          </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
-              <div className="grid gap-3 md:grid-cols-2">
-                <div>
-                  <input
-                    value={fullName}
-                    onChange={(event) => setFullName(event.target.value)}
-                    placeholder={t.payerFullNamePlaceholder}
-                    className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 transition focus:border-white/28"
-                  />
+          <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
+            <h2 className="text-2xl font-bold text-white">
+              {t.orderReceived}
+            </h2>
 
-                  <p className="mt-2 text-xs leading-5 text-amber-100/80">
-                    {t.receiptNameWarning}
-                  </p>
-                </div>
+            <p className="mt-2 text-sm leading-6 text-white/60">
+              {successMessage || t.orderReceivedFallback}
+            </p>
 
-                <input
-                  value={phoneNumber}
-                  onChange={(event) =>
-                    setPhoneNumber(event.target.value.replace(/[^\d+]/g, ""))
-                  }
-                  placeholder={t.phonePlaceholder}
-                  inputMode="tel"
-                  className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 transition focus:border-white/28"
-                />
-
-                <select
-                  value={contactType}
-                  onChange={(event) =>
-                    setContactType(event.target.value as ContactType)
-                  }
-                  className="w-full rounded-2xl border border-white/10 bg-[#121826] px-4 py-3 text-white outline-none transition focus:border-white/28"
+            <div className="mt-5 space-y-3">
+              {createdPaymentInfo?.orderNumbers.map((number) => (
+                <div
+                  key={number}
+                  className="rounded-2xl border border-white/12 bg-white/[0.055] p-4"
                 >
-                  <option value="" className="bg-[#121826]">
-                    {t.contactTypeSelect}
-                  </option>
-                  {contactTypes.map((item) => (
-                    <option key={item} value={item} className="bg-[#121826]">
-                      {item}
-                    </option>
-                  ))}
-                </select>
-
-                <input
-                  value={contactValue}
-                  onChange={(event) => setContactValue(event.target.value)}
-                  placeholder={t.contactValuePlaceholder}
-                  className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 transition focus:border-white/28"
-                />
-              </div>
-
-              <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.055] p-4">
-                <p className="text-sm font-bold text-white">{t.paymentMethod}</p>
-                <p className="mt-1 text-sm leading-6 text-white/60">
-                  {t.paymentDesc}
-                </p>
-
-                <div className="mt-4 grid gap-3 md:grid-cols-3">
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod("turkey_bank")}
-                    className={`rounded-2xl border p-4 text-left transition ${
-                      paymentMethod === "turkey_bank"
-                        ? "border-white/28 bg-white/[0.095]"
-                        : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
-                    }`}
-                  >
-                    <p className="text-sm font-bold text-white">
-                      {t.bankTransfer}
-                    </p>
-                    <p className="mt-1 text-xs leading-5 text-white/55">
-                      {t.bankTransferDesc}
-                    </p>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod("balance")}
-                    disabled={!authUser}
-                    className={`rounded-2xl border p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-50 ${
-                      paymentMethod === "balance"
-                        ? "border-white/28 bg-white/[0.095]"
-                        : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
-                    }`}
-                  >
-                    <p className="text-sm font-bold text-white">{t.tlBalance}</p>
-                    <p className="mt-1 text-xs leading-5 text-white/55">
-                      {authUser
-                        ? `${t.tlBalance}: ${formatMoney(authUser.balance_tl)}`
-                        : t.balanceLoginRequired}
-                    </p>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod("support")}
-                    className={`rounded-2xl border p-4 text-left transition ${
-                      paymentMethod === "support"
-                        ? "border-white/28 bg-white/[0.095]"
-                        : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
-                    }`}
-                  >
-                    <p className="text-sm font-bold text-white">
-                      {t.supportPayment}
-                    </p>
-                    <p className="mt-1 text-xs leading-5 text-white/55">
-                      {t.supportPaymentDesc}
-                    </p>
-                  </button>
+                  <p className="text-sm text-white/62">{t.orderNumber}</p>
+                  <p className="mt-1 text-lg font-bold text-white">{number}</p>
                 </div>
+              ))}
+            </div>
 
-                {paymentMethod === "turkey_bank" && (
-                  <div className="mt-4 rounded-2xl border border-white/12 bg-white/[0.055] p-4 text-sm leading-6 text-white/72">
-                    <p className="font-bold text-white">{t.bankInfo}</p>
-                    <p className="mt-2">
-                      <span className="font-bold text-white">{t.receiver}:</span>{" "}
-                      {TURKEY_BANK_ACCOUNT_NAME}
-                    </p>
-                    <p>
-                      <span className="font-bold text-white">{t.iban}:</span>{" "}
-                      {TURKEY_BANK_IBAN}
-                    </p>
-                    <p>
-                      <span className="font-bold text-white">
-                        {t.description}:
-                      </span>{" "}
-                      {t.yourOrderNumber}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-4 rounded-2xl border border-[#6b5b2a]/60 bg-[#211d11]/70 p-4 text-sm leading-6 text-[#e7d9a4]">
-                <p className="font-bold text-white">{t.paymentSecurity}</p>
-                <p className="mt-2">{t.paymentSecurityText}</p>
-
-                <p className="mt-4 font-bold text-white">
-                  {t.refundContractApproval}
+            {createdPaymentInfo?.paymentMethod === "balance" ? (
+              <div className="mt-5 rounded-2xl border border-white/12 bg-white/[0.055] p-4">
+                <p className="text-sm font-bold text-white">
+                  {t.balancePaymentCompleted}
                 </p>
-                <p className="mt-2">{t.refundContractText}</p>
 
-                <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-black/20 p-3">
-                  <input
-                    type="checkbox"
-                    checked={paymentTermsAccepted}
-                    onChange={(event) =>
-                      setPaymentTermsAccepted(event.target.checked)
+                <p className="mt-2 text-sm leading-6 text-white/70">
+                  {t.balancePaymentCompletedText.replace(
+                    "{amount}",
+                    formatMoney(
+                      createdPaymentInfo.totalAmount,
+                      createdPaymentInfo.currency
+                    )
+                  )}
+                </p>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <a
+                    href="/hesabim"
+                    className="rounded-2xl bg-white px-5 py-3 text-center text-sm font-black text-black transition hover:bg-white/90"
+                  >
+                    {t.goAccount}
+                  </a>
+
+                  <a
+                    href="/hesabim/siparisler"
+                    className="rounded-2xl border border-white/10 bg-white/[0.06] px-5 py-3 text-center text-sm font-bold text-white transition hover:bg-white/[0.1]"
+                  >
+                    {t.viewOrders}
+                  </a>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.055] p-4">
+                <p className="text-sm font-bold text-white">
+                  {t.sendPaymentNotice}
+                </p>
+
+                <p className="mt-2 text-sm leading-6 text-white/60">
+                  {t.sendPaymentNoticeDesc}
+                </p>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <a
+                    href={buildTelegramLink(createdPaymentInfo)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-2xl border border-white/12 bg-white/[0.08] px-5 py-3 text-center text-sm font-bold text-white transition hover:bg-white/[0.12]"
+                  >
+                    {t.goTelegram}
+                  </a>
+
+                  <a
+                    href={
+                      createdPaymentInfo
+                        ? buildWhatsappPaymentLink(createdPaymentInfo)
+                        : "#"
                     }
-                    className="mt-1 h-4 w-4 shrink-0 accent-white"
-                  />
-
-                  <span className="text-sm leading-6 text-white/80">
-                    {t.acceptPrefix ? `${t.acceptPrefix} ` : ""}
-                    <a
-                      href="/kullanim-sartlari"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="font-semibold text-white underline underline-offset-4 hover:text-white/80"
-                    >
-                      {t.terms}
-                    </a>
-                    ,{" "}
-                    <a
-                      href="/gizlilik-politikasi"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="font-semibold text-white underline underline-offset-4 hover:text-white/80"
-                    >
-                      {t.privacy}
-                    </a>
-                    ,{" "}
-                    <a
-                      href="/iade-politikasi"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="font-semibold text-white underline underline-offset-4 hover:text-white/80"
-                    >
-                      {t.refundPolicy}
-                    </a>{" "}
-                    {t.and}{" "}
-                    <a
-                      href="/mesafeli-satis-sozlesmesi"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="font-semibold text-white underline underline-offset-4 hover:text-white/80"
-                    >
-                      {t.distanceSales}
-                    </a>{" "}
-                    {t.acceptSuffix}
-                  </span>
-                </label>
-
-                {!paymentTermsAccepted && (
-                  <p className="mt-3 text-xs leading-5">
-                    {t.acceptanceRequired}
-                  </p>
-                )}
-              </div>
-
-              <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.055] p-4">
-                <div className="flex items-center justify-between text-sm text-white/60">
-                  <span>{t.package}</span>
-                  <span>
-                    {selectedPlatform.title} {selectedCategory.title}
-                  </span>
-                </div>
-
-                <div className="mt-2 flex items-center justify-between text-sm text-white/60">
-                  <span>{t.packageType}</span>
-                  <span>{selectedPackageType.title}</span>
-                </div>
-
-                <div className="mt-2 flex items-center justify-between text-sm text-white/60">
-                  <span>{t.quantity}</span>
-                  <span>{formatNumber(quantity)}</span>
-                </div>
-
-                <div className="mt-3 flex items-center justify-between text-base font-black text-white">
-                  <span>{t.total}</span>
-                  <span>{formatMoney(estimatedPrice)}</span>
-                </div>
-              </div>
-
-              {error && (
-                <div className="mt-4 rounded-2xl border border-[#6b2232] bg-[#31101b]/70 px-4 py-3 text-sm text-[#f2c7d1]">
-                  {error}
-                </div>
-              )}
-            </div>
-
-            <div className="shrink-0 border-t border-white/10 bg-[#121826]/95 px-4 py-3 backdrop-blur-xl sm:px-5">
-              <button
-                type="button"
-                onClick={submitPackageOrder}
-                disabled={!isCheckoutValid || loading}
-                className="w-full rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {loading ? t.creatingOrder : t.createOrder}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {successOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-3 backdrop-blur-sm sm:p-4">
-          <div className="flex max-h-[calc(100dvh-24px)] w-full max-w-2xl flex-col overflow-hidden rounded-[28px] border border-white/10 bg-[#121826]/95 shadow-[0_28px_120px_rgba(0,0,0,0.58)] ring-1 ring-white/[0.035] backdrop-blur-xl sm:max-h-[92vh] sm:rounded-[32px]">
-            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 py-3 sm:px-5">
-              <p className="text-sm font-black text-white/80">
-                {t.packageOrder}
-              </p>
-
-              <button
-                type="button"
-                onClick={() => setSuccessOpen(false)}
-                className="rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-bold text-white/75 transition hover:bg-white/10 hover:text-white"
-              >
-                {t.close}
-              </button>
-            </div>
-
-            <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
-              <h2 className="text-2xl font-bold text-white">
-                {t.orderReceived}
-              </h2>
-
-              <p className="mt-2 text-sm leading-6 text-white/60">
-                {successMessage || t.orderReceivedFallback}
-              </p>
-
-              <div className="mt-5 space-y-3">
-                {createdPaymentInfo?.orderNumbers.map((number) => (
-                  <div
-                    key={number}
-                    className="rounded-2xl border border-white/12 bg-white/[0.055] p-4"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-2xl bg-white px-5 py-3 text-center text-sm font-black text-black transition hover:bg-white/90"
                   >
-                    <p className="text-sm text-white/62">{t.orderNumber}</p>
-                    <p className="mt-1 text-lg font-bold text-white">{number}</p>
-                  </div>
-                ))}
+                    {t.sendWhatsapp}
+                  </a>
+                </div>
               </div>
+            )}
+          </div>
 
-              {createdPaymentInfo?.paymentMethod === "balance" ? (
-                <div className="mt-5 rounded-2xl border border-white/12 bg-white/[0.055] p-4">
-                  <p className="text-sm font-bold text-white">
-                    {t.balancePaymentCompleted}
-                  </p>
-
-                  <p className="mt-2 text-sm leading-6 text-white/70">
-                    {t.balancePaymentCompletedText.replace(
-                      "{amount}",
-                      formatMoney(createdPaymentInfo.totalAmount)
-                    )}
-                  </p>
-
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                    <a
-                      href="/hesabim"
-                      className="rounded-2xl bg-white px-5 py-3 text-center text-sm font-black text-black transition hover:bg-white/90"
-                    >
-                      {t.goAccount}
-                    </a>
-
-                    <a
-                      href="/hesabim/siparisler"
-                      className="rounded-2xl border border-white/10 bg-white/[0.06] px-5 py-3 text-center text-sm font-bold text-white transition hover:bg-white/[0.1]"
-                    >
-                      {t.viewOrders}
-                    </a>
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.055] p-4">
-                  <p className="text-sm font-bold text-white">
-                    {t.sendPaymentNotice}
-                  </p>
-
-                  <p className="mt-2 text-sm leading-6 text-white/60">
-                    {t.sendPaymentNoticeDesc}
-                  </p>
-
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                    <a
-                      href={buildTelegramLink(createdPaymentInfo)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="rounded-2xl border border-white/12 bg-white/[0.08] px-5 py-3 text-center text-sm font-bold text-white transition hover:bg-white/[0.12]"
-                    >
-                      {t.goTelegram}
-                    </a>
-
-                    <a
-                      href={
-                        createdPaymentInfo
-                          ? buildWhatsappPaymentLink(createdPaymentInfo)
-                          : "#"
-                      }
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="rounded-2xl bg-white px-5 py-3 text-center text-sm font-black text-black transition hover:bg-white/90"
-                    >
-                      {t.sendWhatsapp}
-                    </a>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="shrink-0 border-t border-white/10 bg-[#121826]/95 px-4 py-3 backdrop-blur-xl sm:px-5">
-              <button
-                type="button"
-                onClick={() => setSuccessOpen(false)}
-                className="w-full rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:bg-white/90"
-              >
-                {t.ok}
-              </button>
-            </div>
+          <div className="shrink-0 border-t border-white/10 bg-[#121826]/95 px-4 py-3 backdrop-blur-xl sm:px-5">
+            <button
+              type="button"
+              onClick={() => setSuccessOpen(false)}
+              className="w-full rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:bg-white/90"
+            >
+              {t.ok}
+            </button>
           </div>
         </div>
-      )}
-    </main>
-  );
+      </div>
+    )}
+  </main>
+);
 }

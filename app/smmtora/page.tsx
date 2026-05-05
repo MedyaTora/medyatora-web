@@ -341,6 +341,77 @@ function roundMoney(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
+function normalizeBadgeText(value: unknown) {
+  return String(value || "")
+    .toLocaleLowerCase("tr-TR")
+    .replace(/ı/g, "i")
+    .replace(/ğ/g, "g")
+    .replace(/ü/g, "u")
+    .replace(/ş/g, "s")
+    .replace(/ö/g, "o")
+    .replace(/ç/g, "c")
+    .replace(/İ/g, "i")
+    .replace(/Ğ/g, "g")
+    .replace(/Ü/g, "u")
+    .replace(/Ş/g, "s")
+    .replace(/Ö/g, "o")
+    .replace(/Ç/g, "c");
+}
+
+function getGuaranteeBadgeClass(label: string | null | undefined, guaranteed?: boolean) {
+  const text = normalizeBadgeText(label);
+
+  if (!guaranteed || text.includes("garantisiz") || text.includes("no guarantee")) {
+    return "border-rose-400/25 bg-rose-400/10 text-rose-200";
+  }
+
+  if (
+    text.includes("omur") ||
+    text.includes("lifetime") ||
+    text.includes("life time") ||
+    text.includes("non drop") ||
+    text.includes("nondrop") ||
+    text.includes("no drop")
+  ) {
+    return "border-emerald-300/35 bg-emerald-300/12 text-emerald-200";
+  }
+
+  const dayMatch = text.match(/(\d+)/);
+  const days = dayMatch ? Number(dayMatch[1]) : 0;
+
+  if (days >= 60) {
+    return "border-emerald-300/35 bg-emerald-300/12 text-emerald-200";
+  }
+
+  if (days >= 30) {
+    return "border-sky-300/35 bg-sky-300/12 text-sky-200";
+  }
+
+  if (days >= 7) {
+    return "border-amber-300/35 bg-amber-300/12 text-amber-200";
+  }
+
+  return "border-white/15 bg-white/[0.07] text-white/72";
+}
+
+function getQualityBadgeClass(level: string | null | undefined) {
+  const text = normalizeBadgeText(level);
+
+  if (text.includes("prime") || text.includes("vip") || text.includes("ultra")) {
+    return "border-fuchsia-300/30 bg-fuchsia-300/10 text-fuchsia-200";
+  }
+
+  if (text.includes("plus") || text.includes("premium") || text.includes("hq")) {
+    return "border-sky-300/30 bg-sky-300/10 text-sky-200";
+  }
+
+  if (text.includes("core") || text.includes("basic") || text.includes("standart")) {
+    return "border-white/15 bg-white/[0.07] text-white/70";
+  }
+
+  return "border-white/15 bg-white/[0.07] text-white/70";
+}
+
 function formatWalletBalance(value: number, currency: CurrencyCode) {
   const safeValue = Number(value || 0);
 
@@ -1743,9 +1814,9 @@ export default function SmmToraPage() {
         )}
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-[1.12fr_0.88fr]">
-        <div className="space-y-5">
-          <div className="rounded-[34px] border border-white/10 bg-[#121826]/90 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.34)] ring-1 ring-white/[0.025] backdrop-blur-xl sm:p-6">
+      <section className="grid items-start gap-5 xl:grid-cols-[1.12fr_0.88fr]">
+      <div className="flex h-full flex-col gap-5">
+      <div className="flex min-h-[760px] flex-col rounded-[34px] border border-white/10 bg-[#121826]/90 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.34)] ring-1 ring-white/[0.025] backdrop-blur-xl sm:p-6">
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/45">
@@ -1932,7 +2003,7 @@ export default function SmmToraPage() {
             ) : (
               <div
                 ref={productsScrollRef}
-                className="max-h-[520px] space-y-2 overflow-y-auto pr-1 sm:max-h-[620px]"
+                className="min-h-[420px] flex-1 space-y-2 overflow-y-auto pr-1"
                 style={{ scrollbarWidth: "thin" }}
               >
                 {filteredServices.map((service) => {
@@ -2001,25 +2072,22 @@ export default function SmmToraPage() {
                               </span>
                             )}
 
-                            <span
-                              className={`rounded-full px-2.5 py-1 text-[10px] font-bold sm:text-[11px] ${
-                                service.guarantee
-                                  ? "bg-emerald-500/15 text-emerald-300"
-                                  : "bg-rose-500/15 text-rose-300"
-                              }`}
-                            >
-                              {getLocalizedGuaranteeLabel(
-                                service.guaranteeLabel,
-                                selectedLocale
-                              )}
-                            </span>
+<span
+  className={`rounded-full border px-2.5 py-1 text-[10px] font-bold sm:text-[11px] ${getGuaranteeBadgeClass(
+    service.guaranteeLabel,
+    service.guarantee
+  )}`}
+>
+  {getLocalizedGuaranteeLabel(service.guaranteeLabel, selectedLocale)}
+</span>
 
-                            <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-bold text-white/70 sm:text-[11px]">
-                              {localizeCommonServiceText(
-                                service.level,
-                                selectedLocale
-                              )}
-                            </span>
+<span
+  className={`rounded-full border px-2.5 py-1 text-[10px] font-bold sm:text-[11px] ${getQualityBadgeClass(
+    service.level
+  )}`}
+>
+  {localizeCommonServiceText(service.level, selectedLocale)}
+</span>
                           </div>
 
                           <div className="mt-3 grid gap-1 text-xs text-white/55 sm:text-sm">
@@ -2067,8 +2135,8 @@ export default function SmmToraPage() {
                   }
                   className={`rounded-xl border px-4 py-2 text-sm font-bold transition ${
                     infoTab === key
-                      ? "border-emerald-300 bg-emerald-400 text-black shadow-[0_10px_28px_rgba(52,211,153,0.18)]"
-                      : "border-white/10 bg-white/5 text-white/75 hover:bg-white/10"
+? "border-white bg-white text-black shadow-[0_10px_28px_rgba(255,255,255,0.10)]"
+: "border-white/10 bg-white/5 text-white/75 hover:bg-white/10"
                   }`}
                 >
                   {label}
@@ -2102,8 +2170,8 @@ export default function SmmToraPage() {
           </div>
         </div>
 
-        <div className="space-y-5">
-          <div className="rounded-[34px] border border-white/10 bg-[#121826]/90 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.34)] ring-1 ring-white/[0.025] backdrop-blur-xl sm:p-6">
+        <div className="flex h-full flex-col gap-5">
+        <div className="min-h-[760px] rounded-[34px] border border-white/10 bg-[#121826]/90 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.34)] ring-1 ring-white/[0.025] backdrop-blur-xl sm:p-6">
             <p className="mb-4 text-xs font-bold uppercase tracking-[0.2em] text-white/45">
               {t.orderInfo}
             </p>
@@ -2120,24 +2188,21 @@ export default function SmmToraPage() {
                     </p>
 
                     <span
-                      className={`rounded-full px-2.5 py-1 text-[10px] font-bold sm:text-[11px] ${
-                        selectedService.guarantee
-                          ? "bg-emerald-500/15 text-emerald-300"
-                          : "bg-rose-500/15 text-rose-300"
-                      }`}
-                    >
-                      {getLocalizedGuaranteeLabel(
-                        selectedService.guaranteeLabel,
-                        selectedLocale
-                      )}
-                    </span>
+  className={`rounded-full border px-2.5 py-1 text-[10px] font-bold sm:text-[11px] ${getGuaranteeBadgeClass(
+    selectedService.guaranteeLabel,
+    selectedService.guarantee
+  )}`}
+>
+  {getLocalizedGuaranteeLabel(selectedService.guaranteeLabel, selectedLocale)}
+</span>
 
-                    <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-bold text-white/70 sm:text-[11px]">
-                      {localizeCommonServiceText(
-                        selectedService.level,
-                        selectedLocale
-                      )}
-                    </span>
+<span
+  className={`rounded-full border px-2.5 py-1 text-[10px] font-bold sm:text-[11px] ${getQualityBadgeClass(
+    selectedService.level
+  )}`}
+>
+  {localizeCommonServiceText(selectedService.level, selectedLocale)}
+</span>
                   </div>
 
                   <p className="mt-3 text-sm text-white/60">
@@ -2248,7 +2313,7 @@ export default function SmmToraPage() {
                 className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-white/28 focus:bg-white/[0.075]"
               />
 
-              <div className="rounded-2xl border border-emerald-400/20 bg-gradient-to-br from-emerald-400/12 to-emerald-400/[0.035] p-4 shadow-[0_14px_42px_rgba(52,211,153,0.08),inset_0_1px_0_rgba(255,255,255,0.04)]">
+<div className="rounded-2xl border border-white/14 bg-gradient-to-br from-white/[0.10] to-white/[0.035] p-4 shadow-[0_14px_42px_rgba(255,255,255,0.05),inset_0_1px_0_rgba(255,255,255,0.04)]">
                 <p className="text-sm text-white/50">{t.totalSalePrice}</p>
                 <p className="mt-1 text-2xl font-bold text-white">
                   {totalPrice > 0
@@ -2364,7 +2429,7 @@ export default function SmmToraPage() {
             )}
 
             <div className="mt-4 space-y-3">
-              <div className="rounded-2xl border border-emerald-400/20 bg-gradient-to-br from-emerald-400/12 to-emerald-400/[0.035] p-4 shadow-[0_14px_42px_rgba(52,211,153,0.08),inset_0_1px_0_rgba(255,255,255,0.04)]">
+            <div className="rounded-2xl border border-white/14 bg-gradient-to-br from-white/[0.10] to-white/[0.035] p-4 shadow-[0_14px_42px_rgba(255,255,255,0.05),inset_0_1px_0_rgba(255,255,255,0.04)]">
                 <div className="flex items-center justify-between text-sm text-white/60">
                   <span>{t.cartTotal}</span>
                   <span className="text-lg font-bold text-white/82">

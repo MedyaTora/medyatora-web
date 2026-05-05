@@ -3,6 +3,7 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ChangeEvent,
   type ReactNode,
@@ -106,6 +107,9 @@ type AnalysisFormText = {
   currencyTitle: string;
   currencyDesc: string;
   selectedAmount: string;
+  privacyConsent: string;
+  privacyConsentLink: string;
+  errorPrivacyConsent: string;
 
   back: string;
   continue: string;
@@ -248,7 +252,12 @@ const analysisFormText: Record<Locale, AnalysisFormText> = {
     currencyTitle: "Para birimini seçin",
     currencyDesc:
       "Sonraki ekranda analiz talebi numarası, seçilen para birimi ve ödeme bilgileri gösterilecek.",
-    selectedAmount: "Seçili tutar",
+      selectedAmount: "Seçili tutar",
+      privacyConsent:
+        "Gizlilik politikası, mesafeli satış sözleşmesi ve analiz hizmeti bilgilendirmesini okudum, onaylıyorum.",
+      privacyConsentLink: "Sözleşmeleri ve politikaları görüntüle",
+      errorPrivacyConsent:
+        "Devam etmek için gizlilik politikası ve hizmet onayını kabul etmelisin.",
 
     back: "Geri",
     continue: "Devam Et",
@@ -518,7 +527,12 @@ const analysisFormText: Record<Locale, AnalysisFormText> = {
     currencyTitle: "Choose currency",
     currencyDesc:
       "On the next screen, the analysis request number, selected currency, and payment details will be shown.",
-    selectedAmount: "Selected amount",
+      selectedAmount: "Selected amount",
+      privacyConsent:
+        "I have read and accept the privacy policy, distance sales agreement, and analysis service information.",
+      privacyConsentLink: "View agreements and policies",
+      errorPrivacyConsent:
+        "You must accept the privacy policy and service confirmation to continue.",
 
     back: "Back",
     continue: "Continue",
@@ -788,7 +802,12 @@ const analysisFormText: Record<Locale, AnalysisFormText> = {
     currencyTitle: "Выберите валюту",
     currencyDesc:
       "На следующем экране будет показан номер заявки, выбранная валюта и платёжная информация.",
-    selectedAmount: "Выбранная сумма",
+      selectedAmount: "Выбранная сумма",
+      privacyConsent:
+        "Я прочитал(а) и принимаю политику конфиденциальности, дистанционный договор продажи и информацию об услуге анализа.",
+      privacyConsentLink: "Посмотреть договоры и политики",
+      errorPrivacyConsent:
+        "Чтобы продолжить, необходимо принять политику конфиденциальности и условия услуги.",
 
     back: "Назад",
     continue: "Продолжить",
@@ -1164,9 +1183,11 @@ function safeJsonParse<T>(value: string): T | null {
 
 export default function AnalysisForm() {
   const router = useRouter();
+  const formTopRef = useRef<HTMLDivElement | null>(null);
 
   const [locale, setLocale] = useState<Locale>("tr");
   const [step, setStep] = useState(1);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
 
   const t = useMemo(
     () => analysisFormText[locale] || analysisFormText.tr,
@@ -1235,6 +1256,15 @@ export default function AnalysisForm() {
 
   const currentPrice = priceMap[selectedCurrency];
 
+  function scrollToFormTop() {
+    window.setTimeout(() => {
+      formTopRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 80);
+  }
+
   function nextStep() {
     setError("");
 
@@ -1260,11 +1290,13 @@ export default function AnalysisForm() {
     }
 
     setStep((prev) => Math.min(prev + 1, 4));
+    scrollToFormTop();
   }
 
   function previousStep() {
     setError("");
     setStep((prev) => Math.max(prev - 1, 1));
+    scrollToFormTop();
   }
 
   async function submitAnalysisAndGoToPayment() {
@@ -1282,6 +1314,11 @@ export default function AnalysisForm() {
 
     if (!accountUsername.trim()) {
       setError(t.errorUsername);
+      return;
+    }
+
+    if (!privacyAccepted) {
+      setError(t.errorPrivacyConsent);
       return;
     }
 
@@ -1346,11 +1383,10 @@ export default function AnalysisForm() {
         data?.id ||
         "";
 
-      const isFreeAnalysis =
+        const isFreeAnalysis =
         data?.isFreeAnalysis === true ||
         data?.freeAnalysisUsed === true ||
-        data?.paymentRequired === false ||
-        Number(data?.packagePrice || 0) === 0;
+        data?.paymentRequired === false;
 
       if (isFreeAnalysis) {
         router.push("/hesabim");
@@ -1384,34 +1420,37 @@ export default function AnalysisForm() {
   }
 
   return (
-    <div className="relative overflow-hidden rounded-[34px] border border-white/10 bg-[#080a0d] p-5 shadow-[0_28px_100px_rgba(0,0,0,0.45)] ring-1 ring-white/[0.025] md:p-7">
+    <div
+      ref={formTopRef}
+      className="relative scroll-mt-24 overflow-hidden rounded-[34px] border border-white/10 bg-[#080a0d] p-4 shadow-[0_28px_100px_rgba(0,0,0,0.45)] ring-1 ring-white/[0.025] sm:p-5 md:p-7"
+    >
       <div className="pointer-events-none absolute -right-32 -top-32 h-80 w-80 rounded-full bg-white/[0.03] blur-[90px]" />
       <div className="pointer-events-none absolute -bottom-40 left-1/4 h-80 w-80 rounded-full bg-white/[0.025] blur-[100px]" />
 
       <div className="relative">
-        <div className="mb-6 flex flex-wrap gap-2">
+      <div className="mb-6 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-visible sm:pb-0">
           <StepPill step={1} currentStep={step} label={t.platform} />
           <StepPill step={2} currentStep={step} label={t.target} />
           <StepPill step={3} currentStep={step} label={t.detail} />
           <StepPill step={4} currentStep={step} label={t.confirm} />
         </div>
 
-        <div className="mb-7 grid gap-5 lg:grid-cols-[1fr_0.82fr]">
+        <div className="mb-6 grid gap-4 lg:mb-7 lg:grid-cols-[1fr_0.82fr] lg:gap-5">
           <div>
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-white/72">
               <span className="h-1.5 w-1.5 rounded-full bg-white/85" />
               {t.heroBadge}
             </div>
 
-            <h2 className="text-4xl font-black tracking-tight text-white md:text-5xl">
+            <h2 className="text-3xl font-black tracking-tight text-white sm:text-4xl md:text-5xl">
               {t.heroTitle}
             </h2>
 
-            <p className="mt-4 max-w-3xl text-sm leading-7 text-white/64 md:text-base">
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-white/64 md:mt-4 md:text-base md:leading-7">
               {t.heroDesc}
             </p>
 
-            <div className="mt-6 grid gap-3 md:grid-cols-3">
+            <div className="mt-5 grid gap-3 sm:grid-cols-3 md:mt-6">
               <MiniInfoCard label={t.infoFocusLabel} value={t.infoFocusValue} />
               <MiniInfoCard
                 label={t.infoProcessLabel}
@@ -1421,7 +1460,7 @@ export default function AnalysisForm() {
             </div>
           </div>
 
-          <div className="rounded-[28px] border border-white/10 bg-white/[0.045] p-5">
+          <div className="hidden rounded-[28px] border border-white/10 bg-white/[0.045] p-5 lg:block">
             <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-black/25 text-white">
               <FaCircleQuestion />
             </div>
@@ -1442,7 +1481,7 @@ export default function AnalysisForm() {
               {t.platformEyebrow}
             </p>
 
-            <h3 className="mt-2 text-3xl font-black text-white">
+            <h3 className="mt-2 text-2xl font-black text-white sm:text-3xl">
               {t.platformTitle}
             </h3>
 
@@ -1468,7 +1507,7 @@ export default function AnalysisForm() {
               {t.accountTypeEyebrow}
             </p>
 
-            <h3 className="mt-2 text-3xl font-black text-white">
+            <h3 className="mt-2 text-2xl font-black text-white sm:text-3xl">
               {t.accountTypeTitle}
             </h3>
 
@@ -1495,7 +1534,7 @@ export default function AnalysisForm() {
                 {t.goalEyebrow}
               </p>
 
-              <h3 className="mt-2 text-3xl font-black text-white">
+              <h3 className="mt-2 text-2xl font-black text-white sm:text-3xl">
                 {t.goalTitle}
               </h3>
 
@@ -1521,7 +1560,7 @@ export default function AnalysisForm() {
               {t.detailEyebrow}
             </p>
 
-            <h3 className="mt-2 text-3xl font-black text-white">
+            <h3 className="mt-2 text-2xl font-black text-white sm:text-3xl">
               {t.detailTitle}
             </h3>
 
@@ -1607,7 +1646,7 @@ export default function AnalysisForm() {
               {t.contactEyebrow}
             </p>
 
-            <h3 className="mt-2 text-3xl font-black text-white">
+            <h3 className="mt-2 text-2xl font-black text-white sm:text-3xl">
               {t.contactTitle}
             </h3>
 
@@ -1710,6 +1749,29 @@ export default function AnalysisForm() {
                   );
                 })}
               </div>
+
+              <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-black/25 p-4 transition hover:bg-white/[0.045]">
+                <input
+                  type="checkbox"
+                  checked={privacyAccepted}
+                  onChange={(event) => setPrivacyAccepted(event.target.checked)}
+                  className="mt-1 h-4 w-4 shrink-0 accent-white"
+                />
+
+                <span className="text-sm leading-6 text-white/65">
+                  {t.privacyConsent}{" "}
+                  <a
+                    href="/mesafeli-satis-sozlesmesi"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-bold text-white underline underline-offset-4 hover:text-white/80"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    {t.privacyConsentLink}
+                  </a>
+                </span>
+              </label>
+
             </div>
           </>
         )}
@@ -1720,7 +1782,7 @@ export default function AnalysisForm() {
           </div>
         )}
 
-        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+<div className="sticky bottom-3 z-20 mt-8 flex flex-col gap-3 rounded-3xl border border-white/10 bg-[#080a0d]/95 p-3 shadow-[0_18px_60px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:static sm:flex-row sm:items-center sm:justify-between sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none sm:backdrop-blur-0">
           <button
             type="button"
             onClick={previousStep}

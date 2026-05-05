@@ -6,6 +6,8 @@ import { getCurrentUser } from "@/lib/auth/current-user";
 import { getMysqlPool } from "@/lib/mysql";
 import UserMenu from "@/app/components/auth/UserMenu";
 import ContactVerificationCard from "@/app/components/auth/ContactVerificationCard";
+import EmailVerificationCard from "@/app/components/auth/EmailVerificationCard";
+
 
 type LocaleCode = "tr" | "en" | "ru";
 
@@ -666,6 +668,8 @@ export default async function AccountPage() {
   );
 
   const userWithExtraFields = user as typeof user & {
+    email_verified?: boolean;
+    email_verified_at?: string | null;
     free_analysis_granted_at?: string | null;
     contact_bonus_granted_at?: string | null;
     whatsapp_verified_at?: string | null;
@@ -861,6 +865,12 @@ export default async function AccountPage() {
             </div>
           </div>
         </section>
+
+        <EmailVerificationCard
+  email={user.email}
+  initialEmailVerified={Boolean(user.email_verified)}
+  initialFreeAnalysisGrantedAt={userWithExtraFields.free_analysis_granted_at}
+/>
 
         <ContactVerificationCard
           initialPhoneNumber={user.phone_number}

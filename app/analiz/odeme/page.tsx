@@ -541,7 +541,7 @@ export default async function AnalysisPaymentPage({ searchParams }: PageProps) {
                   {t.selectedCurrency}
                 </p>
 
-                <p className="mt-2 text-3xl font-black text-white">
+                <p className="mt-2 text-2xl font-black text-white sm:text-3xl">
                   {currency}
                 </p>
 

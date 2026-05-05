@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { FaGoogle } from "react-icons/fa6";
 import AuthModal from "./AuthModal";
 import { detectBrowserLocale, saveLocale, type Locale } from "@/lib/i18n";
 
@@ -43,6 +44,7 @@ const userMenuText: Record<
     logout: string;
     login: string;
     register: string;
+    googleLogin: string;
     language: string;
   }
 > = {
@@ -54,6 +56,7 @@ const userMenuText: Record<
     logout: "Çıkış",
     login: "Giriş Yap",
     register: "Üye Ol",
+    googleLogin: "Google",
     language: "Dil",
   },
   en: {
@@ -64,6 +67,7 @@ const userMenuText: Record<
     logout: "Logout",
     login: "Login",
     register: "Sign Up",
+    googleLogin: "Google",
     language: "Language",
   },
   ru: {
@@ -74,6 +78,7 @@ const userMenuText: Record<
     logout: "Выйти",
     login: "Войти",
     register: "Регистрация",
+    googleLogin: "Google",
     language: "Язык",
   },
 };
@@ -223,6 +228,10 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
     setAuthOpen(true);
   }
 
+  function handleGoogleLogin() {
+    window.location.href = "/api/auth/google/start";
+  }
+
   function handleLocaleChange(locale: Locale) {
     setSelectedLocale(locale);
     saveLocale(locale);
@@ -242,7 +251,7 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
   if (loading) {
     return (
       <div className="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.045] px-3 text-[11px] font-bold text-white/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:h-12 sm:rounded-2xl sm:px-4 sm:text-sm">
-        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400 sm:h-2 sm:w-2" />
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white sm:h-2 sm:w-2" />
         {text.checking}
       </div>
     );
@@ -274,12 +283,12 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
         {user ? (
           <>
             <div className="flex h-9 min-w-0 items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:h-12 sm:rounded-2xl sm:px-3">
-              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-400 text-[9px] font-black text-black shadow-[0_10px_26px_rgba(52,211,153,0.18)] sm:h-9 sm:w-9 sm:rounded-xl sm:text-xs">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-[9px] font-black text-black shadow-[0_10px_26px_rgba(255,255,255,0.12)] sm:h-9 sm:w-9 sm:rounded-xl sm:text-xs">
                 {getInitials(user)}
               </div>
 
               <div className="min-w-0">
-                <p className="hidden text-[9px] font-black uppercase tracking-[0.16em] text-emerald-200/70 sm:block">
+                <p className="hidden text-[9px] font-black uppercase tracking-[0.16em] text-white/50 sm:block">
                   {text.welcome}
                 </p>
 
@@ -291,10 +300,10 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
 
             <a
               href="/hesabim/bakiye"
-              className="flex h-9 min-w-0 items-center justify-between gap-1.5 rounded-full border border-sky-400/20 bg-gradient-to-br from-sky-400/14 to-emerald-400/10 px-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition hover:-translate-y-0.5 hover:border-emerald-300/30 hover:bg-emerald-400/10 sm:h-12 sm:rounded-2xl sm:px-3"
+              className="flex h-9 min-w-0 items-center justify-between gap-1.5 rounded-full border border-white/12 bg-white/[0.06] px-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition hover:-translate-y-0.5 hover:border-white/25 hover:bg-white/[0.1] sm:h-12 sm:rounded-2xl sm:px-3"
             >
               <div className="min-w-0">
-                <p className="hidden text-[9px] font-black uppercase tracking-[0.16em] text-sky-100/70 sm:block">
+                <p className="hidden text-[9px] font-black uppercase tracking-[0.16em] text-white/45 sm:block">
                   {text.wallet}
                 </p>
 
@@ -303,7 +312,7 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
                 </p>
               </div>
 
-              <span className="hidden shrink-0 rounded-xl border border-white/10 bg-black/20 px-2 py-1 text-[10px] font-black text-emerald-300 sm:inline-flex">
+              <span className="hidden shrink-0 rounded-xl border border-white/10 bg-black/20 px-2 py-1 text-[10px] font-black text-white/70 sm:inline-flex">
                 {user.preferred_currency}
               </span>
             </a>
@@ -318,7 +327,7 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
             <button
               type="button"
               onClick={handleLogout}
-              className="inline-flex h-9 items-center justify-center rounded-full border border-rose-400/20 bg-rose-400/10 px-3 text-[11px] font-black text-rose-300 transition hover:-translate-y-0.5 hover:bg-rose-400/15 sm:h-12 sm:rounded-2xl sm:px-4 sm:text-xs"
+              className="inline-flex h-9 items-center justify-center rounded-full border border-[#6b2232] bg-[#31101b]/70 px-3 text-[11px] font-black text-[#f2c7d1] transition hover:-translate-y-0.5 hover:bg-[#4a1625] sm:h-12 sm:rounded-2xl sm:px-4 sm:text-xs"
             >
               {text.logout}
             </button>
@@ -328,7 +337,7 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
             <button
               type="button"
               onClick={() => openAuth("login")}
-              className="inline-flex h-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] px-3 text-[11px] font-black text-white/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:bg-white/[0.1] hover:text-white sm:h-12 sm:rounded-2xl sm:px-4 sm:text-xs"
+              className="inline-flex h-9 items-center justify-center rounded-full border border-white/12 bg-white/[0.06] px-3 text-[11px] font-black text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:border-white/24 hover:bg-white/[0.11] sm:h-12 sm:rounded-2xl sm:px-4 sm:text-xs"
             >
               {text.login}
             </button>
@@ -336,9 +345,18 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
             <button
               type="button"
               onClick={() => openAuth("register")}
-              className="inline-flex h-9 items-center justify-center rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 px-3 text-[11px] font-black text-black shadow-[0_16px_38px_rgba(52,211,153,0.18)] transition hover:-translate-y-0.5 hover:from-emerald-300 hover:to-emerald-400 sm:h-12 sm:rounded-2xl sm:px-4 sm:text-xs"
+              className="inline-flex h-9 items-center justify-center rounded-full border border-white bg-white px-3 text-[11px] font-black text-black shadow-[0_16px_38px_rgba(255,255,255,0.12)] transition hover:-translate-y-0.5 hover:bg-white/90 sm:h-12 sm:rounded-2xl sm:px-4 sm:text-xs"
             >
               {text.register}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-white/14 bg-white/[0.08] px-3 text-[11px] font-black text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:border-white/24 hover:bg-white/[0.13] sm:h-12 sm:rounded-2xl sm:px-4 sm:text-xs"
+            >
+              <FaGoogle className="text-[11px] sm:text-xs" />
+              {text.googleLogin}
             </button>
           </>
         )}
