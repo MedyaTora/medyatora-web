@@ -54,6 +54,19 @@ type BalanceTransactionRow = RowDataPacket & {
   created_at: Date | string;
 };
 
+type BalanceTopupRow = RowDataPacket & {
+  id: number;
+  request_number: string;
+  amount: string | number;
+  currency: string;
+  payment_method: string | null;
+  status: string;
+  admin_note: string | null;
+  created_at: Date | string;
+  approved_at: Date | string | null;
+  rejected_at: Date | string | null;
+};
+
 type OrderStatsRow = RowDataPacket & {
   total_orders: string | number;
   completed_orders: string | number;
@@ -502,7 +515,9 @@ function formatSignedMoney(value: string | number, currency: string) {
   return `${sign}${formatMoney(numberValue, currency)}`;
 }
 
-function formatDate(value: Date | string) {
+function formatDate(value: Date | string | null | undefined) {
+  if (!value) return "-";
+
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
@@ -543,6 +558,36 @@ function getTransactionAmountClass(value: string | number) {
   if (numberValue < 0) return "text-[#f2c7d1]";
 
   return "text-white/70";
+}
+
+function getTopupStatusLabel(status: string) {
+  const map: Record<string, string> = {
+    pending: "Onay Bekliyor",
+    approved: "Onaylandı",
+    rejected: "Reddedildi",
+  };
+
+  return map[status] || status || "-";
+}
+
+function getTopupStatusClass(status: string) {
+  const map: Record<string, string> = {
+    pending: "border-[#6b5b2a]/60 bg-[#211d11]/70 text-[#e7d9a4]",
+    approved: "border-white/18 bg-white/[0.08] text-white",
+    rejected: "border-[#6b2232] bg-[#31101b]/70 text-[#f2c7d1]",
+  };
+
+  return map[status] || "border-white/10 bg-white/[0.06] text-white/70";
+}
+
+function getTopupPaymentMethodLabel(method: string | null | undefined) {
+  const map: Record<string, string> = {
+    turkey_bank: "Türkiye Banka Havalesi / EFT",
+    support: "Destek ile ödeme",
+    manual_transfer: "Manuel ödeme",
+  };
+
+  return map[method || ""] || method || "-";
 }
 
 export default async function AccountPage() {
@@ -619,6 +664,27 @@ export default async function AccountPage() {
       related_order_id,
       created_at
     FROM balance_transactions
+    WHERE user_id = ?
+    ORDER BY id DESC
+    LIMIT 5
+    `,
+    [user.id]
+  );
+
+  const [balanceTopups] = await pool.query<BalanceTopupRow[]>(
+    `
+    SELECT
+      id,
+      request_number,
+      amount,
+      currency,
+      payment_method,
+      status,
+      admin_note,
+      created_at,
+      approved_at,
+      rejected_at
+    FROM balance_topup_requests
     WHERE user_id = ?
     ORDER BY id DESC
     LIMIT 5
@@ -860,7 +926,9 @@ export default async function AccountPage() {
         <EmailVerificationCard
           email={user.email}
           initialEmailVerified={Boolean(user.email_verified)}
-          initialFreeAnalysisGrantedAt={userWithExtraFields.free_analysis_granted_at}
+          initialFreeAnalysisGrantedAt={
+            userWithExtraFields.free_analysis_granted_at
+          }
         />
 
         <section className="rounded-[30px] border border-white/10 bg-[#080a0d]/92 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.28)] ring-1 ring-white/[0.025] backdrop-blur-xl md:p-6">
@@ -935,6 +1003,90 @@ export default async function AccountPage() {
               {t.pendingCount}: {pendingAnalysisRequests}
             </p>
           </div>
+        </section>
+
+        <section className="rounded-[34px] border border-white/10 bg-[#080a0d]/92 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.36)] ring-1 ring-white/[0.025] backdrop-blur-xl md:p-6">
+          <div className="mb-5">
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-white/40">
+              Yatırım Taleplerim
+            </p>
+            <h2 className="mt-2 text-2xl font-black text-white">
+              Son yatırım bildirimlerin
+            </h2>
+            <p className="mt-2 text-sm text-white/45">
+              Oluşturduğun bakiye yükleme taleplerini ve onay durumlarını
+              buradan takip edebilirsin.
+            </p>
+          </div>
+
+          {balanceTopups.length === 0 ? (
+            <div className="rounded-3xl border border-dashed border-white/15 bg-white/[0.04] p-8 text-center">
+              <p className="text-lg font-bold text-white">
+                Henüz yatırım bildirimi yok.
+              </p>
+              <p className="mt-2 text-sm leading-6 text-white/55">
+                Para Yatır butonundan yatırım bildirimi oluşturduğunda burada
+                görünecek.
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-3">
+              {balanceTopups.map((topup) => (
+                <div
+                  key={topup.id}
+                  className="rounded-3xl border border-white/10 bg-white/[0.045] p-4 transition hover:bg-white/[0.07]"
+                >
+                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-black text-white md:text-base">
+                          {topup.request_number}
+                        </p>
+
+                        <span
+                          className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${getTopupStatusClass(
+                            topup.status
+                          )}`}
+                        >
+                          {getTopupStatusLabel(topup.status)}
+                        </span>
+
+                        <span className="inline-flex rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs font-bold text-white/55">
+                          {topup.currency}
+                        </span>
+                      </div>
+
+                      <div className="mt-3 grid gap-1 text-sm leading-6 text-white/55">
+                        <p>
+                          Ödeme yöntemi:{" "}
+                          {getTopupPaymentMethodLabel(topup.payment_method)}
+                        </p>
+                        <p>Oluşturma tarihi: {formatDate(topup.created_at)}</p>
+                        {topup.approved_at ? (
+                          <p>Onay tarihi: {formatDate(topup.approved_at)}</p>
+                        ) : null}
+                        {topup.rejected_at ? (
+                          <p>Red tarihi: {formatDate(topup.rejected_at)}</p>
+                        ) : null}
+                        {topup.admin_note ? (
+                          <p className="mt-2 rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-white/60">
+                            Admin notu: {topup.admin_note}
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-right">
+                      <p className="text-xs text-white/40">Yatırım Tutarı</p>
+                      <p className="mt-1 text-lg font-black text-white">
+                        {formatMoney(topup.amount, topup.currency)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         <section className="rounded-[34px] border border-white/10 bg-[#080a0d]/92 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.36)] ring-1 ring-white/[0.025] backdrop-blur-xl md:p-6">
@@ -1092,9 +1244,7 @@ export default async function AccountPage() {
                           {t.accountType}: {item.account_type || "-"} ·{" "}
                           {t.content}: {item.content_type || "-"}
                         </p>
-                        <p>
-                          {t.date}: {formatDate(item.created_at)}
-                        </p>
+                        <p>{t.date}: {formatDate(item.created_at)}</p>
                       </div>
                     </div>
 

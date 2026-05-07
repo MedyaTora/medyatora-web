@@ -159,7 +159,7 @@ export default function BalanceTopUpCard({ userFullName, userEmail }: Props) {
     setError("");
 
     try {
-      const res = await fetch("/api/balance-topup", {
+      const res = await fetch("/api/balance-topup/request", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -382,8 +382,7 @@ export default function BalanceTopUpCard({ userFullName, userEmail }: Props) {
                               <span className="font-bold text-white">
                                 Açıklama:
                               </span>{" "}
-                              Yatırım bildirimi sonrası oluşan yatırım numarası
-                              yazılmalıdır.
+                              Dijital hizmet
                             </p>
                           </div>
                         </div>

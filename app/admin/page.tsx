@@ -598,6 +598,14 @@ export default async function AdminPage({
               >
                 Kâr Paneli
               </a>
+
+              <a
+  href="/admin/balance-topups"
+  className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/[0.08]"
+>
+  Yatırımlar
+</a>
+
             </div>
           </div>
         </header>
