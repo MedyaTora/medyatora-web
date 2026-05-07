@@ -99,6 +99,8 @@ export async function POST(request: Request) {
       50
     );
 
+    const paymentMethod = safeText(body?.payment_method || "turkey_bank", 50);
+
     if (!fullName) {
       return NextResponse.json(
         {
@@ -163,7 +165,7 @@ export async function POST(request: Request) {
         receipt_sent,
         receipt_sent_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, 'manual_transfer', ?, 'pending', ?, 1, NOW())
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, 0, NULL)
       `,
       [
         user.id,
@@ -173,6 +175,7 @@ export async function POST(request: Request) {
         phoneNumber,
         currency,
         amount,
+        paymentMethod,
         supportChannel,
         userNote || null,
       ]

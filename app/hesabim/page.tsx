@@ -782,12 +782,19 @@ export default async function AccountPage() {
                       </p>
                     </div>
 
-                    <Link
-                      href="/smmtora"
-                      className="inline-flex shrink-0 items-center justify-center rounded-2xl bg-white px-4 py-2 text-xs font-black text-black transition hover:-translate-y-0.5 hover:bg-white/90"
-                    >
-                      {t.shopWithBalance}
-                    </Link>
+                    <div className="flex shrink-0 flex-wrap gap-2">
+                    <BalanceTopUpCard
+  userFullName={user.full_name}
+  userEmail={user.email}
+/>
+
+  <Link
+    href="/smmtora"
+    className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-2 text-xs font-bold text-white/85 transition hover:-translate-y-0.5 hover:bg-white/[0.1] hover:text-white"
+  >
+    {t.shopWithBalance}
+  </Link>
+</div>
                   </div>
 
                   <div className="mt-5 grid gap-3 sm:grid-cols-3">

@@ -714,6 +714,7 @@ function OrderBeforeNotice({ t }: { t: ReturnType<typeof getDictionary> }) {
     </section>
   );
 }
+
 export default function SmmToraPage() {
   const platforms = getAllPlatforms();
 
@@ -1825,8 +1826,9 @@ export default function SmmToraPage() {
           )}
         </section>
 
-        <div className="flex flex-col gap-5">
-        <div className="flex flex-col rounded-[34px] border border-white/10 bg-[#121826]/90 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.34)] ring-1 ring-white/[0.025] backdrop-blur-xl sm:p-6">
+        <section className="grid items-start gap-5 xl:grid-cols-[1.12fr_0.88fr]">
+          <div className="flex flex-col gap-5">
+            <div className="flex min-h-[760px] flex-col rounded-[34px] border border-white/10 bg-[#121826]/90 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.34)] ring-1 ring-white/[0.025] backdrop-blur-xl sm:p-6">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
                   <p className="text-xs font-black uppercase tracking-[0.2em] text-white/42">
@@ -2013,11 +2015,11 @@ export default function SmmToraPage() {
                   {t.noProductsFound}
                 </div>
               ) : (
-<div
-  ref={productsScrollRef}
-  className="max-h-[760px] min-h-[420px] space-y-2 overflow-y-auto pr-1"
-  style={{ scrollbarWidth: "thin" }}
->
+                <div
+                  ref={productsScrollRef}
+                  className="max-h-[760px] min-h-[420px] space-y-2 overflow-y-auto pr-1"
+                  style={{ scrollbarWidth: "thin" }}
+                >
                   {filteredServices.map((service) => {
                     const active = selectedService?.id === service.id;
                     const unitPrice = getUnitSalePrice(
@@ -2194,9 +2196,8 @@ export default function SmmToraPage() {
             </div>
           </div>
 
-          <section className="grid items-start gap-5 xl:grid-cols-[1.12fr_0.88fr]">
-      <div className="flex flex-col gap-5">
-      <div className="flex flex-col rounded-[34px] border border-white/10 bg-[#121826]/90 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.34)] ring-1 ring-white/[0.025] backdrop-blur-xl sm:p-6">
+          <div className="flex flex-col gap-5">
+            <div className="flex min-h-[760px] flex-col rounded-[34px] border border-white/10 bg-[#121826]/90 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.34)] ring-1 ring-white/[0.025] backdrop-blur-xl sm:p-6">
               <p className="mb-4 text-xs font-black uppercase tracking-[0.2em] text-white/42">
                 {t.orderInfo}
               </p>
@@ -2489,7 +2490,7 @@ export default function SmmToraPage() {
                   </div>
                 )}
 
-{error && (
+                {error && (
                   <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
                     {error}
                   </div>
@@ -3102,4 +3103,4 @@ export default function SmmToraPage() {
       )}
     </main>
   );
-}         
+}
