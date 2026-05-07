@@ -15,6 +15,20 @@ function normalizeCurrency(value: unknown): CurrencyCode {
   return "TL";
 }
 
+function normalizePaymentMethod(value: unknown) {
+  const method = String(value || "").trim().toLowerCase();
+
+  if (method === "support") return "support";
+  if (method === "turkey_bank") return "turkey_bank";
+
+  return "turkey_bank";
+}
+
+function getPaymentMethodLabel(method: string) {
+  if (method === "support") return "Destek ile ödeme";
+  return "Türkiye Banka Havalesi / EFT";
+}
+
 function createTopupRequestNumber() {
   const now = new Date();
   const datePart = `${now.getFullYear()}${String(
@@ -47,9 +61,7 @@ async function sendTelegramMessage(message: string) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
 
-  if (!token || !chatId) {
-    return;
-  }
+  if (!token || !chatId) return;
 
   await fetch(`${TELEGRAM_API_URL}/bot${token}/sendMessage`, {
     method: "POST",
@@ -91,15 +103,13 @@ export async function POST(request: Request) {
     const email =
       safeText(body?.email, 255) || safeText(user.email, 255) || null;
 
-    const phoneNumber = safeText(user.phone_number, 50) || null;
-
     const userNote = safeText(body?.user_note, 2000);
     const supportChannel = safeText(
       body?.support_channel || "whatsapp_telegram",
       50
     );
 
-    const paymentMethod = safeText(body?.payment_method || "turkey_bank", 50);
+    const paymentMethod = normalizePaymentMethod(body?.payment_method);
 
     if (!fullName) {
       return NextResponse.json(
@@ -165,14 +175,14 @@ export async function POST(request: Request) {
         receipt_sent,
         receipt_sent_at
       )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, 0, NULL)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, 0, NULL)
       `,
       [
         user.id,
         requestNumber,
         fullName,
         email,
-        phoneNumber,
+        null,
         currency,
         amount,
         paymentMethod,
@@ -192,13 +202,15 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, 0, NULL)
         `<b>Ad Soyad:</b> ${escapeTelegramHtml(fullName)}`,
         `<b>E-posta:</b> ${escapeTelegramHtml(email)}`,
         `<b>Tutar:</b> ${escapeTelegramHtml(formatAmount(amount, currency))}`,
-        `<b>Ödeme Yöntemi:</b> ${escapeTelegramHtml(paymentMethod)}`,
+        `<b>Ödeme Yöntemi:</b> ${escapeTelegramHtml(
+          getPaymentMethodLabel(paymentMethod)
+        )}`,
         `<b>Destek Kanalı:</b> ${escapeTelegramHtml(supportChannel || "-")}`,
         userNote
           ? `<b>Kullanıcı Notu:</b> ${escapeTelegramHtml(userNote)}`
           : "",
         "",
-        "Yeni bakiye yükleme ödeme bildirimi oluşturuldu. Kullanıcı dekont ilettiğinde admin panelinden kontrol edip talebi onaylayın.",,
+        "Yeni bakiye yükleme bildirimi oluşturuldu. Kullanıcı dekont ilettiğinde admin panelinden kontrol edip talebi onaylayın.",
       ]
         .filter(Boolean)
         .join("\n")

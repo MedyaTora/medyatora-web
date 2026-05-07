@@ -1,9 +1,15 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
+import type {
+  PoolConnection,
+  ResultSetHeader,
+  RowDataPacket,
+} from "mysql2/promise";
 import { getMysqlPool } from "@/lib/mysql";
 
 type ActionType = "approve" | "reject";
 type CurrencyCode = "TL" | "USD" | "RUB";
+type BalanceColumn = "balance_tl" | "balance_usd" | "balance_rub";
 
 type TopupRequestRow = RowDataPacket & {
   id: number;
@@ -35,6 +41,18 @@ type UserBalanceRow = RowDataPacket & {
   balance_rub: string | number;
 };
 
+type ColumnRow = RowDataPacket & {
+  Field: string;
+};
+
+function isAdminCookieValid(adminCookie: string | undefined) {
+  const expectedSecret = process.env.ADMIN_SECRET;
+
+  if (!expectedSecret) return false;
+
+  return adminCookie === expectedSecret;
+}
+
 function normalizeAction(value: unknown): ActionType | null {
   const action = String(value || "").trim().toLowerCase();
 
@@ -53,7 +71,7 @@ function normalizeCurrency(value: unknown): CurrencyCode {
   return "TL";
 }
 
-function getBalanceColumn(currency: CurrencyCode) {
+function getBalanceColumn(currency: CurrencyCode): BalanceColumn {
   if (currency === "USD") return "balance_usd";
   if (currency === "RUB") return "balance_rub";
 
@@ -75,10 +93,8 @@ function formatMoney(value: number, currency: CurrencyCode) {
   })} ${currency}`;
 }
 
-async function getTableColumns(tableName: string) {
-  const pool = getMysqlPool();
-
-  const [rows] = await pool.query<RowDataPacket[]>(
+async function getTableColumns(connection: PoolConnection, tableName: string) {
+  const [rows] = await connection.query<ColumnRow[]>(
     `
     SHOW COLUMNS FROM ${tableName}
     `
@@ -103,6 +119,7 @@ function addInsertValue(
 }
 
 async function insertBalanceTransaction({
+  connection,
   userId,
   currency,
   amount,
@@ -111,6 +128,7 @@ async function insertBalanceTransaction({
   requestId,
   requestNumber,
 }: {
+  connection: PoolConnection;
   userId: number;
   currency: CurrencyCode;
   amount: number;
@@ -119,8 +137,7 @@ async function insertBalanceTransaction({
   requestId: number;
   requestNumber: string;
 }) {
-  const pool = getMysqlPool();
-  const columns = await getTableColumns("balance_transactions");
+  const columns = await getTableColumns(connection, "balance_transactions");
 
   const insertColumns: string[] = [];
   const placeholders: string[] = [];
@@ -243,11 +260,9 @@ async function insertBalanceTransaction({
     placeholders.push("NOW()");
   }
 
-  if (insertColumns.length === 0) {
-    return;
-  }
+  if (insertColumns.length === 0) return;
 
-  await pool.query(
+  await connection.query(
     `
     INSERT INTO balance_transactions (${insertColumns.join(", ")})
     VALUES (${placeholders.join(", ")})
@@ -310,6 +325,19 @@ async function sendTelegramAdminNotification({
 }
 
 export async function POST(request: Request) {
+  const cookieStore = await cookies();
+  const adminCookie = cookieStore.get("medyatora_admin")?.value;
+
+  if (!isAdminCookieValid(adminCookie)) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Admin yetkisi gerekli.",
+      },
+      { status: 401 }
+    );
+  }
+
   const pool = getMysqlPool();
   const connection = await pool.getConnection();
 
@@ -421,7 +449,8 @@ export async function POST(request: Request) {
         SET
           status = 'rejected',
           admin_note = ?,
-          rejected_at = NOW()
+          rejected_at = NOW(),
+          updated_at = NOW()
         WHERE id = ?
           AND status = 'pending'
         `,
@@ -500,7 +529,8 @@ export async function POST(request: Request) {
       SET
         status = 'approved',
         admin_note = ?,
-        approved_at = NOW()
+        approved_at = NOW(),
+        updated_at = NOW()
       WHERE id = ?
         AND status = 'pending'
       `,
@@ -510,9 +540,8 @@ export async function POST(request: Request) {
       ]
     );
 
-    await connection.commit();
-
     await insertBalanceTransaction({
+      connection,
       userId: Number(topupRequest.user_id),
       currency,
       amount,
@@ -521,6 +550,8 @@ export async function POST(request: Request) {
       requestId,
       requestNumber: topupRequest.request_number,
     });
+
+    await connection.commit();
 
     await sendTelegramAdminNotification({
       action,
@@ -546,7 +577,7 @@ export async function POST(request: Request) {
     try {
       await connection.rollback();
     } catch {
-      // rollback hatası yok sayılır
+      // rollback hatası yok sayılır.
     }
 
     return NextResponse.json(

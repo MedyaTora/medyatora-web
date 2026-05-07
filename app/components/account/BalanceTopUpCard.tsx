@@ -73,10 +73,8 @@ function buildWhatsappLink(message: string) {
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
 }
 
-function buildTelegramLink(message: string) {
-  return `https://t.me/${TELEGRAM_USERNAME}?text=${encodeURIComponent(
-    message
-  )}`;
+function buildTelegramLink() {
+  return `https://t.me/${TELEGRAM_USERNAME}`;
 }
 
 export default function BalanceTopUpCard({ userFullName, userEmail }: Props) {
@@ -118,7 +116,14 @@ export default function BalanceTopUpCard({ userFullName, userEmail }: Props) {
     termsAccepted &&
     !loading;
 
+  function openCheckout() {
+    setCheckoutOpen(true);
+    setSuccessOpen(false);
+    setError("");
+  }
+
   function closeCheckout() {
+    if (loading) return;
     setCheckoutOpen(false);
     setError("");
   }
@@ -164,7 +169,15 @@ export default function BalanceTopUpCard({ userFullName, userEmail }: Props) {
         throw new Error(data?.error || "Yatırım bildirimi oluşturulamadı.");
       }
 
-      setRequestNumber(String(data.requestNumber || ""));
+      const nextRequestNumber = String(
+        data.requestNumber || data.request_number || data.topupRequestNumber || ""
+      );
+
+      if (!nextRequestNumber) {
+        throw new Error("Yatırım numarası alınamadı.");
+      }
+
+      setRequestNumber(nextRequestNumber);
       setCheckoutOpen(false);
       setSuccessOpen(true);
     } catch (err) {
@@ -178,244 +191,290 @@ export default function BalanceTopUpCard({ userFullName, userEmail }: Props) {
     <>
       <button
         type="button"
-        onClick={() => {
-          setCheckoutOpen(true);
-          setError("");
-        }}
+        onClick={openCheckout}
         className="inline-flex items-center justify-center rounded-2xl bg-white px-4 py-2 text-xs font-black text-black transition hover:-translate-y-0.5 hover:bg-white/90"
       >
         Para Yatır
       </button>
 
       {checkoutOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/78 p-3 backdrop-blur-sm sm:p-4">
-          <div className="flex max-h-[calc(100dvh-24px)] w-full max-w-2xl flex-col overflow-hidden rounded-[28px] border border-white/10 bg-[#10141a]/98 shadow-[0_28px_120px_rgba(0,0,0,0.58)] ring-1 ring-white/[0.035] sm:max-h-[92vh] sm:rounded-[32px]">
-            <div className="flex shrink-0 items-start justify-between gap-3 border-b border-white/10 px-4 py-3 sm:px-5">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-3 backdrop-blur-sm sm:p-4">
+          <div className="flex max-h-[calc(100dvh-24px)] w-full max-w-4xl flex-col overflow-hidden rounded-[28px] border border-white/10 bg-[#080a0d] shadow-[0_28px_120px_rgba(0,0,0,0.62)] ring-1 ring-white/[0.035] sm:max-h-[92vh] sm:rounded-[34px]">
+            <div className="flex shrink-0 items-start justify-between gap-3 border-b border-white/10 px-4 py-4 sm:px-6">
               <div>
-                <p className="text-sm font-black text-white">
-                  Bakiye Yükleme
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-white/38">
+                  MedyaTora Cüzdan
                 </p>
-                <p className="mt-1 text-xs text-white/50">
-                  Hesabına bakiye eklemek için yatırım bildirimi oluştur.
+                <h2 className="mt-2 text-2xl font-black text-white">
+                  Bakiye Yükleme
+                </h2>
+                <p className="mt-1 text-sm leading-6 text-white/55">
+                  Yatırım bildirimi oluştur, dekontu destek ekibine gönder.
+                  Onaylanan tutar bakiyene yansıtılır.
                 </p>
               </div>
 
               <button
                 type="button"
                 onClick={closeCheckout}
-                className="rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-bold text-white/75 transition hover:bg-white/10 hover:text-white"
+                disabled={loading}
+                className="rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-bold text-white/75 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Kapat
               </button>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
-              <div className="grid items-start gap-3 md:grid-cols-2">
-                <div>
-                  <input
-                    value={fullName}
-                    onChange={(event) => setFullName(event.target.value)}
-                    placeholder="Ödeme yapacak kişinin adı soyadı"
-                    className="w-full rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-white/28 focus:bg-white/[0.07]"
-                  />
-
-                  <p className="mt-2 text-xs leading-5 text-amber-100/80">
-                    Dekonttaki gönderen adı soyadı ile aynı olmalıdır.
-                  </p>
-                </div>
-
-                <input
-                  value={userEmail}
-                  disabled
-                  className="w-full rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-3 text-white/55 outline-none"
-                />
-
-                <input
-                  value={amountInput}
-                  onChange={(event) =>
-                    setAmountInput(normalizeAmount(event.target.value))
-                  }
-                  placeholder="Yatırım tutarı"
-                  inputMode="decimal"
-                  className="w-full rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-white/28 focus:bg-white/[0.07]"
-                />
-
-                <div className="grid grid-cols-3 gap-2">
-                  {(["TL", "USD", "RUB"] as CurrencyCode[]).map((item) => {
-                    const active = currency === item;
-
-                    return (
-                      <button
-                        key={item}
-                        type="button"
-                        onClick={() => setCurrency(item)}
-                        className={`rounded-2xl border px-4 py-3 text-sm font-black transition ${
-                          active
-                            ? "border-white bg-white text-black"
-                            : "border-white/10 bg-white/[0.045] text-white/72 hover:bg-white/[0.08] hover:text-white"
-                        }`}
-                      >
-                        {item}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <p className="text-sm font-bold text-white">
-                      Ödeme yöntemi
+            <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+              <div className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
+                <div className="space-y-4">
+                  <div className="rounded-3xl border border-white/10 bg-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
+                    <p className="text-sm font-black text-white">
+                      Yatırım Bilgileri
                     </p>
-                    <p className="mt-1 text-sm leading-6 text-white/58">
-                      Şu anda banka havalesi / EFT yöntemi kullanılmaktadır.
-                      Alternatif ödeme yöntemleri aktif olduğunda bu alanda
-                      gösterilecektir.
-                    </p>
-                  </div>
 
-                  <span className="inline-flex shrink-0 rounded-full border border-white/10 bg-black/20 px-3 py-2 text-[11px] font-black text-white/75">
-                    Seçili Para Birimi: {currency}
-                  </span>
-                </div>
+                    <div className="mt-4 grid gap-3">
+                      <label className="grid gap-2">
+                        <span className="text-xs font-black uppercase tracking-[0.18em] text-white/35">
+                          Ödeme yapacak kişi
+                        </span>
+                        <input
+                          value={fullName}
+                          onChange={(event) => setFullName(event.target.value)}
+                          placeholder="Ad soyad"
+                          className="w-full rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-white outline-none placeholder:text-white/30 transition focus:border-white/28 focus:bg-white/[0.07]"
+                        />
+                        <span className="text-xs leading-5 text-white/45">
+                          Dekonttaki gönderen adı soyadı ile aynı olmalıdır.
+                        </span>
+                      </label>
 
-                <div className="mt-4 grid gap-3 md:grid-cols-2">
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod("turkey_bank")}
-                    className={`rounded-2xl border p-4 text-left transition ${
-                      paymentMethod === "turkey_bank"
-                        ? "border-white/30 bg-white/[0.095] shadow-[0_12px_34px_rgba(255,255,255,0.08)]"
-                        : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
-                    }`}
-                  >
-                    <p className="text-sm font-bold text-white">
-                      Havale / EFT
-                    </p>
-                    <p className="mt-1 text-xs leading-5 text-white/52">
-                      Dekont sonrası ödeme kontrol edilir.
-                    </p>
-                  </button>
+                      <label className="grid gap-2">
+                        <span className="text-xs font-black uppercase tracking-[0.18em] text-white/35">
+                          Hesap e-postası
+                        </span>
+                        <input
+                          value={userEmail}
+                          disabled
+                          className="w-full rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-white/55 outline-none"
+                        />
+                      </label>
 
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod("support")}
-                    className={`rounded-2xl border p-4 text-left transition ${
-                      paymentMethod === "support"
-                        ? "border-white/30 bg-white/[0.095] shadow-[0_12px_34px_rgba(255,255,255,0.08)]"
-                        : "border-white/10 bg-black/20 hover:bg-white/[0.06]"
-                    }`}
-                  >
-                    <p className="text-sm font-bold text-white">
-                      Destek ile ödeme
-                    </p>
-                    <p className="mt-1 text-xs leading-5 text-white/52">
-                      Şu anda aktif değildir. Destek ekibiyle ilerlenir.
-                    </p>
-                  </button>
-                </div>
+                      <div className="grid gap-3 sm:grid-cols-[1fr_0.9fr]">
+                        <label className="grid gap-2">
+                          <span className="text-xs font-black uppercase tracking-[0.18em] text-white/35">
+                            Yatırım tutarı
+                          </span>
+                          <input
+                            value={amountInput}
+                            onChange={(event) =>
+                              setAmountInput(normalizeAmount(event.target.value))
+                            }
+                            placeholder="Örn: 5000"
+                            inputMode="decimal"
+                            className="w-full rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-white outline-none placeholder:text-white/30 transition focus:border-white/28 focus:bg-white/[0.07]"
+                          />
+                        </label>
 
-                {paymentMethod === "turkey_bank" && (
-                  <div className="mt-4 rounded-2xl border border-white/14 bg-white/[0.055] p-4 text-sm leading-6 text-white/78">
-                    <p className="font-bold text-white">Banka bilgileri</p>
+                        <div className="grid gap-2">
+                          <span className="text-xs font-black uppercase tracking-[0.18em] text-white/35">
+                            Para birimi
+                          </span>
+                          <div className="grid grid-cols-3 gap-2">
+                            {(["TL", "USD", "RUB"] as CurrencyCode[]).map(
+                              (item) => {
+                                const active = currency === item;
 
-                    <div className="mt-3 space-y-2">
-                      <p>
-                        <span className="font-bold text-white">Alıcı:</span>{" "}
-                        {TURKEY_BANK_ACCOUNT_NAME}
-                      </p>
-                      <p>
-                        <span className="font-bold text-white">IBAN:</span>{" "}
-                        {TURKEY_BANK_IBAN}
-                      </p>
-                      <p>
-                        <span className="font-bold text-white">
-                          Açıklama:
-                        </span>{" "}
-                        Yatırım bildirimi sonrası oluşan yatırım numarası
-                      </p>
+                                return (
+                                  <button
+                                    key={item}
+                                    type="button"
+                                    onClick={() => setCurrency(item)}
+                                    className={`rounded-2xl border px-3 py-3 text-sm font-black transition ${
+                                      active
+                                        ? "border-white bg-white text-black"
+                                        : "border-white/10 bg-black/25 text-white/72 hover:bg-white/[0.08] hover:text-white"
+                                    }`}
+                                  >
+                                    {item}
+                                  </button>
+                                );
+                              }
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                )}
-              </div>
 
-              <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm leading-6 text-amber-50">
-                <p className="font-bold text-white">Ödeme Güvenliği</p>
+                  <div className="rounded-3xl border border-white/10 bg-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
+                    <p className="text-sm font-black text-white">
+                      Ödeme Yöntemi
+                    </p>
 
-                <p className="mt-2 text-white/75">
-                  Ödeme yapacak kişinin adı soyadı, dekonttaki gönderen adı
-                  soyadı ile aynı olmalıdır. Eşleşmeyen ödemeler onaylanmaz.
-                </p>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod("turkey_bank")}
+                        className={`rounded-2xl border p-4 text-left transition ${
+                          paymentMethod === "turkey_bank"
+                            ? "border-white/35 bg-white/[0.095]"
+                            : "border-white/10 bg-black/25 hover:bg-white/[0.06]"
+                        }`}
+                      >
+                        <p className="text-sm font-black text-white">
+                          Havale / EFT
+                        </p>
+                        <p className="mt-1 text-xs leading-5 text-white/52">
+                          Dekont sonrası ödeme kontrol edilir.
+                        </p>
+                      </button>
 
-                <p className="mt-4 font-bold text-white">
-                  Bakiye Yükleme Onayı
-                </p>
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod("support")}
+                        className={`rounded-2xl border p-4 text-left transition ${
+                          paymentMethod === "support"
+                            ? "border-white/35 bg-white/[0.095]"
+                            : "border-white/10 bg-black/25 hover:bg-white/[0.06]"
+                        }`}
+                      >
+                        <p className="text-sm font-black text-white">
+                          Destek ile ödeme
+                        </p>
+                        <p className="mt-1 text-xs leading-5 text-white/52">
+                          Destek ekibiyle ödeme detayları netleştirilir.
+                        </p>
+                      </button>
+                    </div>
 
-                <p className="mt-2 text-white/75">
-                  Yatırım bildirimi oluşturulduktan sonra dekont WhatsApp veya
-                  Telegram üzerinden iletilmelidir. Ekip kontrolünden sonra
-                  onaylanan tutar ilgili bakiyeye eklenir.
-                </p>
+                    {paymentMethod === "turkey_bank" && (
+                      <div className="mt-4 rounded-2xl border border-white/14 bg-black/25 p-4 text-sm leading-6 text-white/78">
+                        <p className="font-black text-white">Banka bilgileri</p>
 
-                <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-black/20 p-3">
-                  <input
-                    type="checkbox"
-                    checked={termsAccepted}
-                    onChange={(event) =>
-                      setTermsAccepted(event.target.checked)
-                    }
-                    className="mt-1 h-4 w-4 accent-white"
-                  />
-
-                  <span className="text-sm font-semibold text-white">
-                    Bakiye yükleme koşullarını okudum, kabul ediyorum.
-                  </span>
-                </label>
-              </div>
-
-              <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
-                <div className="flex items-center justify-between text-sm text-white/58">
-                  <span>Para Birimi</span>
-                  <span className="font-bold text-white">{currency}</span>
+                        <div className="mt-3 space-y-2">
+                          <p>
+                            <span className="font-bold text-white">
+                              Alıcı:
+                            </span>{" "}
+                            {TURKEY_BANK_ACCOUNT_NAME}
+                          </p>
+                          <p>
+                            <span className="font-bold text-white">IBAN:</span>{" "}
+                            {TURKEY_BANK_IBAN}
+                          </p>
+                          <p>
+                            <span className="font-bold text-white">
+                              Açıklama:
+                            </span>{" "}
+                            Yatırım bildirimi sonrası oluşan yatırım numarası
+                            yazılmalıdır.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                <div className="mt-2 flex items-center justify-between text-base font-bold text-white">
-                  <span>Yatırım Tutarı</span>
-                  <span>{formatMoney(amount, currency)}</span>
+                <div className="space-y-4">
+                  <div className="rounded-3xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm leading-6 text-amber-50">
+                    <p className="font-black text-white">Ödeme Güvenliği</p>
+
+                    <p className="mt-2 text-white/75">
+                      Ödeme yapacak kişinin adı soyadı, dekonttaki gönderen adı
+                      soyadı ile aynı olmalıdır. Eşleşmeyen ödemeler
+                      onaylanmayabilir.
+                    </p>
+
+                    <p className="mt-4 font-black text-white">
+                      Bakiye Yükleme Onayı
+                    </p>
+
+                    <p className="mt-2 text-white/75">
+                      Yatırım bildirimi oluşturulduktan sonra dekont WhatsApp
+                      veya Telegram üzerinden iletilmelidir. Ekip kontrolünden
+                      sonra onaylanan tutar ilgili bakiyeye eklenir.
+                    </p>
+
+                    <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-black/20 p-3">
+                      <input
+                        type="checkbox"
+                        checked={termsAccepted}
+                        onChange={(event) =>
+                          setTermsAccepted(event.target.checked)
+                        }
+                        className="mt-1 h-4 w-4 accent-white"
+                      />
+
+                      <span className="text-sm font-semibold text-white">
+                        Bakiye yükleme koşullarını okudum, kabul ediyorum.
+                      </span>
+                    </label>
+                  </div>
+
+                  <div className="rounded-3xl border border-white/10 bg-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
+                    <p className="text-sm font-black text-white">
+                      Yatırım Özeti
+                    </p>
+
+                    <div className="mt-4 space-y-3 text-sm">
+                      <div className="flex items-center justify-between text-white/58">
+                        <span>Para Birimi</span>
+                        <span className="font-bold text-white">
+                          {currency}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-white/58">
+                        <span>Ödeme Yöntemi</span>
+                        <span className="font-bold text-white">
+                          {getPaymentMethodLabel(paymentMethod)}
+                        </span>
+                      </div>
+
+                      <div className="border-t border-white/10 pt-3">
+                        <div className="flex items-center justify-between text-base font-black text-white">
+                          <span>Yatırım Tutarı</span>
+                          <span>{formatMoney(amount, currency)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {error && (
+                    <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm font-bold text-rose-200">
+                      {error}
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={submitTopupRequest}
+                    disabled={!canSubmit}
+                    className="w-full rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:-translate-y-0.5 hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+                  >
+                    {loading
+                      ? "Yatırım Bildirimi Oluşturuluyor..."
+                      : "Yatırım Bildirimi Oluştur"}
+                  </button>
                 </div>
               </div>
-
-              {error && (
-                <div className="mt-4 rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
-                  {error}
-                </div>
-              )}
-            </div>
-
-            <div className="shrink-0 border-t border-white/10 bg-[#10141a]/96 px-4 py-3 backdrop-blur-xl sm:px-5">
-              <button
-                type="button"
-                onClick={submitTopupRequest}
-                disabled={!canSubmit}
-                className="w-full rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {loading
-                  ? "Yatırım Bildirimi Oluşturuluyor..."
-                  : "Yatırım Bildirimi Oluştur"}
-              </button>
             </div>
           </div>
         </div>
       )}
 
       {successOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/78 p-3 backdrop-blur-sm sm:p-4">
-          <div className="flex max-h-[calc(100dvh-24px)] w-full max-w-2xl flex-col overflow-hidden rounded-[28px] border border-white/10 bg-[#10141a]/98 shadow-[0_28px_120px_rgba(0,0,0,0.58)] ring-1 ring-white/[0.035] sm:max-h-[92vh] sm:rounded-[32px]">
-            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 py-3 sm:px-5">
-              <p className="text-sm font-black text-white/80">
-                Yatırım Bildirimi
-              </p>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-3 backdrop-blur-sm sm:p-4">
+          <div className="flex max-h-[calc(100dvh-24px)] w-full max-w-2xl flex-col overflow-hidden rounded-[28px] border border-white/10 bg-[#080a0d] shadow-[0_28px_120px_rgba(0,0,0,0.62)] ring-1 ring-white/[0.035] sm:max-h-[92vh] sm:rounded-[34px]">
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 py-4 sm:px-6">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-white/38">
+                  Yatırım Bildirimi
+                </p>
+                <h2 className="mt-2 text-2xl font-black text-white">
+                  Yatırım bildiriminiz alındı
+                </h2>
+              </div>
 
               <button
                 type="button"
@@ -426,26 +485,22 @@ export default function BalanceTopUpCard({ userFullName, userEmail }: Props) {
               </button>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
-              <h2 className="text-2xl font-black text-white">
-                Yatırım bildiriminiz alındı
-              </h2>
-
-              <p className="mt-2 text-sm leading-6 text-white/60">
+            <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+              <p className="text-sm leading-6 text-white/60">
                 Dekontunuzu WhatsApp veya Telegram üzerinden ilettikten sonra
                 ekibimiz ödemenizi kontrol edecektir. Onaylanan tutar
                 bakiyenize yansıtılır.
               </p>
 
               <div className="mt-5 space-y-3">
-                <div className="rounded-2xl border border-white/14 bg-white/[0.055] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
+                <div className="rounded-2xl border border-white/14 bg-white/[0.055] p-4">
                   <p className="text-sm text-white/60">Yatırım numarası</p>
                   <p className="mt-1 break-all text-lg font-black text-white">
                     {requestNumber}
                   </p>
                 </div>
 
-                <div className="rounded-2xl border border-white/14 bg-white/[0.055] p-4 text-sm leading-6 text-white/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
+                <div className="rounded-2xl border border-white/14 bg-white/[0.055] p-4 text-sm leading-6 text-white/72">
                   <p>
                     <span className="font-bold text-white">
                       Gönderen Ad Soyad:
@@ -467,19 +522,26 @@ export default function BalanceTopUpCard({ userFullName, userEmail }: Props) {
                 </div>
               </div>
 
-              <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
-                <p className="text-sm font-bold text-white">
+              <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.045] p-4">
+                <p className="text-sm font-black text-white">
                   Dekont bildirimi gönder
                 </p>
 
                 <p className="mt-2 text-sm leading-6 text-white/60">
-                  Dekontu seçtiğiniz kanal üzerinden iletin. Mesaj otomatik
-                  hazırlanacaktır.
+                  WhatsApp butonu hazır mesajla açılır. Telegram için mesaj
+                  metnini kopyalayıp destek sohbetine gönderebilirsin.
                 </p>
+
+                <textarea
+                  value={supportMessage}
+                  readOnly
+                  rows={8}
+                  className="mt-4 w-full resize-none rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-xs leading-5 text-white/70 outline-none"
+                />
 
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   <a
-                    href={buildTelegramLink(supportMessage)}
+                    href={buildTelegramLink()}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="rounded-2xl border border-white/10 bg-white/[0.06] px-5 py-3 text-center text-sm font-bold text-white transition hover:bg-white/[0.1]"
@@ -499,7 +561,7 @@ export default function BalanceTopUpCard({ userFullName, userEmail }: Props) {
               </div>
             </div>
 
-            <div className="shrink-0 border-t border-white/10 bg-[#10141a]/96 px-4 py-3 backdrop-blur-xl sm:px-5">
+            <div className="shrink-0 border-t border-white/10 bg-[#080a0d]/96 px-4 py-3 backdrop-blur-xl sm:px-6">
               <button
                 type="button"
                 onClick={closeSuccess}
