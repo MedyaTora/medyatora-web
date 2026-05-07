@@ -12,16 +12,6 @@ import UserMenu from "./components/auth/UserMenu";
 
 type LocaleCode = "tr" | "en" | "ru";
 
-type ActionCard = {
-  title: string;
-  description: string;
-  mobileDescription: string;
-  eyebrow: string;
-  href: string;
-  icon: typeof FaChartLine;
-  primary: boolean;
-};
-
 const homeText: Record<
   LocaleCode,
   {
@@ -37,7 +27,16 @@ const homeText: Record<
     terms: string;
     distanceSales: string;
     refundPolicy: string;
-    actionCards: ActionCard[];
+    actionCards: {
+      title: string;
+      description: string;
+      mobileDescription: string;
+      eyebrow: string;
+      href: string;
+      icon: typeof FaChartLine;
+      primary: boolean;
+    }[];
+    trustItems: string[];
   }
 > = {
   tr: {
@@ -87,6 +86,12 @@ const homeText: Record<
         icon: FaBoxesStacked,
         primary: false,
       },
+    ],
+    trustItems: [
+      "KDV + vergiler dahil",
+      "Sipariş numarası ile takip",
+      "WhatsApp / Telegram destek",
+      "Güvenli işlem akışı",
     ],
   },
 
@@ -138,6 +143,12 @@ const homeText: Record<
         primary: false,
       },
     ],
+    trustItems: [
+      "Taxes included",
+      "Track with order number",
+      "WhatsApp / Telegram support",
+      "Secure process flow",
+    ],
   },
 
   ru: {
@@ -183,10 +194,16 @@ const homeText: Record<
           "Откройте полный список услуг, фильтры платформ и подробные варианты сервисов.",
         mobileDescription: "Открыть панель услуг.",
         href: "/smmtora",
-        eyebrow: "Расширенная панель услуг",
+        eyebrow: "Расширенная панель",
         icon: FaBoxesStacked,
         primary: false,
       },
+    ],
+    trustItems: [
+      "Налоги включены",
+      "Отслеживание по номеру заказа",
+      "Поддержка WhatsApp / Telegram",
+      "Безопасный процесс",
     ],
   },
 };
@@ -202,28 +219,30 @@ function LuxuryMonogram({
     <svg
       width={size}
       height={size}
-      viewBox="0 0 100 100"
+      viewBox="-8 -8 116 116"
       fill="currentColor"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
       aria-hidden="true"
+      overflow="visible"
     >
       <rect x="14" y="20" width="8" height="60" />
       <rect x="78" y="20" width="8" height="60" />
-      <polygon points="22,20 32,20 50,56 68,20 78,20 54,80 46,80" />
-      <polygon points="33,20 43,20 50,36 57,20 67,20 50,61" />
+      <polygon points="22,20 32,20 50,56 68,20 78,20 54,68 46,68" />
+      <polygon points="27,20 43,20 50,34 57,20 73,20 50,66" />
+      <rect x="47" y="44" width="7" height="36" />
     </svg>
   );
 }
 
 function MinimalStars() {
   const stars = [
-    { left: "14%", top: "74%", size: 3, opacity: 0.55 },
-    { left: "25%", top: "23%", size: 2, opacity: 0.42 },
-    { left: "82%", top: "32%", size: 3, opacity: 0.62 },
-    { left: "78%", top: "83%", size: 3, opacity: 0.58 },
-    { left: "43%", top: "86%", size: 2, opacity: 0.34 },
-    { left: "64%", top: "57%", size: 2, opacity: 0.42 },
+    { left: "14%", top: "43%", size: 3, opacity: 0.6 },
+    { left: "20%", top: "30%", size: 2, opacity: 0.38 },
+    { left: "86%", top: "54%", size: 3, opacity: 0.58 },
+    { left: "90%", top: "38%", size: 2, opacity: 0.5 },
+    { left: "52%", top: "21%", size: 1, opacity: 0.4 },
+    { left: "8%", top: "73%", size: 2, opacity: 0.5 },
   ];
 
   return (
@@ -231,7 +250,7 @@ function MinimalStars() {
       {stars.map((star, index) => (
         <span
           key={index}
-          className="absolute rounded-full bg-white shadow-[0_0_12px_rgba(255,255,255,0.72)]"
+          className="absolute rounded-full bg-white shadow-[0_0_18px_rgba(255,255,255,0.75)]"
           style={{
             left: star.left,
             top: star.top,
@@ -296,15 +315,15 @@ export default function Home() {
 
       <MinimalStars />
 
-      <section className="mt-premium-inner mx-auto flex min-h-[100dvh] w-full max-w-7xl flex-col px-3 py-3 sm:px-6 sm:py-5 lg:px-8">
-        <header className="flex items-start justify-between gap-3 border-b border-white/8 pb-3 sm:items-center sm:pb-5">
+      <section className="mt-premium-inner mx-auto flex min-h-[100dvh] w-full max-w-7xl flex-col px-4 pt-6 pb-5 sm:px-6 sm:pt-7 sm:pb-6 lg:px-8 lg:pt-8">
+        <header className="flex items-start justify-between gap-4 border-b border-white/8 pb-5 sm:items-center sm:pb-6">
           <Link href="/" className="flex min-w-0 shrink-0 items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center text-white drop-shadow-[0_0_18px_rgba(255,255,255,0.16)] sm:h-10 sm:w-10">
-              <LuxuryMonogram size={30} />
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center pl-1 text-white drop-shadow-[0_0_18px_rgba(255,255,255,0.16)] sm:h-11 sm:w-11 sm:pl-0">
+              <LuxuryMonogram size={38} />
             </div>
 
             <div className="min-w-0">
-              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-white sm:text-base sm:tracking-[0.32em]">
+              <p className="text-xs font-black uppercase tracking-[0.24em] text-white sm:text-base sm:tracking-[0.32em]">
                 MedyaTora
               </p>
 
@@ -314,20 +333,20 @@ export default function Home() {
             </div>
           </Link>
 
-          <div className="flex min-w-0 shrink-0 items-start justify-end">
+          <div className="shrink-0">
             <UserMenu />
           </div>
         </header>
 
-        <div className="flex flex-1 items-start pt-4 pb-4 sm:items-center sm:py-14 lg:py-16">
+        <div className="flex flex-1 items-start pt-10 pb-8 sm:pt-16 sm:pb-14 lg:pt-20 lg:pb-16">
           <div className="mx-auto w-full max-w-6xl">
-            <div className="mx-auto max-w-4xl text-center">
-              <div className="mx-auto mb-3 inline-flex border border-white/10 bg-white/[0.045] px-4 py-2 text-[8px] font-black uppercase tracking-[0.18em] text-white/55 shadow-[0_12px_45px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:mb-6 sm:px-5 sm:text-xs sm:tracking-[0.28em]">
+            <div className="mx-auto max-w-[1040px] text-center">
+              <div className="mx-auto mb-4 inline-flex border border-white/10 bg-white/[0.045] px-4 py-2 text-[8px] font-black uppercase tracking-[0.18em] text-white/55 shadow-[0_12px_45px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:mb-6 sm:px-5 sm:text-xs sm:tracking-[0.28em]">
                 {t.heroBadge}
               </div>
 
-              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center text-white drop-shadow-[0_0_30px_rgba(255,255,255,0.15)] sm:mb-7 sm:h-28 sm:w-28">
-                <LuxuryMonogram size={64} className="sm:hidden" />
+              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center text-white drop-shadow-[0_0_30px_rgba(255,255,255,0.15)] sm:mb-7 sm:h-28 sm:w-28">
+                <LuxuryMonogram size={74} className="sm:hidden" />
                 <LuxuryMonogram size={122} className="hidden sm:block" />
               </div>
 
@@ -345,11 +364,11 @@ export default function Home() {
                 {t.heroLine1}
               </p>
 
-              <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-white/55 sm:mt-3 sm:text-base sm:leading-7">
+              <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-white/55 sm:text-base sm:leading-7">
                 {t.heroLine2}
               </p>
 
-              <div className="mx-auto mt-5 grid max-w-5xl gap-3 sm:mt-8 md:mt-10 md:grid-cols-3 md:gap-4">
+              <div className="mx-auto mt-8 grid max-w-5xl gap-3 sm:mt-10 md:mt-12 md:grid-cols-3 md:gap-4">
                 {t.actionCards.map((card) => {
                   const Icon = card.icon;
 
@@ -363,49 +382,58 @@ export default function Home() {
                           : "border-white/12 bg-white/[0.07] hover:border-white/22 hover:bg-white/[0.11]"
                       }`}
                     >
-                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/[0.08] via-transparent to-transparent opacity-80" />
+                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/[0.08] via-transparent to-transparent opacity-70" />
 
                       <div className="relative flex items-center gap-4 md:block">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/22 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.045)] sm:h-14 sm:w-14">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/25 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:h-14 sm:w-14">
                           <Icon className="text-lg sm:text-xl" />
                         </div>
 
                         <div className="min-w-0 flex-1 md:mt-5">
-                          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/42">
+                          <p className="text-[9px] font-black uppercase tracking-[0.22em] text-white/38 sm:text-[10px]">
                             {card.eyebrow}
                           </p>
 
-                          <div className="mt-1 flex items-center justify-between gap-3 sm:mt-2">
-                            <h2 className="text-xl font-black tracking-tight text-white sm:text-2xl">
-                              {card.title}
-                            </h2>
+                          <h2 className="mt-1 text-xl font-black tracking-tight text-white sm:mt-2 sm:text-2xl">
+                            {card.title}
+                          </h2>
 
-                            <FaArrowRight className="shrink-0 text-lg text-white transition group-hover:translate-x-1 md:hidden" />
-                          </div>
-
-                          <p className="mt-1 text-sm leading-6 text-white/56 sm:hidden">
+                          <p className="mt-1 text-sm leading-6 text-white/50 sm:hidden">
                             {card.mobileDescription}
                           </p>
 
-                          <p className="mt-3 hidden text-sm leading-7 text-white/58 sm:block">
+                          <p className="mt-3 hidden text-sm leading-7 text-white/52 sm:block">
                             {card.description}
                           </p>
 
-                          <div className="mt-7 hidden items-center gap-2 text-sm font-black text-white md:flex">
+                          <div className="mt-4 hidden items-center gap-2 text-sm font-black text-white sm:flex">
                             {t.continue}
                             <FaArrowRight className="transition group-hover:translate-x-1" />
                           </div>
                         </div>
+
+                        <FaArrowRight className="ml-auto shrink-0 text-xl text-white transition group-hover:translate-x-1 sm:hidden" />
                       </div>
                     </Link>
                   );
                 })}
               </div>
+
+              <div className="mx-auto mt-6 grid max-w-5xl gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                {t.trustItems.map((item) => (
+                  <div
+                    key={item}
+                    className="border border-white/10 bg-white/[0.035] px-4 py-3 text-center text-[10px] font-black text-white/46 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]"
+                  >
+                    {item}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
 
-        <footer className="border-t border-white/8 py-4 text-xs text-white/38 sm:py-5">
+        <footer className="border-t border-white/8 py-5 text-xs text-white/38">
           <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
             <div>
               <p className="font-semibold text-white/50">© MedyaTora</p>
