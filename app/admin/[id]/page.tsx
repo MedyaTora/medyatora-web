@@ -41,7 +41,7 @@ function formatDate(value: string | null | undefined) {
   if (!value) return "-";
 
   try {
-    return new Date(value).toLocaleString();
+    return new Date(value).toLocaleString("tr-TR");
   } catch {
     return "-";
   }
@@ -69,6 +69,7 @@ function InfoCard({
       <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-white/40">
         {title}
       </p>
+
       <p className="break-all text-sm text-white/90">{value || "-"}</p>
     </div>
   );
@@ -86,6 +87,7 @@ function TextCard({
       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/40">
         {title}
       </p>
+
       <p className="text-sm leading-7 text-white/85">{value || "-"}</p>
     </div>
   );
@@ -154,7 +156,8 @@ export default async function AnalysisDetailPage({
       id: String(row.id),
       coupon_code: row.coupon_code,
       package_type: row.package_type,
-      package_price: row.package_price === null ? null : Number(row.package_price),
+      package_price:
+        row.package_price === null ? null : Number(row.package_price),
       currency: row.currency,
       status: row.status,
       admin_note: row.admin_note,
@@ -176,7 +179,11 @@ export default async function AnalysisDetailPage({
   } catch (error) {
     return (
       <ErrorScreen
-        message={error instanceof Error ? error.message : "MySQL analiz detayı okunamadı."}
+        message={
+          error instanceof Error
+            ? error.message
+            : "MySQL analiz detayı okunamadı."
+        }
       />
     );
   }
@@ -200,9 +207,12 @@ export default async function AnalysisDetailPage({
                 <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-black">
                   {item.status || "-"}
                 </span>
+
                 <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-white/60">
-                  {item.package_type || "-"} • {item.package_price ?? "-"} {item.currency || ""}
+                  {item.package_type || "-"} • {item.package_price ?? "-"}{" "}
+                  {item.currency || ""}
                 </span>
+
                 {item.coupon_code ? (
                   <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-300">
                     Kupon: {item.coupon_code}
@@ -213,12 +223,15 @@ export default async function AnalysisDetailPage({
               <p className="text-xs uppercase tracking-[0.25em] text-white/40">
                 Analysis Detail
               </p>
+
               <h1 className="mt-2 text-3xl font-bold tracking-tight md:text-4xl">
                 {customer?.full_name || "İsimsiz başvuru"}
               </h1>
+
               <p className="mt-2 text-sm text-white/50">
                 Oluşturulma: {formatDate(item.created_at)}
               </p>
+
               <p className="mt-1 text-sm text-white/50">
                 Güncellenme: {formatDate(item.updated_at)}
               </p>
@@ -230,10 +243,26 @@ export default async function AnalysisDetailPage({
           </div>
 
           <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <InfoCard title="Kullanıcı Adı" value={customer?.username || "-"} />
-            <InfoCard title="Hesap Linki" value={customer?.account_link || "-"} />
-            <InfoCard title="Hesap Türü" value={customer?.account_type || "-"} />
-            <InfoCard title="İçerik Türü" value={customer?.content_type || "-"} />
+            <InfoCard
+              title="Kullanıcı Adı"
+              value={customer?.username || "-"}
+            />
+
+            <InfoCard
+              title="Hesap Linki"
+              value={customer?.account_link || "-"}
+            />
+
+            <InfoCard
+              title="Hesap Türü"
+              value={customer?.account_type || "-"}
+            />
+
+            <InfoCard
+              title="İçerik Türü"
+              value={customer?.content_type || "-"}
+            />
+
             <InfoCard
               title="Günlük Paylaşım"
               value={
@@ -243,9 +272,12 @@ export default async function AnalysisDetailPage({
                   : "-"
               }
             />
+
             <InfoCard
               title="İletişim"
-              value={`${customer?.contact_type || "-"} / ${customer?.contact_value || "-"}`}
+              value={`${customer?.contact_type || "-"} / ${
+                customer?.contact_value || "-"
+              }`}
             />
           </div>
 

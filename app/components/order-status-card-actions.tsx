@@ -1,14 +1,29 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
+
+type OrderStatus =
+  | "pending_payment"
+  | "pending"
+  | "processing"
+  | "completed"
+  | "cancelled"
+  | "refunded"
+  | "partial_refunded"
+  | "failed";
 
 type Props = {
-  id: number;
-  initialStatus: string;
-  initialStartCount?: number | null;
-  initialEndCount?: number | null;
+  orderId?: number | string;
+  id?: number | string;
+
+  status?: string | null;
+  currentStatus?: string | null;
+  initialStatus?: string | null;
+
+  initialStartCount?: number | string | null;
+  initialEndCount?: number | string | null;
   initialCompletionNote?: string | null;
+
   orderNumber?: string | null;
   fullName?: string | null;
   contactType?: string | null;
@@ -16,478 +31,322 @@ type Props = {
   serviceTitle?: string | null;
   targetUsername?: string | null;
   paymentMethod?: string | null;
-};;
+};
 
-const statusOptions = [
-  { value: "pending_payment", label: "Ödeme Bekliyor" },
-  { value: "pending", label: "Bekliyor" },
-  { value: "processing", label: "İşlemde" },
-  { value: "completed", label: "Tamamlandı" },
-  { value: "cancelled", label: "İptal Edildi" },
-  { value: "refunded", label: "İade Edildi" },
-  { value: "partial_refunded", label: "Kısmi İade Edildi" },
-  { value: "failed", label: "Başarısız" },
+const STATUS_OPTIONS: {
+  value: OrderStatus;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: "pending_payment",
+    label: "Ödeme Bekliyor",
+    description: "Müşteri ödeme bildirimini henüz tamamlamadı.",
+  },
+  {
+    value: "pending",
+    label: "Beklemede",
+    description: "Sipariş alındı, işleme alınmayı bekliyor.",
+  },
+  {
+    value: "processing",
+    label: "İşlemde",
+    description: "Sipariş aktif olarak işleniyor.",
+  },
+  {
+    value: "completed",
+    label: "Tamamlandı",
+    description: "Sipariş başarıyla tamamlandı.",
+  },
+  {
+    value: "partial_refunded",
+    label: "Kısmi İade",
+    description: "Siparişin bir kısmı tamamlandı, kalan kısmın iadesi yapıldı.",
+  },
+  {
+    value: "refunded",
+    label: "İade Edildi",
+    description: "Sipariş tutarı iade edildi.",
+  },
+  {
+    value: "cancelled",
+    label: "İptal Edildi",
+    description: "Sipariş iptal edildi.",
+  },
+  {
+    value: "failed",
+    label: "Başarısız",
+    description: "Sipariş tamamlanamadı.",
+  },
 ];
 
-function onlyDigits(value: string) {
-  return value.replace(/\D/g, "");
+const STATUS_LABELS: Record<OrderStatus, string> = {
+  pending_payment: "Ödeme Bekliyor",
+  pending: "Beklemede",
+  processing: "İşlemde",
+  completed: "Tamamlandı",
+  partial_refunded: "Kısmi İade",
+  refunded: "İade Edildi",
+  cancelled: "İptal Edildi",
+  failed: "Başarısız",
+};
+
+function normalizeStatus(value?: string | null): OrderStatus {
+  const safeValue = String(value || "pending").trim();
+
+  if (
+    safeValue === "pending_payment" ||
+    safeValue === "pending" ||
+    safeValue === "processing" ||
+    safeValue === "completed" ||
+    safeValue === "cancelled" ||
+    safeValue === "refunded" ||
+    safeValue === "partial_refunded" ||
+    safeValue === "failed"
+  ) {
+    return safeValue;
+  }
+
+  return "pending";
 }
 
-function cleanTelegramUsername(value: string) {
-  return value
-    .replace("https://t.me/", "")
-    .replace("http://t.me/", "")
-    .replace("t.me/", "")
-    .replace("@", "")
-    .trim();
-}
-
-function cleanInstagramUsername(value: string) {
-  return value
-    .replace("https://instagram.com/", "")
-    .replace("https://www.instagram.com/", "")
-    .replace("instagram.com/", "")
-    .replace("@", "")
-    .split("?")[0]
-    .trim();
-}
-
-function getStatusLabel(status: string) {
-  return statusOptions.find((item) => item.value === status)?.label || status;
-}
-
-function buildCustomerMessage({
-  orderNumber,
-  fullName,
-  serviceTitle,
-  status,
-  startCount,
-  endCount,
-  completionNote,
-}: {
-  orderNumber?: string | null;
-  fullName?: string | null;
-  serviceTitle?: string | null;
-  status: string;
-  startCount: string;
-  endCount: string;
-  completionNote: string;
-}) {
-  const statusLabel = getStatusLabel(status);
-  const name = fullName?.trim() || "Değerli müşterimiz";
-
-  if (status === "pending_payment") {
-    return `Merhaba ${name}
-
-MedyaTora siparişiniz alınmıştır ve ödeme kontrolü beklenmektedir.
-
-Sipariş No: ${orderNumber || "-"}
-Hizmet: ${serviceTitle || "-"}
-Durum: ${statusLabel}
-
-Not: ${completionNote || "Ödeme dekontunuzu ilettikten sonra siparişiniz işleme alınacaktır."}
-
-Detay için buradan dönüş yapabilirsiniz.`;
-  }
-
-  if (status === "pending") {
-    return `Merhaba ${name}
-
-MedyaTora siparişiniz alınmıştır.
-
-Sipariş No: ${orderNumber || "-"}
-Hizmet: ${serviceTitle || "-"}
-Durum: ${statusLabel}
-
-Not: ${completionNote || "Siparişiniz kısa süre içinde kontrol edilecektir."}
-
-Detay için buradan dönüş yapabilirsiniz.`;
-  }
-
-  if (status === "processing") {
-    return `Merhaba ${name}
-
-MedyaTora siparişiniz işleme alınmıştır.
-
-Sipariş No: ${orderNumber || "-"}
-Hizmet: ${serviceTitle || "-"}
-Durum: ${statusLabel}
-
-Başlangıç: ${startCount || "-"}
-Not: ${completionNote || "Siparişiniz işlem sürecindedir."}
-
-Detay için buradan dönüş yapabilirsiniz.`;
-  }
-
-  if (status === "completed") {
-    return `Merhaba ${name}
-
-MedyaTora siparişiniz tamamlanmıştır.
-
-Sipariş No: ${orderNumber || "-"}
-Hizmet: ${serviceTitle || "-"}
-Durum: ${statusLabel}
-
-Başlangıç: ${startCount || "-"}
-Bitiş: ${endCount || "-"}
-
-Not: ${completionNote || "Bizi tercih ettiğiniz için teşekkür ederiz."}
-
-Detay için buradan dönüş yapabilirsiniz.`;
-  }
-
-  if (status === "cancelled") {
-    return `Merhaba ${name}
-
-MedyaTora siparişinizle ilgili bilgi vermek istiyorum.
-
-Sipariş No: ${orderNumber || "-"}
-Hizmet: ${serviceTitle || "-"}
-Durum: ${statusLabel}
-
-Not: ${completionNote || "Siparişiniz iptal edildi."}
-
-Detay için buradan dönüş yapabilirsiniz.`;
-  }
-
-  if (status === "refunded") {
-    return `Merhaba ${name}
-
-MedyaTora siparişinizle ilgili bilgi vermek istiyorum.
-
-Sipariş No: ${orderNumber || "-"}
-Hizmet: ${serviceTitle || "-"}
-Durum: ${statusLabel}
-
-Not: ${completionNote || "Siparişiniz için iade işlemi işaretlendi."}
-
-Detay için buradan dönüş yapabilirsiniz.`;
-  }
-
-  if (status === "failed") {
-    return `Merhaba ${name}
-
-MedyaTora siparişinizle ilgili bilgi vermek istiyorum.
-
-Sipariş No: ${orderNumber || "-"}
-Hizmet: ${serviceTitle || "-"}
-Durum: ${statusLabel}
-
-Not: ${completionNote || "Sipariş işlemi başarısız olarak işaretlendi."}
-
-Detay için buradan dönüş yapabilirsiniz.`;
-  }
-
-  return `Merhaba ${name}
-
-MedyaTora siparişinizle ilgili bilgi vermek istiyorum.
-
-Sipariş No: ${orderNumber || "-"}
-Hizmet: ${serviceTitle || "-"}
-Durum: ${statusLabel}
-
-Başlangıç: ${startCount || "-"}
-Bitiş: ${endCount || "-"}
-
-Not: ${completionNote || "-"}
-
-Detay için buradan dönüş yapabilirsiniz.`;
-}
-
-function buildContactLink({
-  contactType,
-  contactValue,
-  message,
-}: {
-  contactType?: string | null;
-  contactValue?: string | null;
-  message: string;
-}) {
-  const type = (contactType || "").toLowerCase();
-  const value = (contactValue || "").trim();
-
-  if (!value) return null;
-
-  if (type.includes("whatsapp")) {
-    const phone = onlyDigits(value);
-    if (!phone) return null;
-
-    return {
-      label: "WhatsApp Yaz",
-      href: `https://wa.me/${phone}?text=${encodeURIComponent(message)}`,
-      className: "bg-emerald-500 hover:bg-emerald-400 text-black",
-    };
-  }
-
-  if (type.includes("telegram")) {
-    const username = cleanTelegramUsername(value);
-    if (!username) return null;
-
-    return {
-      label: "Telegram Aç",
-      href: `https://t.me/${username}`,
-      className: "bg-sky-500 hover:bg-sky-400 text-black",
-    };
-  }
-
-  if (type.includes("instagram")) {
-    const username = cleanInstagramUsername(value);
-    if (!username) return null;
-
-    return {
-      label: "Instagram Aç",
-      href: `https://instagram.com/${username}`,
-      className: "bg-pink-500 hover:bg-pink-400 text-black",
-    };
-  }
-
-  if (type.includes("posta") || type.includes("mail")) {
-    return {
-      label: "E-posta Yaz",
-      href: `mailto:${value}?subject=${encodeURIComponent(
-        "MedyaTora Sipariş Bilgilendirme"
-      )}&body=${encodeURIComponent(message)}`,
-      className: "bg-white hover:bg-white/90 text-black",
-    };
-  }
-
-  return null;
+function toInputValue(value?: number | string | null) {
+  if (value === null || value === undefined) return "";
+  return String(value);
 }
 
 export default function OrderStatusCardActions({
+  orderId,
   id,
+  status,
+  currentStatus,
   initialStatus,
   initialStartCount,
   initialEndCount,
   initialCompletionNote,
-  orderNumber,
-  fullName,
-  contactType,
-  contactValue,
-  serviceTitle,
-  paymentMethod,
 }: Props) {
-  const [status, setStatus] = useState(initialStatus || "pending");
-  const [startCount, setStartCount] = useState(
-    initialStartCount !== null && initialStartCount !== undefined
-      ? String(initialStartCount)
-      : ""
+  const resolvedOrderId = orderId ?? id;
+  const startingStatus = normalizeStatus(initialStatus || currentStatus || status);
+
+  const [selectedStatus, setSelectedStatus] =
+    useState<OrderStatus>(startingStatus);
+  const [startCount, setStartCount] = useState(toInputValue(initialStartCount));
+  const [endCount, setEndCount] = useState(toInputValue(initialEndCount));
+  const [completionNote, setCompletionNote] = useState(
+    initialCompletionNote || ""
   );
-  const [endCount, setEndCount] = useState(
-    initialEndCount !== null && initialEndCount !== undefined
-      ? String(initialEndCount)
-      : ""
-  );
-  const [completionNote, setCompletionNote] = useState(initialCompletionNote || "");
-  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
-  const [isPending, startTransition] = useTransition();
-  const router = useRouter();
+  const selectedStatusMeta = useMemo(() => {
+    return STATUS_OPTIONS.find((item) => item.value === selectedStatus);
+  }, [selectedStatus]);
 
-  const customerMessage = buildCustomerMessage({
-    orderNumber,
-    fullName,
-    serviceTitle,
-    status,
-    startCount,
-    endCount,
-    completionNote,
-  });
+  async function handleSubmit() {
+    if (!resolvedOrderId) {
+      setMessage({
+        type: "error",
+        text: "Sipariş ID bulunamadı.",
+      });
+      return;
+    }
 
-  const contactLink = buildContactLink({
-    contactType,
-    contactValue,
-    message: customerMessage,
-  });
-
-  async function handleSave() {
-    setMessage("");
+    setLoading(true);
+    setMessage(null);
 
     try {
+      const parsedStartCount = startCount ? Number(startCount) : null;
+      const parsedEndCount = endCount ? Number(endCount) : null;
+      const trimmedNote = completionNote.trim() || null;
+
       const res = await fetch("/api/order-request/update-status", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          id,
-          status,
-          start_count: startCount ? Number(startCount) : null,
-          end_count: endCount ? Number(endCount) : null,
-          completion_note: completionNote.trim() || null,
+          orderId: resolvedOrderId,
+          order_id: resolvedOrderId,
+          id: resolvedOrderId,
+          status: selectedStatus,
+          start_count: parsedStartCount,
+          end_count: parsedEndCount,
+          startCount: parsedStartCount,
+          endCount: parsedEndCount,
+          completion_note: trimmedNote,
+          completionNote: trimmedNote,
+          note: trimmedNote,
         }),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
 
       if (!res.ok) {
-        throw new Error(data.error || "Sipariş güncellenemedi.");
+        throw new Error(
+          data?.error || data?.message || "Durum güncellenemedi."
+        );
       }
 
-      setMessage("Kaydedildi.");
-
-      startTransition(() => {
-        router.refresh();
+      setMessage({
+        type: "success",
+        text: "Sipariş durumu başarıyla güncellendi.",
       });
+
+      setTimeout(() => {
+        window.location.reload();
+      }, 700);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Bir hata oluştu.");
-    }
-  }
-
-  async function handleApprovePayment() {
-    setMessage("");
-
-    const ok = window.confirm(
-      `${orderNumber || `#${id}`} siparişinin ödemesi onaylansın mı?`
-    );
-
-    if (!ok) return;
-
-    try {
-      const res = await fetch("/api/order-request/approve-payment", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          order_id: id,
-        }),
+      setMessage({
+        type: "error",
+        text:
+          error instanceof Error
+            ? error.message
+            : "Beklenmeyen bir hata oluştu.",
       });
-
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "Ödeme onaylanamadı.");
-      }
-
-      setStatus("pending");
-      setCompletionNote(
-        "Ödeme admin tarafından onaylandı. Sipariş işleme alınabilir."
-      );
-      setMessage(data.message || "Ödeme onaylandı.");
-
-      startTransition(() => {
-        router.refresh();
-      });
-    } catch (error) {
-      setMessage(
-        error instanceof Error ? error.message : "Ödeme onaylanırken hata oluştu."
-      );
-    }
-  }
-
-  async function copyMessage() {
-    try {
-      await navigator.clipboard.writeText(customerMessage);
-      setMessage("Müşteri mesajı kopyalandı.");
-    } catch {
-      setMessage("Mesaj kopyalanamadı.");
+    } finally {
+      setLoading(false);
     }
   }
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-      <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-white/40">
-        Sipariş Yönetimi
-      </p>
+    <section className="rounded-[28px] border border-white/10 bg-white/[0.035] p-5 shadow-[0_18px_60px_rgba(0,0,0,0.25)]">
+      <div className="flex flex-col gap-2">
+        <p className="text-xs font-black uppercase tracking-[0.24em] text-white/35">
+          Sipariş Durumu
+        </p>
 
-      <div className="grid gap-3">
-        <div>
-          <label className="mb-2 block text-xs text-white/50">Durum</label>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="text-2xl font-black text-white">
+              Durum Güncelle
+            </h2>
+
+            <p className="mt-1 text-sm font-semibold leading-6 text-white/50">
+              Siparişin müşteriye görünen durumunu buradan değiştirebilirsin.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm font-black text-white">
+            Mevcut: {STATUS_LABELS[startingStatus]}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-4">
+        <label className="grid gap-2">
+          <span className="text-xs font-black uppercase tracking-[0.18em] text-white/40">
+            Yeni Durum
+          </span>
+
           <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            disabled={isPending}
-            className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-3 text-sm text-white outline-none disabled:opacity-60"
+            value={selectedStatus}
+            onChange={(event) =>
+              setSelectedStatus(event.target.value as OrderStatus)
+            }
+            className="h-12 rounded-2xl border border-white/10 bg-black/50 px-4 text-sm font-bold text-white outline-none transition focus:border-white/30"
           >
-            {statusOptions.map((option) => (
-              <option key={option.value} value={option.value} className="bg-[#121826]">
-                {option.label}
+            {STATUS_OPTIONS.map((item) => (
+              <option
+                key={item.value}
+                value={item.value}
+                className="bg-black text-white"
+              >
+                {item.label}
               </option>
             ))}
           </select>
-        </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label className="mb-2 block text-xs text-white/50">Başlangıç</label>
+          {selectedStatusMeta ? (
+            <span className="text-xs font-semibold leading-5 text-white/45">
+              {selectedStatusMeta.description}
+            </span>
+          ) : null}
+        </label>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className="grid gap-2">
+            <span className="text-xs font-black uppercase tracking-[0.18em] text-white/40">
+              Başlangıç Sayısı
+            </span>
+
             <input
               value={startCount}
-              onChange={(e) => setStartCount(e.target.value.replace(/\D/g, ""))}
-              placeholder="Örn: 12500"
-              disabled={isPending}
+              onChange={(event) =>
+                setStartCount(event.target.value.replace(/[^\d]/g, ""))
+              }
+              placeholder="Örn: 1200"
               inputMode="numeric"
-              className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-3 text-sm text-white outline-none placeholder:text-white/25 disabled:opacity-60"
+              className="h-12 rounded-2xl border border-white/10 bg-black/50 px-4 text-sm font-bold text-white outline-none transition placeholder:text-white/25 focus:border-white/30"
             />
-          </div>
+          </label>
 
-          <div>
-            <label className="mb-2 block text-xs text-white/50">Bitiş</label>
+          <label className="grid gap-2">
+            <span className="text-xs font-black uppercase tracking-[0.18em] text-white/40">
+              Bitiş Sayısı
+            </span>
+
             <input
               value={endCount}
-              onChange={(e) => setEndCount(e.target.value.replace(/\D/g, ""))}
-              placeholder="Örn: 13000"
-              disabled={isPending}
+              onChange={(event) =>
+                setEndCount(event.target.value.replace(/[^\d]/g, ""))
+              }
+              placeholder="Örn: 2200"
               inputMode="numeric"
-              className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-3 text-sm text-white outline-none placeholder:text-white/25 disabled:opacity-60"
+              className="h-12 rounded-2xl border border-white/10 bg-black/50 px-4 text-sm font-bold text-white outline-none transition placeholder:text-white/25 focus:border-white/30"
             />
-          </div>
+          </label>
         </div>
 
-        <div>
-          <label className="mb-2 block text-xs text-white/50">Admin / İşlem Notu</label>
-          <input
+        <label className="grid gap-2">
+          <span className="text-xs font-black uppercase tracking-[0.18em] text-white/40">
+            Müşteri Notu / Tamamlama Notu
+          </span>
+
+          <textarea
             value={completionNote}
-            onChange={(e) => setCompletionNote(e.target.value)}
-            placeholder="İşlem notu / iptal nedeni / iade notu"
-            disabled={isPending}
-            className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-3 text-sm text-white outline-none placeholder:text-white/25 disabled:opacity-60"
+            onChange={(event) => setCompletionNote(event.target.value)}
+            placeholder="Örn: Merhaba, siparişiniz tamamlandı. İyi günler dileriz."
+            rows={4}
+            className="resize-none rounded-2xl border border-white/10 bg-black/50 px-4 py-3 text-sm font-semibold leading-6 text-white outline-none transition placeholder:text-white/25 focus:border-white/30"
           />
-        </div>
-      </div>
+        </label>
 
-      <div className="mt-4 flex flex-wrap gap-3">
-      {initialStatus === "pending_payment" &&
-        (paymentMethod === "turkey_bank" || paymentMethod === "support") ? (
+        {message ? (
+          <div
+            className={[
+              "rounded-2xl border px-4 py-3 text-sm font-black",
+              message.type === "success"
+                ? "border-white/15 bg-white/[0.06] text-white"
+                : "border-red-400/30 bg-red-500/10 text-red-100",
+            ].join(" ")}
+          >
+            {message.text}
+          </div>
+        ) : null}
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
           <button
             type="button"
-            onClick={handleApprovePayment}
-            disabled={isPending}
-            className="rounded-xl bg-amber-300 px-4 py-3 text-sm font-black text-black transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={() => window.location.reload()}
+            disabled={loading}
+            className="rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-black text-white transition hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Ödemeyi Onayla
+            Vazgeç
           </button>
-        ) : null}
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={isPending}
-          className="rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-black transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {isPending ? "Kaydediliyor..." : "Kaydet"}
-        </button>
 
-        <button
-          type="button"
-          onClick={copyMessage}
-          className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-semibold text-white/80 transition hover:bg-white/[0.08]"
-        >
-          Mesajı Kopyala
-        </button>
-
-        {contactLink ? (
-          <a
-            href={contactLink.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`rounded-xl px-4 py-3 text-sm font-semibold transition ${contactLink.className}`}
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={loading}
+            className="rounded-2xl border border-white/10 bg-white px-6 py-3 text-sm font-black text-black transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {contactLink.label}
-          </a>
-        ) : null}
+            {loading ? "Güncelleniyor..." : "Durumu Güncelle"}
+          </button>
+        </div>
       </div>
-
-      {message ? <p className="mt-3 text-sm text-white/70">{message}</p> : null}
-    </div>
+    </section>
   );
 }

@@ -66,14 +66,6 @@ function formatMoney(value: number | null | undefined, currency?: string | null)
   return `${safeValue} ${normalizeCurrency(currency)}`.trim();
 }
 
-function calculateProfit(order: OrderDetailRow) {
-  const sale = typeof order.total_price === "number" ? order.total_price : 0;
-  const cost =
-    typeof order.total_cost_price === "number" ? order.total_cost_price : 0;
-
-  return sale - cost;
-}
-
 function getOrderStatusLabel(status: string | null | undefined) {
   const map: Record<string, string> = {
     pending_payment: "Ödeme Bekliyor",
@@ -144,6 +136,7 @@ function InfoCard({
       <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-white/40">
         {title}
       </p>
+
       <p className="break-words text-sm font-semibold text-white/90">
         {value || "-"}
       </p>
@@ -163,6 +156,7 @@ function TextCard({
       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/40">
         {title}
       </p>
+
       <p className="whitespace-pre-line break-words text-sm leading-7 text-white/85">
         {value || "-"}
       </p>
@@ -313,23 +307,19 @@ export default async function OrderDetailPage({
 
   const remainingRefundable = Math.max(
     0,
-    Math.round(
-      (orderTotalForRefund - alreadyRefunded + Number.EPSILON) * 100
-    ) / 100
+    Math.round((orderTotalForRefund - alreadyRefunded + Number.EPSILON) * 100) /
+      100
   );
 
   const grossSale =
-  typeof order.total_price === "number" ? order.total_price : 0;
+    typeof order.total_price === "number" ? order.total_price : 0;
 
-const totalCost =
-  typeof order.total_cost_price === "number" ? order.total_cost_price : 0;
+  const totalCost =
+    typeof order.total_cost_price === "number" ? order.total_cost_price : 0;
 
-const netSale = Math.max(0, grossSale - alreadyRefunded);
-
-const profit = netSale - totalCost;
-
-const profitRate =
-  netSale > 0 ? Math.round((profit / netSale) * 100) : 0;
+  const netSale = Math.max(0, grossSale - alreadyRefunded);
+  const profit = netSale - totalCost;
+  const profitRate = netSale > 0 ? Math.round((profit / netSale) * 100) : 0;
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#171717_0%,#090909_55%,#050505_100%)] p-4 text-white md:p-8">
@@ -406,59 +396,69 @@ const profitRate =
 
         <section className="grid gap-6 xl:grid-cols-[1fr_420px]">
           <div className="space-y-6">
-          <section className="rounded-[28px] border border-white/10 bg-white/[0.03] p-5 md:p-6">
-  <h2 className="text-xl font-bold">Fiyat ve Kâr</h2>
+            <section className="rounded-[28px] border border-white/10 bg-white/[0.03] p-5 md:p-6">
+              <h2 className="text-xl font-bold">Fiyat ve Kâr</h2>
 
-  <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-    <InfoCard
-      title="Birim Alış"
-      value={`${order.unit_cost_price ?? 0} ${displayCurrency} / 1000`}
-    />
-    <InfoCard
-      title="Birim Satış"
-      value={`${order.unit_price ?? 0} ${displayCurrency} / 1000`}
-    />
-    <InfoCard
-      title="Brüt Satış"
-      value={formatMoney(order.total_price, displayCurrency)}
-    />
-    <InfoCard
-      title="Toplam Maliyet"
-      value={formatMoney(order.total_cost_price, displayCurrency)}
-    />
-    <InfoCard
-      title="Toplam İade"
-      value={formatMoney(alreadyRefunded, displayCurrency)}
-    />
-    <InfoCard
-      title="Net Satış"
-      value={formatMoney(netSale, displayCurrency)}
-      highlight
-    />
-    <InfoCard
-      title="Net Kâr"
-      value={`${formatMoney(profit, displayCurrency)} (${profitRate}%)`}
-      highlight
-    />
-    <InfoCard
-      title="İade Edilebilir Kalan"
-      value={formatMoney(remainingRefundable, displayCurrency)}
-    />
-  </div>
-</section>
+              <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <InfoCard
+                  title="Birim Alış"
+                  value={`${order.unit_cost_price ?? 0} ${displayCurrency} / 1000`}
+                />
+
+                <InfoCard
+                  title="Birim Satış"
+                  value={`${order.unit_price ?? 0} ${displayCurrency} / 1000`}
+                />
+
+                <InfoCard
+                  title="Brüt Satış"
+                  value={formatMoney(order.total_price, displayCurrency)}
+                />
+
+                <InfoCard
+                  title="Toplam Maliyet"
+                  value={formatMoney(order.total_cost_price, displayCurrency)}
+                />
+
+                <InfoCard
+                  title="Toplam İade"
+                  value={formatMoney(alreadyRefunded, displayCurrency)}
+                />
+
+                <InfoCard
+                  title="Net Satış"
+                  value={formatMoney(netSale, displayCurrency)}
+                  highlight
+                />
+
+                <InfoCard
+                  title="Net Kâr"
+                  value={`${formatMoney(profit, displayCurrency)} (${profitRate}%)`}
+                  highlight
+                />
+
+                <InfoCard
+                  title="İade Edilebilir Kalan"
+                  value={formatMoney(remainingRefundable, displayCurrency)}
+                />
+              </div>
+            </section>
 
             <section className="rounded-[28px] border border-white/10 bg-white/[0.03] p-5 md:p-6">
               <h2 className="text-xl font-bold">Müşteri Bilgileri</h2>
 
               <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <InfoCard title="Müşteri" value={order.full_name || "-"} />
+
                 <InfoCard title="Telefon" value={order.phone_number || "-"} />
+
                 <InfoCard
                   title="İletişim"
                   value={`${order.contact_type || "-"} / ${
                     order.contact_value || "-"
                   }`}
                 />
+
                 <InfoCard
                   title="Hedef Kullanıcı"
                   value={order.target_username || "-"}
@@ -467,30 +467,40 @@ const profitRate =
             </section>
 
             <section className="rounded-[28px] border border-white/10 bg-white/[0.03] p-5 md:p-6">
-              <h2 className="text-xl font-bold">Fiyat ve Kâr</h2>
+              <h2 className="text-xl font-bold">Servis Bilgileri</h2>
 
-              <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+              <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <InfoCard title="Platform" value={order.platform || "-"} />
+
+                <InfoCard title="Kategori" value={order.category || "-"} />
+
                 <InfoCard
-                  title="Birim Alış"
-                  value={`${order.unit_cost_price ?? 0} ${displayCurrency} / 1000`}
+                  title="Panel Servis ID"
+                  value={order.service_id ?? "-"}
                 />
+
                 <InfoCard
-                  title="Birim Satış"
-                  value={`${order.unit_price ?? 0} ${displayCurrency} / 1000`}
+                  title="Müşteri Ürün Kodu"
+                  value={order.site_code ?? "-"}
                 />
+
+                <InfoCard title="Miktar" value={order.quantity ?? "-"} />
+
                 <InfoCard
-                  title="Toplam Alış"
-                  value={formatMoney(order.total_cost_price, displayCurrency)}
+                  title="Garanti"
+                  value={order.guarantee_label || "-"}
                 />
+
+                <InfoCard title="Hız" value={order.speed || "-"} />
+
                 <InfoCard
-                  title="Toplam Satış"
-                  value={formatMoney(order.total_price, displayCurrency)}
+                  title="Hedef Link"
+                  value={order.target_link || "-"}
                 />
-                <InfoCard
-                  title="Tahmini Kâr"
-                  value={`${formatMoney(profit, displayCurrency)} (${profitRate}%)`}
-                  highlight
-                />
+              </div>
+
+              <div className="mt-5">
+                <TextCard title="Ürün" value={order.service_title} />
               </div>
             </section>
 
@@ -502,7 +512,9 @@ const profitRate =
                   title="Başlangıç Sayısı"
                   value={order.start_count ?? "-"}
                 />
+
                 <InfoCard title="Bitiş Sayısı" value={order.end_count ?? "-"} />
+
                 <InfoCard
                   title="Fark"
                   value={
@@ -521,6 +533,7 @@ const profitRate =
 
               <div className="mt-5 grid gap-4 md:grid-cols-2">
                 <TextCard title="Sipariş Notu" value={order.order_note} />
+
                 <TextCard
                   title="Admin / İşlem Notu"
                   value={order.completion_note}
@@ -530,35 +543,35 @@ const profitRate =
           </div>
 
           <aside className="space-y-6">
-          <AdminBalanceRefundCard
-  orderId={order.id}
-  orderNumber={order.order_number}
-  userId={order.user_id}
-  paymentMethod={order.payment_method}
-  currency={displayCurrency}
-  totalPrice={order.total_price}
-  alreadyRefunded={alreadyRefunded}
-  remainingRefundable={remainingRefundable}
-  status={order.status}
-  quantity={order.quantity}
-  startCount={order.start_count}
-  endCount={order.end_count}
-/>
+            <AdminBalanceRefundCard
+              orderId={order.id}
+              orderNumber={order.order_number}
+              userId={order.user_id}
+              paymentMethod={order.payment_method}
+              currency={displayCurrency}
+              totalPrice={order.total_price}
+              alreadyRefunded={alreadyRefunded}
+              remainingRefundable={remainingRefundable}
+              status={order.status}
+              quantity={order.quantity}
+              startCount={order.start_count}
+              endCount={order.end_count}
+            />
 
-<OrderStatusCardActions
-  id={order.id}
-  initialStatus={order.status || "pending"}
-  initialStartCount={order.start_count}
-  initialEndCount={order.end_count}
-  initialCompletionNote={order.completion_note}
-  orderNumber={order.order_number}
-  fullName={order.full_name}
-  contactType={order.contact_type}
-  contactValue={order.contact_value}
-  serviceTitle={order.service_title}
-  targetUsername={order.target_username}
-  paymentMethod={order.payment_method}
-/>
+            <OrderStatusCardActions
+              id={order.id}
+              initialStatus={order.status || "pending"}
+              initialStartCount={order.start_count}
+              initialEndCount={order.end_count}
+              initialCompletionNote={order.completion_note}
+              orderNumber={order.order_number}
+              fullName={order.full_name}
+              contactType={order.contact_type}
+              contactValue={order.contact_value}
+              serviceTitle={order.service_title}
+              targetUsername={order.target_username}
+              paymentMethod={order.payment_method}
+            />
 
             <section className="rounded-[28px] border border-white/10 bg-white/[0.03] p-5 md:p-6">
               <h2 className="text-xl font-bold">Hızlı Kontrol</h2>
@@ -568,18 +581,22 @@ const profitRate =
                   <span className="font-semibold text-white">Sipariş No:</span>{" "}
                   {order.order_number || "-"}
                 </p>
+
                 <p>
                   <span className="font-semibold text-white">Panel ID:</span>{" "}
                   {order.service_id || "-"}
                 </p>
+
                 <p>
                   <span className="font-semibold text-white">Ürün Kodu:</span>{" "}
                   {order.site_code || "-"}
                 </p>
+
                 <p>
                   <span className="font-semibold text-white">Hedef:</span>{" "}
                   {order.target_username || order.target_link || "-"}
                 </p>
+
                 <p>
                   <span className="font-semibold text-white">Ödeme:</span>{" "}
                   {getPaymentMethodLabel(order.payment_method)}

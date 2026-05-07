@@ -27,7 +27,7 @@ const transactionTypeLabels: Record<string, string> = {
   order_partial_refund: "Kısmi İade",
   welcome_bonus: "Hoş Geldin Bonusu",
   welcome_google_bonus: "Google Kayıt Bonusu",
-  contact_verification_bonus: "İletişim Doğrulama Bonusu",
+  contact_verification_bonus: "Hesap Bonusu",
   email_verification_bonus: "E-posta Doğrulama Bonusu",
   admin_add: "Admin Bakiye Ekleme",
   admin_remove: "Admin Bakiye Düşme",

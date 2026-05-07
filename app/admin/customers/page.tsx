@@ -18,13 +18,18 @@ type CustomerRow = {
   contact_value: string | null;
 };
 
+type SearchParams = {
+  q?: string;
+  page?: string;
+};
+
 const PAGE_SIZE = 20;
 
 function formatDate(value: string | null | undefined) {
   if (!value) return "-";
 
   try {
-    return new Date(value).toLocaleString();
+    return new Date(value).toLocaleString("tr-TR");
   } catch {
     return "-";
   }
@@ -41,8 +46,11 @@ function getPageItems<T>(items: T[], page: number) {
 
 function buildPageHref(q: string, page: number) {
   const params = new URLSearchParams();
+
   if (q) params.set("q", q);
+
   params.set("page", String(page));
+
   return `/admin/customers?${params.toString()}`;
 }
 
@@ -59,13 +67,12 @@ function ErrorScreen({ message }: { message: string }) {
 export default async function CustomersPage({
   searchParams,
 }: {
-  searchParams?: {
-    q?: string;
-    page?: string;
-  };
+  searchParams?: Promise<SearchParams>;
 }) {
-  const q = searchParams?.q?.trim() || "";
-  const page = Math.max(Number(searchParams?.page || 1), 1);
+  const params = (await searchParams) || {};
+
+  const q = params.q?.trim() || "";
+  const page = Math.max(Number(params.page || 1), 1);
 
   const pool = getMysqlPool();
 
@@ -115,7 +122,11 @@ export default async function CustomersPage({
   } catch (error) {
     return (
       <ErrorScreen
-        message={error instanceof Error ? error.message : "MySQL müşteri listesi okunamadı."}
+        message={
+          error instanceof Error
+            ? error.message
+            : "MySQL müşteri listesi okunamadı."
+        }
       />
     );
   }
@@ -137,8 +148,13 @@ export default async function CustomersPage({
     );
   });
 
-  const totalPages = Math.max(Math.ceil(filteredCustomers.length / PAGE_SIZE), 1);
-  const pageItems = getPageItems(filteredCustomers, page);
+  const totalPages = Math.max(
+    Math.ceil(filteredCustomers.length / PAGE_SIZE),
+    1
+  );
+
+  const safePage = Math.min(page, totalPages);
+  const pageItems = getPageItems(filteredCustomers, safePage);
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#171717_0%,#090909_55%,#050505_100%)] p-4 text-white md:p-8">
@@ -188,6 +204,7 @@ export default async function CustomersPage({
               <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-white/40">
                 Müşteri Ara
               </label>
+
               <input
                 name="q"
                 defaultValue={q}
@@ -211,9 +228,12 @@ export default async function CustomersPage({
 
         <section className="rounded-[28px] border border-white/10 bg-white/[0.03] p-5 md:p-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="text-2xl font-bold tracking-tight">Müşteri Listesi</h2>
+            <h2 className="text-2xl font-bold tracking-tight">
+              Müşteri Listesi
+            </h2>
+
             <span className="text-sm text-white/45">
-              {filteredCustomers.length} kayıt • Sayfa {page}/{totalPages}
+              {filteredCustomers.length} kayıt • Sayfa {safePage}/{totalPages}
             </span>
           </div>
 
@@ -284,18 +304,18 @@ export default async function CustomersPage({
           </div>
 
           <div className="mt-5 flex items-center justify-end gap-3">
-            {page > 1 ? (
+            {safePage > 1 ? (
               <a
-                href={buildPageHref(q, page - 1)}
+                href={buildPageHref(q, safePage - 1)}
                 className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white/80"
               >
                 ← Önceki
               </a>
             ) : null}
 
-            {page < totalPages ? (
+            {safePage < totalPages ? (
               <a
-                href={buildPageHref(q, page + 1)}
+                href={buildPageHref(q, safePage + 1)}
                 className="rounded-xl bg-white px-4 py-2 text-sm font-bold text-black"
               >
                 Sonraki →

@@ -152,7 +152,7 @@ function getBonusTypeLabel(type: string | null | undefined) {
     bonus: "Manuel / Eski Bonus",
     welcome_bonus: "Hoş Geldin Bonusu",
     welcome_google_bonus: "Google Kayıt Bonusu",
-    contact_verification_bonus: "İletişim Doğrulama Bonusu",
+    contact_verification_bonus: "Hesap Bonusu",
     email_verification_bonus: "E-posta Doğrulama Bonusu",
   };
 
@@ -270,7 +270,9 @@ function StatCard({
       <p className="text-xs font-semibold uppercase tracking-wide opacity-75">
         {title}
       </p>
+
       <p className="mt-3 text-2xl font-bold tracking-tight">{value}</p>
+
       {subtitle ? <p className="mt-2 text-xs opacity-65">{subtitle}</p> : null}
     </div>
   );
@@ -300,7 +302,11 @@ export default async function ProfitPage({
 
   try {
     const orderSqlParams: unknown[] = [startIso, endIso];
-    const bonusSqlParams: unknown[] = [startIso, endIso, ...BONUS_TRANSACTION_TYPES];
+    const bonusSqlParams: unknown[] = [
+      startIso,
+      endIso,
+      ...BONUS_TRANSACTION_TYPES,
+    ];
 
     let orderCurrencyCondition = "";
     let bonusCurrencyCondition = "";
@@ -389,7 +395,7 @@ export default async function ProfitPage({
       FROM balance_transactions bt
       WHERE bt.created_at >= ?
         AND bt.created_at < ?
-      AND bt.transaction_type IN (?, ?, ?, ?, ?)
+        AND bt.transaction_type IN (?, ?, ?, ?, ?)
         ${bonusCurrencyCondition}
       ORDER BY bt.created_at DESC
       `,
@@ -410,7 +416,9 @@ export default async function ProfitPage({
     return (
       <ErrorScreen
         message={
-          error instanceof Error ? error.message : "MySQL kâr verileri alınamadı."
+          error instanceof Error
+            ? error.message
+            : "MySQL kâr verileri alınamadı."
         }
       />
     );
@@ -488,6 +496,7 @@ export default async function ProfitPage({
               <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-white/40">
                 Ay
               </label>
+
               <input
                 type="month"
                 name="month"
@@ -500,6 +509,7 @@ export default async function ProfitPage({
               <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-white/40">
                 Para Birimi
               </label>
+
               <select
                 name="currency"
                 defaultValue={selectedCurrency}
@@ -517,10 +527,15 @@ export default async function ProfitPage({
                 <option value="RUB" className="bg-[#121826]">
                   RUB
                 </option>
+
                 {availableCurrencies
                   .filter((currency) => !["TL", "USD", "RUB"].includes(currency))
                   .map((currency) => (
-                    <option key={currency} value={currency} className="bg-[#121826]">
+                    <option
+                      key={currency}
+                      value={currency}
+                      className="bg-[#121826]"
+                    >
                       {currency}
                     </option>
                   ))}
@@ -553,7 +568,7 @@ export default async function ProfitPage({
           <StatCard
             title="Bonus Gideri Kaydı"
             value={totalBonusCount}
-            subtitle="Hoş geldin / Google / iletişim / e-posta bonusları"
+            subtitle="Hoş geldin / Google / hesap / e-posta bonusları"
             accent="amber"
           />
 
@@ -586,6 +601,7 @@ export default async function ProfitPage({
             <h2 className="text-2xl font-bold tracking-tight">
               Para Birimi Toplamları
             </h2>
+
             <span className="text-sm text-white/45">
               {currencyTotals.length} para birimi
             </span>
@@ -678,6 +694,7 @@ export default async function ProfitPage({
             <h2 className="text-2xl font-bold tracking-tight">
               Bonus Giderleri
             </h2>
+
             <span className="text-sm text-white/45">
               {bonusExpenses.length} kayıt
             </span>
@@ -730,7 +747,11 @@ export default async function ProfitPage({
                       </td>
 
                       <td className="rounded-r-2xl px-3 py-3 font-bold text-rose-300">
-                        -{formatMoney(getBonusExpenseAmount(bonus), bonus.currency)}
+                        -
+                        {formatMoney(
+                          getBonusExpenseAmount(bonus),
+                          bonus.currency
+                        )}
                       </td>
                     </tr>
                   ))
@@ -745,6 +766,7 @@ export default async function ProfitPage({
             <h2 className="text-2xl font-bold tracking-tight">
               Kâr Hesabına Dahil Siparişler
             </h2>
+
             <span className="text-sm text-white/45">{orders.length} kayıt</span>
           </div>
 

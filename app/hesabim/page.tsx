@@ -5,9 +5,7 @@ import type { RowDataPacket } from "mysql2";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { getMysqlPool } from "@/lib/mysql";
 import UserMenu from "@/app/components/auth/UserMenu";
-import ContactVerificationCard from "@/app/components/auth/ContactVerificationCard";
 import EmailVerificationCard from "@/app/components/auth/EmailVerificationCard";
-
 
 type LocaleCode = "tr" | "en" | "ru";
 
@@ -90,9 +88,10 @@ type AccountText = {
   used: string;
   waiting: string;
   freeAnalysisDesc: string;
-  contactBonus: string;
-  granted: string;
-  contactBonusDesc: string;
+  supportChannels: string;
+  supportChannelsDesc: string;
+  whatsappSupport: string;
+  telegramSupport: string;
   totalOrders: string;
   totalOrdersDesc: string;
   activeProcess: string;
@@ -147,7 +146,7 @@ const texts: Record<LocaleCode, AccountText> = {
     myAccount: "Hesabım",
     welcomePrefix: "Hoş geldin",
     intro:
-      "Bu alanda bakiyelerini, ücretsiz analiz hakkını, doğrulama durumunu, siparişlerini, analiz taleplerini ve son bakiye hareketlerini takip edebilirsin.",
+      "Bu alanda bakiyelerini, ücretsiz analiz hakkını, siparişlerini, analiz taleplerini ve son bakiye hareketlerini takip edebilirsin.",
     createNewOrder: "Yeni Sipariş Oluştur",
     leaveAnalysisRequest: "Analiz Talebi Bırak",
     walletBalances: "Cüzdan Bakiyeleri",
@@ -166,10 +165,11 @@ const texts: Record<LocaleCode, AccountText> = {
     waiting: "Bekliyor",
     freeAnalysisDesc:
       "E-posta doğrulaması tamamlanınca 1 ücretsiz analiz hakkı tanımlanır.",
-    contactBonus: "İletişim bonusu",
-    granted: "Tanımlandı",
-    contactBonusDesc:
-      "WhatsApp veya Telegram doğrulamasından biri yeterlidir. Bonus yalnızca 1 kez verilir.",
+    supportChannels: "Destek Kanalları",
+    supportChannelsDesc:
+      "Ödeme bildirimi, sipariş takibi veya destek talepleri için WhatsApp ya da Telegram üzerinden bize ulaşabilirsiniz.",
+    whatsappSupport: "WhatsApp Destek",
+    telegramSupport: "Telegram Destek",
     totalOrders: "Toplam sipariş",
     totalOrdersDesc: "Ana ekranda son 5 sipariş görünür.",
     activeProcess: "Aktif işlem",
@@ -233,7 +233,7 @@ const texts: Record<LocaleCode, AccountText> = {
       order_partial_refund: "Kısmi İade",
       welcome_bonus: "Hoş Geldin Bonusu",
       welcome_google_bonus: "Google Kayıt Bonusu",
-      contact_verification_bonus: "İletişim Doğrulama Bonusu",
+      contact_verification_bonus: "Hesap Bonusu",
       email_verification_bonus: "E-posta Doğrulama Bonusu",
     },
   },
@@ -246,7 +246,7 @@ const texts: Record<LocaleCode, AccountText> = {
     myAccount: "My Account",
     welcomePrefix: "Welcome",
     intro:
-      "Here you can track your balances, free analysis right, verification status, orders, analysis requests, and latest balance activity.",
+      "Here you can track your balances, free analysis right, orders, analysis requests, and latest balance activity.",
     createNewOrder: "Create New Order",
     leaveAnalysisRequest: "Submit Analysis Request",
     walletBalances: "Wallet Balances",
@@ -265,10 +265,11 @@ const texts: Record<LocaleCode, AccountText> = {
     waiting: "Waiting",
     freeAnalysisDesc:
       "When email verification is completed, 1 free analysis right is assigned.",
-    contactBonus: "Contact bonus",
-    granted: "Granted",
-    contactBonusDesc:
-      "One WhatsApp or Telegram verification is enough. The bonus is given only once.",
+    supportChannels: "Support Channels",
+    supportChannelsDesc:
+      "For payment notifications, order tracking, or support requests, you can contact us via WhatsApp or Telegram.",
+    whatsappSupport: "WhatsApp Support",
+    telegramSupport: "Telegram Support",
     totalOrders: "Total orders",
     totalOrdersDesc: "The latest 5 orders appear on the main account screen.",
     activeProcess: "Active process",
@@ -332,7 +333,7 @@ const texts: Record<LocaleCode, AccountText> = {
       order_partial_refund: "Partial Refund",
       welcome_bonus: "Welcome Bonus",
       welcome_google_bonus: "Google Signup Bonus",
-      contact_verification_bonus: "Contact Verification Bonus",
+      contact_verification_bonus: "Account Bonus",
       email_verification_bonus: "Email Verification Bonus",
     },
   },
@@ -345,7 +346,7 @@ const texts: Record<LocaleCode, AccountText> = {
     myAccount: "Мой аккаунт",
     welcomePrefix: "Добро пожаловать",
     intro:
-      "Здесь вы можете отслеживать балансы, право на бесплатный анализ, статус верификации, заказы, заявки на анализ и последние операции по балансу.",
+      "Здесь вы можете отслеживать балансы, право на бесплатный анализ, заказы, заявки на анализ и последние операции по балансу.",
     createNewOrder: "Создать новый заказ",
     leaveAnalysisRequest: "Оставить заявку на анализ",
     walletBalances: "Балансы кошельков",
@@ -364,10 +365,11 @@ const texts: Record<LocaleCode, AccountText> = {
     waiting: "Ожидает",
     freeAnalysisDesc:
       "После подтверждения e-mail назначается 1 право на бесплатный анализ.",
-    contactBonus: "Бонус за контакт",
-    granted: "Назначен",
-    contactBonusDesc:
-      "Достаточно одной верификации WhatsApp или Telegram. Бонус выдаётся только один раз.",
+    supportChannels: "Каналы поддержки",
+    supportChannelsDesc:
+      "Для уведомлений об оплате, отслеживания заказов или обращений в поддержку вы можете связаться с нами через WhatsApp или Telegram.",
+    whatsappSupport: "Поддержка WhatsApp",
+    telegramSupport: "Поддержка Telegram",
     totalOrders: "Всего заказов",
     totalOrdersDesc: "На главном экране аккаунта видны последние 5 заказов.",
     activeProcess: "Активный процесс",
@@ -432,7 +434,7 @@ const texts: Record<LocaleCode, AccountText> = {
       order_partial_refund: "Частичный возврат",
       welcome_bonus: "Приветственный бонус",
       welcome_google_bonus: "Бонус за регистрацию Google",
-      contact_verification_bonus: "Бонус за подтверждение контакта",
+      contact_verification_bonus: "Бонус аккаунта",
       email_verification_bonus: "Бонус за подтверждение e-mail",
     },
   },
@@ -541,7 +543,6 @@ function getTransactionAmountClass(value: string | number) {
 
   return "text-white/70";
 }
-
 export default async function AccountPage() {
   const user = await getCurrentUser();
 
@@ -671,17 +672,10 @@ export default async function AccountPage() {
     email_verified?: boolean;
     email_verified_at?: string | null;
     free_analysis_granted_at?: string | null;
-    contact_bonus_granted_at?: string | null;
-    whatsapp_verified_at?: string | null;
-    telegram_verified_at?: string | null;
   };
 
   const freeAnalysisGranted = Boolean(
     userWithExtraFields.free_analysis_granted_at || !user.free_analysis_used
-  );
-
-  const contactBonusGranted = Boolean(
-    userWithExtraFields.contact_bonus_granted_at
   );
 
   return (
@@ -834,7 +828,7 @@ export default async function AccountPage() {
                   </div>
                 </div>
 
-                <div className="rounded-3xl border border-white/10 bg-white/[0.045] p-5">
+                <div className="rounded-3xl border border-white/10 bg-white/[0.045] p-5 sm:col-span-2">
                   <p className="text-xs font-black uppercase tracking-[0.18em] text-white/40">
                     {t.freeAnalysisRight}
                   </p>
@@ -849,37 +843,50 @@ export default async function AccountPage() {
                     {t.freeAnalysisDesc}
                   </p>
                 </div>
-
-                <div className="rounded-3xl border border-white/10 bg-white/[0.045] p-5">
-                  <p className="text-xs font-black uppercase tracking-[0.18em] text-white/40">
-                    {t.contactBonus}
-                  </p>
-                  <p className="mt-3 text-2xl font-black text-white">
-                    {contactBonusGranted ? t.granted : t.waiting}
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-white/55">
-                    {t.contactBonusDesc}
-                  </p>
-                </div>
               </div>
             </div>
           </div>
         </section>
 
         <EmailVerificationCard
-  email={user.email}
-  initialEmailVerified={Boolean(user.email_verified)}
-  initialFreeAnalysisGrantedAt={userWithExtraFields.free_analysis_granted_at}
-/>
-
-        <ContactVerificationCard
-          initialPhoneNumber={user.phone_number}
-          initialWhatsappVerifiedAt={userWithExtraFields.whatsapp_verified_at}
-          initialTelegramVerifiedAt={userWithExtraFields.telegram_verified_at}
-          initialContactBonusGrantedAt={
-            userWithExtraFields.contact_bonus_granted_at
-          }
+          email={user.email}
+          initialEmailVerified={Boolean(user.email_verified)}
+          initialFreeAnalysisGrantedAt={userWithExtraFields.free_analysis_granted_at}
         />
+
+        <section className="rounded-[30px] border border-white/10 bg-[#080a0d]/92 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.28)] ring-1 ring-white/[0.025] backdrop-blur-xl md:p-6">
+          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-white/40">
+                {t.supportChannels}
+              </p>
+
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-white/60">
+                {t.supportChannelsDesc}
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row md:shrink-0">
+              <a
+                href="https://wa.me/905530739292"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:-translate-y-0.5 hover:bg-white/90"
+              >
+                {t.whatsappSupport}
+              </a>
+
+              <a
+                href="https://t.me/MEDYATORA"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] px-5 py-3 text-sm font-bold text-white/85 transition hover:-translate-y-0.5 hover:bg-white/[0.1] hover:text-white"
+              >
+                {t.telegramSupport}
+              </a>
+            </div>
+          </div>
+        </section>
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-[28px] border border-white/10 bg-[#080a0d]/92 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.26)]">
