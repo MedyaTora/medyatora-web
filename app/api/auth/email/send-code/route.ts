@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
-import nodemailer from "nodemailer";
+import {
+  buildMedyatoraMailHtml,
+  buildMedyatoraMailText,
+  sendMail,
+} from "@/lib/mail";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { getMysqlPool } from "@/lib/mysql";
 
@@ -13,62 +17,6 @@ function createCode() {
 
 function hashCode(code: string) {
   return crypto.createHash("sha256").update(code).digest("hex");
-}
-
-function getRequiredEnv(name: string) {
-  const value = process.env[name];
-
-  if (!value) {
-    throw new Error(`${name} environment variable eksik.`);
-  }
-
-  return value;
-}
-
-async function sendEmailCode({
-  to,
-  code,
-}: {
-  to: string;
-  code: string;
-}) {
-  const host = getRequiredEnv("SMTP_HOST");
-  const port = Number(process.env.SMTP_PORT || 587);
-  const user = getRequiredEnv("SMTP_USER");
-  const pass = getRequiredEnv("SMTP_PASSWORD");
-  const from = process.env.SMTP_FROM || user;
-
-  const transporter = nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465,
-    auth: {
-      user,
-      pass,
-    },
-  });
-
-  await transporter.sendMail({
-    from,
-    to,
-    subject: "MedyaTora E-posta Doğrulama Kodu",
-    text: `MedyaTora e-posta doğrulama kodunuz: ${code}
-
-Bu kod 10 dakika geçerlidir.
-
-Bu işlemi siz başlatmadıysanız bu e-postayı yok sayabilirsiniz.`,
-    html: `
-      <div style="font-family:Arial,sans-serif;background:#0b0d12;color:#ffffff;padding:24px;border-radius:18px;">
-        <h2 style="margin:0 0 12px;">MedyaTora E-posta Doğrulama</h2>
-        <p style="color:#cbd5e1;">E-posta doğrulama kodunuz:</p>
-        <div style="font-size:32px;font-weight:800;letter-spacing:6px;background:#ffffff;color:#000000;padding:16px 20px;border-radius:14px;display:inline-block;">
-          ${code}
-        </div>
-        <p style="margin-top:18px;color:#94a3b8;">Bu kod 10 dakika geçerlidir.</p>
-        <p style="color:#64748b;font-size:13px;">Bu işlemi siz başlatmadıysanız bu e-postayı yok sayabilirsiniz.</p>
-      </div>
-    `,
-  });
 }
 
 export async function POST() {
@@ -106,9 +54,34 @@ export async function POST() {
       [user.id, user.email, codeHash, expiresAt]
     );
 
-    await sendEmailCode({
+    await sendMail({
       to: user.email,
-      code,
+      subject: "MedyaTora E-posta Doğrulama Kodu",
+      text: buildMedyatoraMailText({
+        title: "MedyaTora E-posta Doğrulama",
+        intro: "E-posta doğrulama işlemini tamamlamak için aşağıdaki kodu kullanabilirsin.",
+        highlightLabel: "Doğrulama Kodu",
+        highlightValue: code,
+        bodyLines: [
+          "Bu kod 10 dakika boyunca geçerlidir.",
+          "Eğer bu işlemi sen başlatmadıysan bu e-postayı dikkate alma.",
+        ],
+        footerNote:
+          "Detaylar için Hesabım alanını kontrol edebilirsin. İyi günler dileriz. MedyaTora Ekibi",
+      }),
+      html: buildMedyatoraMailHtml({
+        title: "MedyaTora E-posta Doğrulama",
+        intro:
+          "E-posta doğrulama işlemini tamamlamak için aşağıdaki kodu kullanabilirsin.",
+        highlightLabel: "Doğrulama Kodu",
+        highlightValue: code,
+        bodyLines: [
+          "Bu kod 10 dakika boyunca geçerlidir.",
+          "Eğer bu işlemi sen başlatmadıysan bu e-postayı dikkate alma.",
+        ],
+        footerNote:
+          "Detaylar için Hesabım alanını kontrol edebilirsin. İyi günler dileriz. MedyaTora Ekibi",
+      }),
     });
 
     return NextResponse.json({

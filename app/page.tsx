@@ -7,11 +7,20 @@ import {
   FaBoxesStacked,
   FaChartLine,
   FaUserCheck,
-  FaWhatsapp,
 } from "react-icons/fa6";
 import UserMenu from "./components/auth/UserMenu";
 
 type LocaleCode = "tr" | "en" | "ru";
+
+type ActionCard = {
+  title: string;
+  description: string;
+  mobileDescription: string;
+  eyebrow: string;
+  href: string;
+  icon: typeof FaChartLine;
+  primary: boolean;
+};
 
 const homeText: Record<
   LocaleCode,
@@ -28,16 +37,7 @@ const homeText: Record<
     terms: string;
     distanceSales: string;
     refundPolicy: string;
-    actionCards: {
-      title: string;
-      description: string;
-      mobileDescription: string;
-      eyebrow: string;
-      href: string;
-      icon: typeof FaChartLine;
-      primary: boolean;
-    }[];
-    trustItems: string[];
+    actionCards: ActionCard[];
   }
 > = {
   tr: {
@@ -88,12 +88,6 @@ const homeText: Record<
         primary: false,
       },
     ],
-    trustItems: [
-      "KDV + vergiler dahil",
-      "Sipariş numarası ile takip",
-      "WhatsApp / Telegram destek",
-      "Güvenli işlem akışı",
-    ],
   },
 
   en: {
@@ -136,19 +130,13 @@ const homeText: Record<
       {
         title: "Go to SMMTora",
         description:
-          "Access the wider service list, platform filters, and detailed service options.",
-        mobileDescription: "Open the advanced service panel.",
+          "Access the full service list, platform filters, and detailed service options.",
+        mobileDescription: "Open the full service panel.",
         href: "/smmtora",
         eyebrow: "Advanced service panel",
         icon: FaBoxesStacked,
         primary: false,
       },
-    ],
-    trustItems: [
-      "VAT + taxes included",
-      "Track with order number",
-      "WhatsApp / Telegram support",
-      "Secure order flow",
     ],
   },
 
@@ -192,19 +180,13 @@ const homeText: Record<
       {
         title: "Перейти в SMMTora",
         description:
-          "Откройте расширенный список услуг, фильтры платформ и подробные варианты сервисов.",
-        mobileDescription: "Открыть расширенную панель услуг.",
+          "Откройте полный список услуг, фильтры платформ и подробные варианты сервисов.",
+        mobileDescription: "Открыть панель услуг.",
         href: "/smmtora",
         eyebrow: "Расширенная панель услуг",
         icon: FaBoxesStacked,
         primary: false,
       },
-    ],
-    trustItems: [
-      "НДС + налоги включены",
-      "Отслеживание по номеру заказа",
-      "Поддержка WhatsApp / Telegram",
-      "Безопасный процесс заказа",
     ],
   },
 };
@@ -228,44 +210,34 @@ function LuxuryMonogram({
     >
       <rect x="14" y="20" width="8" height="60" />
       <rect x="78" y="20" width="8" height="60" />
-      <polygon points="22,20 32,20 50,56 68,20 78,20 50,76" />
-      <path d="M 39 30 L 61 30 L 58 36 L 52 36 L 52 48 L 48 48 L 48 36 L 42 36 Z" />
+      <polygon points="22,20 32,20 50,56 68,20 78,20 54,80 46,80" />
+      <polygon points="33,20 43,20 50,36 57,20 67,20 50,61" />
     </svg>
   );
 }
 
 function MinimalStars() {
-  const stars: {
-    top: string;
-    left?: string;
-    right?: string;
-    size: number;
-    delay: string;
-    duration: string;
-  }[] = [
-    { top: "18%", left: "22%", size: 3, delay: "0s", duration: "5.5s" },
-    { top: "26%", right: "18%", size: 4, delay: "1.2s", duration: "6.5s" },
-    { top: "62%", left: "14%", size: 2.5, delay: "0.8s", duration: "5.8s" },
-    { top: "70%", right: "20%", size: 3.5, delay: "1.8s", duration: "7s" },
+  const stars = [
+    { left: "14%", top: "74%", size: 3, opacity: 0.55 },
+    { left: "25%", top: "23%", size: 2, opacity: 0.42 },
+    { left: "82%", top: "32%", size: 3, opacity: 0.62 },
+    { left: "78%", top: "83%", size: 3, opacity: 0.58 },
+    { left: "43%", top: "86%", size: 2, opacity: 0.34 },
+    { left: "64%", top: "57%", size: 2, opacity: 0.42 },
   ];
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-[2] overflow-hidden">
+    <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
       {stars.map((star, index) => (
         <span
           key={index}
-          className="absolute rounded-full bg-white"
+          className="absolute rounded-full bg-white shadow-[0_0_12px_rgba(255,255,255,0.72)]"
           style={{
-            top: star.top,
             left: star.left,
-            right: star.right,
-            width: `${star.size}px`,
-            height: `${star.size}px`,
-            opacity: 0.65,
-            boxShadow:
-              "0 0 8px rgba(255,255,255,0.72), 0 0 16px rgba(255,255,255,0.22)",
-            animation: `mtStarFloat ${star.duration} ease-in-out infinite, mtStarTwinkle 3.2s ease-in-out infinite`,
-            animationDelay: star.delay,
+            top: star.top,
+            width: star.size,
+            height: star.size,
+            opacity: star.opacity,
           }}
         />
       ))}
@@ -324,15 +296,15 @@ export default function Home() {
 
       <MinimalStars />
 
-      <section className="mt-premium-inner mx-auto flex min-h-[100dvh] w-full max-w-7xl flex-col px-3 py-4 sm:px-6 sm:py-5 lg:px-8">
-        <header className="flex flex-col gap-4 border-b border-white/8 pb-4 sm:flex-row sm:items-center sm:justify-between sm:pb-5">
-          <Link href="/" className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center text-white drop-shadow-[0_0_18px_rgba(255,255,255,0.16)]">
-              <LuxuryMonogram size={34} />
+      <section className="mt-premium-inner mx-auto flex min-h-[100dvh] w-full max-w-7xl flex-col px-3 py-3 sm:px-6 sm:py-5 lg:px-8">
+        <header className="flex items-start justify-between gap-3 border-b border-white/8 pb-3 sm:items-center sm:pb-5">
+          <Link href="/" className="flex min-w-0 shrink-0 items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center text-white drop-shadow-[0_0_18px_rgba(255,255,255,0.16)] sm:h-10 sm:w-10">
+              <LuxuryMonogram size={30} />
             </div>
 
             <div className="min-w-0">
-              <p className="text-xs font-black uppercase tracking-[0.24em] text-white sm:text-base sm:tracking-[0.32em]">
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-white sm:text-base sm:tracking-[0.32em]">
                 MedyaTora
               </p>
 
@@ -342,20 +314,20 @@ export default function Home() {
             </div>
           </Link>
 
-          <div className="flex shrink-0 items-center justify-end">
+          <div className="flex min-w-0 shrink-0 items-start justify-end">
             <UserMenu />
           </div>
         </header>
 
-        <div className="flex flex-1 items-center py-6 sm:py-14 lg:py-16">
+        <div className="flex flex-1 items-start pt-4 pb-4 sm:items-center sm:py-14 lg:py-16">
           <div className="mx-auto w-full max-w-6xl">
             <div className="mx-auto max-w-4xl text-center">
-              <div className="mx-auto mb-4 inline-flex border border-white/10 bg-white/[0.045] px-4 py-2 text-[8px] font-black uppercase tracking-[0.18em] text-white/55 shadow-[0_12px_45px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:mb-6 sm:px-5 sm:text-xs sm:tracking-[0.28em]">
+              <div className="mx-auto mb-3 inline-flex border border-white/10 bg-white/[0.045] px-4 py-2 text-[8px] font-black uppercase tracking-[0.18em] text-white/55 shadow-[0_12px_45px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:mb-6 sm:px-5 sm:text-xs sm:tracking-[0.28em]">
                 {t.heroBadge}
               </div>
 
-              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center text-white drop-shadow-[0_0_30px_rgba(255,255,255,0.15)] sm:mb-7 sm:h-28 sm:w-28">
-                <LuxuryMonogram size={74} className="sm:hidden" />
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center text-white drop-shadow-[0_0_30px_rgba(255,255,255,0.15)] sm:mb-7 sm:h-28 sm:w-28">
+                <LuxuryMonogram size={64} className="sm:hidden" />
                 <LuxuryMonogram size={122} className="hidden sm:block" />
               </div>
 
@@ -373,11 +345,11 @@ export default function Home() {
                 {t.heroLine1}
               </p>
 
-              <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-white/55 sm:text-base sm:leading-7">
+              <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-white/55 sm:mt-3 sm:text-base sm:leading-7">
                 {t.heroLine2}
               </p>
 
-              <div className="mx-auto mt-7 grid max-w-5xl gap-3 sm:mt-8 md:mt-10 md:grid-cols-3 md:gap-4">
+              <div className="mx-auto mt-5 grid max-w-5xl gap-3 sm:mt-8 md:mt-10 md:grid-cols-3 md:gap-4">
                 {t.actionCards.map((card) => {
                   const Icon = card.icon;
 
@@ -391,35 +363,35 @@ export default function Home() {
                           : "border-white/12 bg-white/[0.07] hover:border-white/22 hover:bg-white/[0.11]"
                       }`}
                     >
-                      <div className="pointer-events-none absolute -right-16 -top-16 h-36 w-36 rounded-full bg-white/[0.07] blur-3xl transition group-hover:scale-125" />
+                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/[0.08] via-transparent to-transparent opacity-80" />
 
-                      <div className="relative flex items-center gap-3 md:block">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/12 bg-black/30 text-base text-white sm:h-12 sm:w-12 sm:text-lg md:mb-5">
-                          <Icon />
+                      <div className="relative flex items-center gap-4 md:block">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/22 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.045)] sm:h-14 sm:w-14">
+                          <Icon className="text-lg sm:text-xl" />
                         </div>
 
-                        <div className="min-w-0 flex-1">
-                          <p className="mb-1 text-[9px] font-black uppercase tracking-[0.14em] text-white/42 sm:mb-2 sm:text-[10px] sm:tracking-[0.18em]">
+                        <div className="min-w-0 flex-1 md:mt-5">
+                          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/42">
                             {card.eyebrow}
                           </p>
 
-                          <div className="flex items-center justify-between gap-3 md:block">
-                            <h2 className="text-[17px] font-black tracking-tight text-white sm:text-xl md:text-2xl">
+                          <div className="mt-1 flex items-center justify-between gap-3 sm:mt-2">
+                            <h2 className="text-xl font-black tracking-tight text-white sm:text-2xl">
                               {card.title}
                             </h2>
 
-                            <FaArrowRight className="shrink-0 text-sm text-white transition group-hover:translate-x-1 md:hidden" />
+                            <FaArrowRight className="shrink-0 text-lg text-white transition group-hover:translate-x-1 md:hidden" />
                           </div>
 
-                          <p className="mt-1 text-xs leading-5 text-white/58 sm:hidden">
+                          <p className="mt-1 text-sm leading-6 text-white/56 sm:hidden">
                             {card.mobileDescription}
                           </p>
 
-                          <p className="mt-3 hidden text-sm leading-6 text-white/58 sm:block md:min-h-[108px]">
+                          <p className="mt-3 hidden text-sm leading-7 text-white/58 sm:block">
                             {card.description}
                           </p>
 
-                          <div className="mt-5 hidden items-center gap-2 text-sm font-black text-white md:inline-flex">
+                          <div className="mt-7 hidden items-center gap-2 text-sm font-black text-white md:flex">
                             {t.continue}
                             <FaArrowRight className="transition group-hover:translate-x-1" />
                           </div>
@@ -429,22 +401,11 @@ export default function Home() {
                   );
                 })}
               </div>
-
-              <div className="mx-auto mt-6 grid max-w-4xl grid-cols-2 gap-2 sm:mt-8 lg:grid-cols-4">
-                {t.trustItems.map((item) => (
-                  <div
-                    key={item}
-                    className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 text-center text-[11px] font-semibold leading-5 text-white/52 backdrop-blur-xl sm:rounded-none sm:px-4 sm:text-xs"
-                  >
-                    {item}
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
         </div>
 
-        <footer className="border-t border-white/8 py-5 text-xs text-white/38">
+        <footer className="border-t border-white/8 py-4 text-xs text-white/38 sm:py-5">
           <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
             <div>
               <p className="font-semibold text-white/50">© MedyaTora</p>
@@ -494,16 +455,6 @@ export default function Home() {
               >
                 {t.refundPolicy}
               </Link>
-
-              <a
-                href="https://wa.me/905530739292"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 transition hover:text-white/70"
-              >
-                <FaWhatsapp />
-                WhatsApp
-              </a>
             </div>
           </div>
         </footer>

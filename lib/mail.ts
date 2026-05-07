@@ -4,16 +4,19 @@ type SendMailInput = {
   to: string;
   subject: string;
   text: string;
-  html?: string;
+  html: string;
 };
 
-type BuildMailHtmlInput = {
+type BuildMailInput = {
   title: string;
-  preview?: string;
-  lines: string[];
-  buttonText?: string;
-  buttonUrl?: string;
+  intro?: string;
+  highlightLabel?: string;
+  highlightValue?: string;
+  bodyLines?: string[];
+  footerNote?: string;
 };
+
+let transporterCache: nodemailer.Transporter | null = null;
 
 function getRequiredEnv(name: string) {
   const value = process.env[name];
@@ -25,91 +28,17 @@ function getRequiredEnv(name: string) {
   return value;
 }
 
-function escapeHtml(value: string) {
-  return String(value || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
+function getTransporter() {
+  if (transporterCache) {
+    return transporterCache;
+  }
 
-export function buildMedyatoraMailHtml({
-  title,
-  preview,
-  lines,
-  buttonText,
-  buttonUrl,
-}: BuildMailHtmlInput) {
-  const safeTitle = escapeHtml(title);
-  const safePreview = escapeHtml(preview || "");
-  const paragraphs = lines
-    .map(
-      (line) =>
-        `<p style="margin:0 0 14px;color:#d1d5db;font-size:15px;line-height:1.7;">${escapeHtml(
-          line
-        )}</p>`
-    )
-    .join("");
-
-  const button =
-    buttonText && buttonUrl
-      ? `
-        <a href="${escapeHtml(
-          buttonUrl
-        )}" style="display:inline-block;margin-top:8px;background:#ffffff;color:#050505;text-decoration:none;font-weight:800;padding:13px 18px;border-radius:14px;font-size:14px;">
-          ${escapeHtml(buttonText)}
-        </a>
-      `
-      : "";
-
-  return `
-    <div style="margin:0;padding:0;background:#050505;">
-      <div style="display:none;max-height:0;overflow:hidden;color:transparent;opacity:0;">
-        ${safePreview}
-      </div>
-
-      <div style="font-family:Arial,Helvetica,sans-serif;max-width:640px;margin:0 auto;padding:28px 18px;">
-        <div style="background:#0b0d12;border:1px solid rgba(255,255,255,0.10);border-radius:24px;overflow:hidden;">
-          <div style="padding:24px 24px 18px;border-bottom:1px solid rgba(255,255,255,0.10);">
-            <div style="letter-spacing:0.28em;color:#a3a3a3;font-size:11px;font-weight:800;text-transform:uppercase;">
-              MEDYATORA
-            </div>
-            <h1 style="margin:12px 0 0;color:#ffffff;font-size:24px;line-height:1.3;">
-              ${safeTitle}
-            </h1>
-          </div>
-
-          <div style="padding:24px;">
-            ${paragraphs}
-            ${button}
-
-            <div style="margin-top:24px;padding-top:18px;border-top:1px solid rgba(255,255,255,0.10);">
-              <p style="margin:0;color:#9ca3af;font-size:13px;line-height:1.7;">
-                Detaylar için hesabınızdan işlem durumunu kontrol edebilirsiniz.
-              </p>
-              <p style="margin:10px 0 0;color:#ffffff;font-size:14px;font-weight:700;">
-                İyi günler,<br />
-                MedyaTora Ekibi
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <p style="margin:16px 0 0;text-align:center;color:#6b7280;font-size:12px;line-height:1.6;">
-          Bu e-posta MedyaTora hesabınızla ilgili bilgilendirme amacıyla gönderilmiştir.
-        </p>
-      </div>
-    </div>
-  `;
-}
-
-export async function sendMail({ to, subject, text, html }: SendMailInput) {
   const host = getRequiredEnv("SMTP_HOST");
   const port = Number(process.env.SMTP_PORT || 587);
   const user = getRequiredEnv("SMTP_USER");
   const pass = getRequiredEnv("SMTP_PASSWORD");
-  const from = process.env.SMTP_FROM || `MedyaTora <${user}>`;
 
-  const transporter = nodemailer.createTransport({
+  transporterCache = nodemailer.createTransport({
     host,
     port,
     secure: port === 465,
@@ -119,11 +48,113 @@ export async function sendMail({ to, subject, text, html }: SendMailInput) {
     },
   });
 
+  return transporterCache;
+}
+
+export async function sendMail({
+  to,
+  subject,
+  text,
+  html,
+}: SendMailInput) {
+  const transporter = getTransporter();
+  const fromAddress = process.env.SMTP_FROM || getRequiredEnv("SMTP_USER");
+  const fromName = process.env.SMTP_FROM_NAME || "MedyaTora";
+
   await transporter.sendMail({
-    from,
+    from: `"${fromName}" <${fromAddress}>`,
     to,
     subject,
     text,
     html,
   });
+}
+
+export function buildMedyatoraMailText({
+  title,
+  intro,
+  highlightLabel,
+  highlightValue,
+  bodyLines = [],
+  footerNote,
+}: BuildMailInput) {
+  const parts = [
+    title,
+    intro || "",
+    highlightLabel && highlightValue
+      ? `${highlightLabel}: ${highlightValue}`
+      : "",
+    ...bodyLines,
+    footerNote || "",
+  ].filter(Boolean);
+
+  return parts.join("\n\n");
+}
+
+export function buildMedyatoraMailHtml({
+  title,
+  intro,
+  highlightLabel,
+  highlightValue,
+  bodyLines = [],
+  footerNote,
+}: BuildMailInput) {
+  const linesHtml = bodyLines
+    .map(
+      (line) =>
+        `<p style="margin:0 0 12px;color:#cbd5e1;font-size:15px;line-height:1.7;">${line}</p>`
+    )
+    .join("");
+
+  const highlightHtml =
+    highlightLabel && highlightValue
+      ? `
+        <div style="margin:20px 0 22px;">
+          <div style="margin-bottom:8px;color:#94a3b8;font-size:13px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;">
+            ${highlightLabel}
+          </div>
+          <div style="display:inline-block;padding:14px 18px;border-radius:16px;background:#ffffff;color:#000000;font-size:28px;font-weight:800;letter-spacing:4px;">
+            ${highlightValue}
+          </div>
+        </div>
+      `
+      : "";
+
+  return `
+    <div style="margin:0;padding:24px;background:#07090d;font-family:Arial,sans-serif;color:#ffffff;">
+      <div style="max-width:640px;margin:0 auto;border:1px solid rgba(255,255,255,0.08);border-radius:24px;overflow:hidden;background:#0b0f14;">
+        <div style="padding:28px 28px 20px;border-bottom:1px solid rgba(255,255,255,0.08);">
+          <div style="font-size:12px;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;color:#94a3b8;margin-bottom:12px;">
+            MedyaTora
+          </div>
+          <h1 style="margin:0;font-size:28px;line-height:1.25;color:#ffffff;">
+            ${title}
+          </h1>
+        </div>
+
+        <div style="padding:28px;">
+          ${
+            intro
+              ? `<p style="margin:0 0 16px;color:#e2e8f0;font-size:15px;line-height:1.8;">${intro}</p>`
+              : ""
+          }
+
+          ${highlightHtml}
+          ${linesHtml}
+
+          ${
+            footerNote
+              ? `
+                <div style="margin-top:22px;padding-top:18px;border-top:1px solid rgba(255,255,255,0.08);">
+                  <p style="margin:0;color:#94a3b8;font-size:13px;line-height:1.7;">
+                    ${footerNote}
+                  </p>
+                </div>
+              `
+              : ""
+          }
+        </div>
+      </div>
+    </div>
+  `;
 }

@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
+import {
+  buildMedyatoraMailHtml,
+  buildMedyatoraMailText,
+  sendMail,
+} from "@/lib/mail";
 import { getMysqlPool } from "@/lib/mysql";
 import {
   getPublicUser,
@@ -8,7 +13,6 @@ import {
   type PreferredCurrency,
 } from "@/lib/auth/current-user";
 import { createUserSession } from "@/lib/auth/session";
-import { buildMedyatoraMailHtml, sendMail } from "@/lib/mail";
 
 type RegisterBody = {
   email?: string;
@@ -68,45 +72,6 @@ function getClientIp(req: Request) {
   }
 
   return realIp || cloudflareIp || null;
-}
-
-async function sendWelcomeEmail({
-  to,
-  fullName,
-}: {
-  to: string;
-  fullName: string | null;
-}) {
-  const displayName = fullName || "Değerli kullanıcımız";
-
-  await sendMail({
-    to,
-    subject: "MedyaTora’ya Hoş Geldiniz",
-    text: `Merhaba ${displayName},
-
-MedyaTora hesabınız başarıyla oluşturuldu.
-
-Artık hesabınız üzerinden sosyal medya hizmetlerini inceleyebilir, sipariş oluşturabilir, bakiye yükleyebilir ve sipariş durumlarınızı takip edebilirsiniz.
-
-E-posta doğrulamanızı tamamladığınızda ücretsiz analiz hakkınız hesabınıza tanımlanacaktır.
-
-Detaylar için hesabınızdan işlem durumunu kontrol edebilirsiniz.
-
-İyi günler,
-MedyaTora Ekibi`,
-    html: buildMedyatoraMailHtml({
-      title: "MedyaTora’ya Hoş Geldiniz",
-      preview: "MedyaTora hesabınız başarıyla oluşturuldu.",
-      lines: [
-        `Merhaba ${displayName},`,
-        "MedyaTora hesabınız başarıyla oluşturuldu.",
-        "Artık hesabınız üzerinden sosyal medya hizmetlerini inceleyebilir, sipariş oluşturabilir, bakiye yükleyebilir ve sipariş durumlarınızı takip edebilirsiniz.",
-        "E-posta doğrulamanızı tamamladığınızda ücretsiz analiz hakkınız hesabınıza tanımlanacaktır.",
-      ],
-      buttonText: "Hesabıma Git",
-      buttonUrl: "https://medyatora.store/hesabim",
-    }),
-  });
 }
 
 export async function POST(req: Request) {
@@ -278,12 +243,36 @@ export async function POST(req: Request) {
       [clientIp, createdUser.id]
     );
 
-    await sendWelcomeEmail({
-      to: createdUser.email,
-      fullName: createdUser.full_name,
-    }).catch((mailError) => {
+    try {
+      const displayName = createdUser.full_name || createdUser.email;
+
+      await sendMail({
+        to: createdUser.email,
+        subject: "MedyaTora'ya Hoş Geldiniz",
+        text: buildMedyatoraMailText({
+          title: "MedyaTora'ya Hoş Geldiniz",
+          intro: `Merhaba ${displayName}, MedyaTora hesabın başarıyla oluşturuldu.`,
+          bodyLines: [
+            "Artık hesabından siparişlerini, analiz taleplerini ve bakiye hareketlerini takip edebilirsin.",
+            "E-posta doğrulama işlemini tamamladığında hesabın daha güvenli hale gelir ve ücretsiz analiz hakkın aktifleşir.",
+          ],
+          footerNote:
+            "Detaylar için Hesabım alanını kontrol edebilirsin. İyi günler dileriz. MedyaTora Ekibi",
+        }),
+        html: buildMedyatoraMailHtml({
+          title: "MedyaTora'ya Hoş Geldiniz",
+          intro: `Merhaba ${displayName}, MedyaTora hesabın başarıyla oluşturuldu.`,
+          bodyLines: [
+            "Artık hesabından siparişlerini, analiz taleplerini ve bakiye hareketlerini takip edebilirsin.",
+            "E-posta doğrulama işlemini tamamladığında hesabın daha güvenli hale gelir ve ücretsiz analiz hakkın aktifleşir.",
+          ],
+          footerNote:
+            "Detaylar için Hesabım alanını kontrol edebilirsin. İyi günler dileriz. MedyaTora Ekibi",
+        }),
+      });
+    } catch (mailError) {
       console.error("WELCOME_MAIL_ERROR", mailError);
-    });
+    }
 
     return NextResponse.json({
       ok: true,
