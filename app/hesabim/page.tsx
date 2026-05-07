@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth/current-user";
 import { getMysqlPool } from "@/lib/mysql";
 import UserMenu from "@/app/components/auth/UserMenu";
 import EmailVerificationCard from "@/app/components/auth/EmailVerificationCard";
+import BalanceTopUpCard from "../components/account/BalanceTopUpCard";
 
 type LocaleCode = "tr" | "en" | "ru";
 
@@ -854,6 +855,12 @@ export default async function AccountPage() {
           initialFreeAnalysisGrantedAt={userWithExtraFields.free_analysis_granted_at}
         />
 
+<BalanceTopUpCard />
+
+  userFullName={user.full_name}
+  userEmail={user.email}
+
+
         <section className="rounded-[30px] border border-white/10 bg-[#080a0d]/92 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.28)] ring-1 ring-white/[0.025] backdrop-blur-xl md:p-6">
           <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
             <div>
@@ -1216,4 +1223,4 @@ export default async function AccountPage() {
       </div>
     </main>
   );
-}
+} 
