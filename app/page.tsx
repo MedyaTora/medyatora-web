@@ -7,10 +7,21 @@ import {
   FaBoxesStacked,
   FaChartLine,
   FaUserCheck,
+  FaWhatsapp,
 } from "react-icons/fa6";
 import UserMenu from "./components/auth/UserMenu";
 
 type LocaleCode = "tr" | "en" | "ru";
+
+type HomeCard = {
+  title: string;
+  description: string;
+  mobileDescription: string;
+  eyebrow: string;
+  href: string;
+  icon: typeof FaChartLine;
+  primary: boolean;
+};
 
 const homeText: Record<
   LocaleCode,
@@ -27,16 +38,9 @@ const homeText: Record<
     terms: string;
     distanceSales: string;
     refundPolicy: string;
-    actionCards: {
-      title: string;
-      description: string;
-      mobileDescription: string;
-      eyebrow: string;
-      href: string;
-      icon: typeof FaChartLine;
-      primary: boolean;
-    }[];
-    trustItems: string[];
+    supportText: string;
+    bottomBadges: string[];
+    actionCards: HomeCard[];
   }
 > = {
   tr: {
@@ -55,6 +59,13 @@ const homeText: Record<
     terms: "Kullanım Şartları",
     distanceSales: "Mesafeli Satış",
     refundPolicy: "İade Politikası",
+    supportText: "WhatsApp / Telegram destek",
+    bottomBadges: [
+      "KDV + vergiler dahil",
+      "Sipariş numarası ile takip",
+      "WhatsApp / Telegram destek",
+      "Güvenli işlem akışı",
+    ],
     actionCards: [
       {
         title: "Analize Başla",
@@ -87,12 +98,6 @@ const homeText: Record<
         primary: false,
       },
     ],
-    trustItems: [
-      "KDV + vergiler dahil",
-      "Sipariş numarası ile takip",
-      "WhatsApp / Telegram destek",
-      "Güvenli işlem akışı",
-    ],
   },
 
   en: {
@@ -111,6 +116,13 @@ const homeText: Record<
     terms: "Terms of Use",
     distanceSales: "Distance Sales",
     refundPolicy: "Refund Policy",
+    supportText: "WhatsApp / Telegram support",
+    bottomBadges: [
+      "VAT + taxes included",
+      "Track with order number",
+      "WhatsApp / Telegram support",
+      "Secure transaction flow",
+    ],
     actionCards: [
       {
         title: "Start Analysis",
@@ -135,19 +147,13 @@ const homeText: Record<
       {
         title: "Go to SMMTora",
         description:
-          "Access the full service list, platform filters, and detailed service options.",
+          "Access a broader service list, platform filters, and detailed service options.",
         mobileDescription: "Open the full service panel.",
         href: "/smmtora",
-        eyebrow: "Advanced service panel",
+        eyebrow: "Extended service panel",
         icon: FaBoxesStacked,
         primary: false,
       },
-    ],
-    trustItems: [
-      "Taxes included",
-      "Track with order number",
-      "WhatsApp / Telegram support",
-      "Secure process flow",
     ],
   },
 
@@ -167,6 +173,13 @@ const homeText: Record<
     terms: "Условия использования",
     distanceSales: "Дистанционная продажа",
     refundPolicy: "Политика возврата",
+    supportText: "Поддержка WhatsApp / Telegram",
+    bottomBadges: [
+      "НДС + налоги включены",
+      "Отслеживание по номеру заказа",
+      "Поддержка WhatsApp / Telegram",
+      "Безопасный процесс оплаты",
+    ],
     actionCards: [
       {
         title: "Начать анализ",
@@ -191,19 +204,13 @@ const homeText: Record<
       {
         title: "Перейти в SMMTora",
         description:
-          "Откройте полный список услуг, фильтры платформ и подробные варианты сервисов.",
-        mobileDescription: "Открыть панель услуг.",
+          "Откройте расширенный список услуг, фильтры платформ и подробные варианты сервиса.",
+        mobileDescription: "Открыть полную панель услуг.",
         href: "/smmtora",
-        eyebrow: "Расширенная панель",
+        eyebrow: "Расширенная панель услуг",
         icon: FaBoxesStacked,
         primary: false,
       },
-    ],
-    trustItems: [
-      "Налоги включены",
-      "Отслеживание по номеру заказа",
-      "Поддержка WhatsApp / Telegram",
-      "Безопасный процесс",
     ],
   },
 };
@@ -219,44 +226,53 @@ function LuxuryMonogram({
     <svg
       width={size}
       height={size}
-      viewBox="-8 -8 116 116"
+      viewBox="0 0 100 100"
       fill="currentColor"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
       aria-hidden="true"
-      overflow="visible"
     >
-      <rect x="14" y="20" width="8" height="60" />
-      <rect x="78" y="20" width="8" height="60" />
-      <polygon points="22,20 32,20 50,56 68,20 78,20 54,68 46,68" />
-      <polygon points="27,20 43,20 50,34 57,20 73,20 50,66" />
-      <rect x="47" y="44" width="7" height="36" />
+      {/* Left and right pillars */}
+      <rect x="10" y="16" width="8" height="68" rx="1.5" />
+      <rect x="82" y="16" width="8" height="68" rx="1.5" />
+
+      {/* M shape */}
+      <polygon points="18,16 30,16 44,44 50,34 56,44 70,16 82,16 58,66 50,54 42,66" />
+
+      {/* Small centered T */}
+      <rect x="43" y="38" width="14" height="4" rx="1.5" />
+      <rect x="48" y="38" width="4" height="16" rx="1.5" />
     </svg>
   );
 }
 
 function MinimalStars() {
   const stars = [
-    { left: "14%", top: "43%", size: 3, opacity: 0.6 },
-    { left: "20%", top: "30%", size: 2, opacity: 0.38 },
-    { left: "86%", top: "54%", size: 3, opacity: 0.58 },
-    { left: "90%", top: "38%", size: 2, opacity: 0.5 },
-    { left: "52%", top: "21%", size: 1, opacity: 0.4 },
-    { left: "8%", top: "73%", size: 2, opacity: 0.5 },
+    { left: "8%", top: "22%", size: 2.5, opacity: 0.8 },
+    { left: "16%", top: "40%", size: 1.4, opacity: 0.55 },
+    { left: "27%", top: "14%", size: 1.8, opacity: 0.45 },
+    { left: "39%", top: "55%", size: 1.5, opacity: 0.45 },
+    { left: "58%", top: "18%", size: 2.2, opacity: 0.62 },
+    { left: "74%", top: "31%", size: 1.6, opacity: 0.5 },
+    { left: "89%", top: "39%", size: 2.1, opacity: 0.75 },
+    { left: "84%", top: "72%", size: 1.4, opacity: 0.5 },
+    { left: "11%", top: "78%", size: 2.4, opacity: 0.8 },
+    { left: "91%", top: "51%", size: 1.2, opacity: 0.52 },
   ];
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+    <div className="pointer-events-none absolute inset-0 overflow-hidden">
       {stars.map((star, index) => (
         <span
           key={index}
-          className="absolute rounded-full bg-white shadow-[0_0_18px_rgba(255,255,255,0.75)]"
+          className="absolute rounded-full bg-white"
           style={{
             left: star.left,
             top: star.top,
-            width: star.size,
-            height: star.size,
+            width: `${star.size}px`,
+            height: `${star.size}px`,
             opacity: star.opacity,
+            boxShadow: "0 0 10px rgba(255,255,255,0.45)",
           }}
         />
       ))}
@@ -299,7 +315,10 @@ export default function Home() {
         "medyatora_locale_changed",
         handleLocaleChanged
       );
-      window.removeEventListener("medyatora_locale_change", handleLocaleChanged);
+      window.removeEventListener(
+        "medyatora_locale_change",
+        handleLocaleChanged
+      );
     };
   }, []);
 
@@ -309,25 +328,38 @@ export default function Home() {
   );
 
   return (
-    <main className="mt-premium-page">
-      <div className="mt-top-fade" />
-      <div className="mt-bottom-fade" />
+    <main className="relative min-h-screen overflow-hidden bg-[#040507] text-white">
+      {/* Background glows */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute left-1/2 top-[-12rem] h-[28rem] w-[28rem] -translate-x-1/2 rounded-full bg-white/[0.03] blur-3xl" />
+        <div className="absolute bottom-[-8rem] left-1/2 h-[20rem] w-[32rem] -translate-x-1/2 rounded-full bg-white/[0.025] blur-3xl" />
+      </div>
+
+      {/* Grid background */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.14]"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(255,255,255,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.12) 1px, transparent 1px)",
+          backgroundSize: "48px 48px",
+        }}
+      />
 
       <MinimalStars />
 
-      <section className="mt-premium-inner mx-auto flex min-h-[100dvh] w-full max-w-7xl flex-col px-4 pt-6 pb-5 sm:px-6 sm:pt-7 sm:pb-6 lg:px-8 lg:pt-8">
-        <header className="flex items-start justify-between gap-4 border-b border-white/8 pb-5 sm:items-center sm:pb-6">
-          <Link href="/" className="flex min-w-0 shrink-0 items-center gap-3">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center pl-1 text-white drop-shadow-[0_0_18px_rgba(255,255,255,0.16)] sm:h-11 sm:w-11 sm:pl-0">
-              <LuxuryMonogram size={38} />
+      <section className="relative mx-auto flex min-h-screen w-full max-w-6xl flex-col px-4 py-6 sm:px-6 lg:px-8">
+        <header className="flex items-start justify-between gap-4 border-b border-white/8 pb-5 sm:items-center">
+          <Link href="/" className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-visible text-white drop-shadow-[0_0_18px_rgba(255,255,255,0.14)]">
+              <LuxuryMonogram size={34} />
             </div>
 
             <div className="min-w-0">
-              <p className="text-xs font-black uppercase tracking-[0.24em] text-white sm:text-base sm:tracking-[0.32em]">
+              <p className="text-sm font-black uppercase tracking-[0.28em] text-white sm:text-base">
                 MedyaTora
               </p>
 
-              <p className="mt-1 hidden text-[9px] uppercase tracking-[0.26em] text-white/35 sm:block">
+              <p className="mt-1 hidden text-[9px] uppercase tracking-[0.24em] text-white/35 sm:block">
                 {t.brandSubtitle}
               </p>
             </div>
@@ -338,97 +370,91 @@ export default function Home() {
           </div>
         </header>
 
-        <div className="flex flex-1 items-start pt-10 pb-8 sm:pt-16 sm:pb-14 lg:pt-20 lg:pb-16">
-          <div className="mx-auto w-full max-w-6xl">
-            <div className="mx-auto max-w-[1040px] text-center">
-              <div className="mx-auto mb-4 inline-flex border border-white/10 bg-white/[0.045] px-4 py-2 text-[8px] font-black uppercase tracking-[0.18em] text-white/55 shadow-[0_12px_45px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:mb-6 sm:px-5 sm:text-xs sm:tracking-[0.28em]">
-                {t.heroBadge}
-              </div>
+        <div className="flex flex-1 items-center justify-center py-10 sm:py-14 lg:py-16">
+          <div className="mx-auto w-full max-w-5xl text-center">
+            <div className="mx-auto mb-5 inline-flex border border-white/10 bg-white/[0.045] px-4 py-2 text-[9px] font-black uppercase tracking-[0.22em] text-white/55 shadow-[0_12px_45px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:mb-6 sm:px-5 sm:text-xs sm:tracking-[0.28em]">
+              {t.heroBadge}
+            </div>
 
-              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center text-white drop-shadow-[0_0_30px_rgba(255,255,255,0.15)] sm:mb-7 sm:h-28 sm:w-28">
-                <LuxuryMonogram size={74} className="sm:hidden" />
-                <LuxuryMonogram size={122} className="hidden sm:block" />
-              </div>
+            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center overflow-visible text-white drop-shadow-[0_0_28px_rgba(255,255,255,0.16)] sm:mb-7 sm:h-24 sm:w-24">
+              <LuxuryMonogram size={72} className="sm:hidden" />
+              <LuxuryMonogram size={112} className="hidden sm:block" />
+            </div>
 
-              <div className="relative mx-auto">
-                <div className="pointer-events-none absolute left-1/2 top-1/2 h-20 w-[74%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/[0.105] blur-3xl sm:h-28 sm:w-[82%]" />
+            <div className="relative mx-auto">
+              <div className="pointer-events-none absolute left-1/2 top-1/2 h-24 w-[74%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/[0.10] blur-3xl sm:h-28 sm:w-[78%]" />
 
-                <div className="pointer-events-none absolute left-1/2 top-1/2 h-px w-[82%] -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-transparent via-white/28 to-transparent" />
+              <div className="pointer-events-none absolute left-1/2 top-1/2 h-px w-[82%] -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-transparent via-white/25 to-transparent" />
 
-                <h1 className="relative mx-auto max-w-full text-center text-[32px] font-light uppercase leading-none tracking-[0.105em] text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.32)] min-[390px]:text-[36px] sm:text-6xl sm:tracking-[0.18em] md:text-7xl lg:text-8xl lg:tracking-[0.2em]">
-                  MedyaTora
-                </h1>
-              </div>
+              <h1 className="relative mx-auto text-center text-[52px] font-light uppercase leading-none tracking-[0.12em] text-white drop-shadow-[0_0_22px_rgba(255,255,255,0.26)] sm:text-7xl sm:tracking-[0.16em] md:text-8xl lg:text-[108px]">
+                MedyaTora
+              </h1>
+            </div>
 
-              <p className="mx-auto mt-4 max-w-2xl text-[11px] font-medium uppercase leading-6 tracking-[0.055em] text-white/56 sm:mt-7 sm:text-sm sm:leading-7 sm:tracking-[0.095em]">
-                {t.heroLine1}
-              </p>
+            <p className="mx-auto mt-6 max-w-3xl text-[11px] font-medium uppercase leading-6 tracking-[0.07em] text-white/56 sm:text-sm sm:leading-7 sm:tracking-[0.10em]">
+              {t.heroLine1}
+            </p>
 
-              <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-white/55 sm:text-base sm:leading-7">
-                {t.heroLine2}
-              </p>
+            <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-white/55 sm:text-base sm:leading-7">
+              {t.heroLine2}
+            </p>
 
-              <div className="mx-auto mt-8 grid max-w-5xl gap-3 sm:mt-10 md:mt-12 md:grid-cols-3 md:gap-4">
-                {t.actionCards.map((card) => {
-                  const Icon = card.icon;
+            <div className="mx-auto mt-10 grid max-w-5xl gap-4 md:grid-cols-3">
+              {t.actionCards.map((card) => {
+                const Icon = card.icon;
 
-                  return (
-                    <Link
-                      key={card.title}
-                      href={card.href}
-                      className={`group relative overflow-hidden rounded-[22px] border p-3 text-left shadow-[0_18px_70px_rgba(0,0,0,0.42)] backdrop-blur-2xl transition duration-300 hover:-translate-y-1 sm:rounded-[28px] sm:p-5 md:p-6 ${
-                        card.primary
-                          ? "border-white/22 bg-white/[0.12] hover:bg-white/[0.15]"
-                          : "border-white/12 bg-white/[0.07] hover:border-white/22 hover:bg-white/[0.11]"
-                      }`}
-                    >
-                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/[0.08] via-transparent to-transparent opacity-70" />
-
-                      <div className="relative flex items-center gap-4 md:block">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/25 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:h-14 sm:w-14">
-                          <Icon className="text-lg sm:text-xl" />
-                        </div>
-
-                        <div className="min-w-0 flex-1 md:mt-5">
-                          <p className="text-[9px] font-black uppercase tracking-[0.22em] text-white/38 sm:text-[10px]">
-                            {card.eyebrow}
-                          </p>
-
-                          <h2 className="mt-1 text-xl font-black tracking-tight text-white sm:mt-2 sm:text-2xl">
-                            {card.title}
-                          </h2>
-
-                          <p className="mt-1 text-sm leading-6 text-white/50 sm:hidden">
-                            {card.mobileDescription}
-                          </p>
-
-                          <p className="mt-3 hidden text-sm leading-7 text-white/52 sm:block">
-                            {card.description}
-                          </p>
-
-                          <div className="mt-4 hidden items-center gap-2 text-sm font-black text-white sm:flex">
-                            {t.continue}
-                            <FaArrowRight className="transition group-hover:translate-x-1" />
-                          </div>
-                        </div>
-
-                        <FaArrowRight className="ml-auto shrink-0 text-xl text-white transition group-hover:translate-x-1 sm:hidden" />
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-
-              <div className="mx-auto mt-6 grid max-w-5xl gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                {t.trustItems.map((item) => (
-                  <div
-                    key={item}
-                    className="border border-white/10 bg-white/[0.035] px-4 py-3 text-center text-[10px] font-black text-white/46 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]"
+                return (
+                  <Link
+                    key={card.title}
+                    href={card.href}
+                    className={`group relative overflow-hidden rounded-[24px] border p-5 text-left shadow-[0_18px_70px_rgba(0,0,0,0.42)] backdrop-blur-2xl transition duration-300 hover:-translate-y-1 sm:rounded-[28px] sm:p-6 ${
+                      card.primary
+                        ? "border-white/22 bg-white/[0.12] hover:bg-white/[0.15]"
+                        : "border-white/12 bg-white/[0.07] hover:border-white/22 hover:bg-white/[0.11]"
+                    }`}
                   >
-                    {item}
-                  </div>
-                ))}
-              </div>
+                    <div className="mb-5 flex items-start justify-between gap-3">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-[18px] border border-white/10 bg-black/25 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+                        <Icon className="text-lg" />
+                      </div>
+
+                      <FaArrowRight className="mt-1 text-base text-white/78 transition group-hover:translate-x-1" />
+                    </div>
+
+                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/38">
+                      {card.eyebrow}
+                    </p>
+
+                    <h3 className="mt-3 text-[22px] font-black leading-tight text-white">
+                      {card.title}
+                    </h3>
+
+                    <p className="mt-4 hidden text-sm leading-7 text-white/56 sm:block">
+                      {card.description}
+                    </p>
+
+                    <p className="mt-3 text-sm leading-6 text-white/56 sm:hidden">
+                      {card.mobileDescription}
+                    </p>
+
+                    <div className="mt-6 inline-flex items-center gap-2 text-sm font-black text-white">
+                      <span>{t.continue}</span>
+                      <FaArrowRight className="text-xs transition group-hover:translate-x-1" />
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+
+            <div className="mx-auto mt-5 grid max-w-5xl gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              {t.bottomBadges.map((item) => (
+                <div
+                  key={item}
+                  className="rounded-[18px] border border-white/10 bg-black/20 px-4 py-3 text-center text-[11px] font-bold text-white/46 backdrop-blur-xl"
+                >
+                  {item}
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -483,6 +509,16 @@ export default function Home() {
               >
                 {t.refundPolicy}
               </Link>
+
+              <a
+                href="https://wa.me/"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 transition hover:text-white/70"
+              >
+                <FaWhatsapp className="text-sm" />
+                {t.supportText}
+              </a>
             </div>
           </div>
         </footer>
