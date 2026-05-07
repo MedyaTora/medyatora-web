@@ -23,6 +23,11 @@ const homeText: Record<
     continue: string;
     footerAnalysis: string;
     footerPackages: string;
+    licenseText: string;
+    privacy: string;
+    terms: string;
+    distanceSales: string;
+    refundPolicy: string;
     actionCards: {
       title: string;
       description: string;
@@ -45,6 +50,12 @@ const homeText: Record<
     continue: "Devam Et",
     footerAnalysis: "Analiz",
     footerPackages: "Paketler",
+    licenseText:
+      "MedyaTora; sosyal medya hesap analizi, dijital görünürlük danışmanlığı ve sipariş takip süreçleri için geliştirilmiş özel bir dijital hizmet altyapısıdır. Tüm işlemler kullanım şartları, gizlilik politikası ve mesafeli satış hükümleri kapsamında yürütülür.",
+    privacy: "Gizlilik Politikası",
+    terms: "Kullanım Şartları",
+    distanceSales: "Mesafeli Satış",
+    refundPolicy: "İade Politikası",
     actionCards: [
       {
         title: "Analize Başla",
@@ -95,6 +106,12 @@ const homeText: Record<
     continue: "Continue",
     footerAnalysis: "Analysis",
     footerPackages: "Packages",
+    licenseText:
+      "MedyaTora is a private digital service infrastructure developed for social media account analysis, digital presence consulting, and order tracking processes. All services are provided under the terms of use, privacy policy, and distance sales provisions.",
+    privacy: "Privacy Policy",
+    terms: "Terms of Use",
+    distanceSales: "Distance Sales",
+    refundPolicy: "Refund Policy",
     actionCards: [
       {
         title: "Start Analysis",
@@ -145,6 +162,12 @@ const homeText: Record<
     continue: "Продолжить",
     footerAnalysis: "Анализ",
     footerPackages: "Пакеты",
+    licenseText:
+      "MedyaTora — это частная цифровая сервисная инфраструктура для анализа аккаунтов в социальных сетях, консультаций по цифровому присутствию и отслеживания заказов. Все процессы выполняются в рамках условий использования, политики конфиденциальности и правил дистанционной продажи.",
+    privacy: "Политика конфиденциальности",
+    terms: "Условия использования",
+    distanceSales: "Дистанционная продажа",
+    refundPolicy: "Политика возврата",
     actionCards: [
       {
         title: "Начать анализ",
@@ -238,9 +261,9 @@ function MinimalStars() {
             right: star.right,
             width: `${star.size}px`,
             height: `${star.size}px`,
-            opacity: 0.7,
+            opacity: 0.65,
             boxShadow:
-              "0 0 10px rgba(255,255,255,0.85), 0 0 18px rgba(255,255,255,0.28)",
+              "0 0 8px rgba(255,255,255,0.72), 0 0 16px rgba(255,255,255,0.22)",
             animation: `mtStarFloat ${star.duration} ease-in-out infinite, mtStarTwinkle 3.2s ease-in-out infinite`,
             animationDelay: star.delay,
           }}
@@ -302,18 +325,18 @@ export default function Home() {
       <MinimalStars />
 
       <section className="mt-premium-inner mx-auto flex min-h-[100dvh] w-full max-w-7xl flex-col px-3 py-4 sm:px-6 sm:py-5 lg:px-8">
-        <header className="flex flex-col gap-4 border-b border-white/5 pb-4 sm:flex-row sm:items-center sm:justify-between sm:pb-5">
+        <header className="flex flex-col gap-4 border-b border-white/8 pb-4 sm:flex-row sm:items-center sm:justify-between sm:pb-5">
           <Link href="/" className="flex min-w-0 items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center text-white drop-shadow-[0_0_18px_rgba(255,255,255,0.16)]">
               <LuxuryMonogram size={34} />
             </div>
 
             <div className="min-w-0">
-              <p className="text-xs font-black uppercase tracking-[0.3em] text-white sm:text-base sm:tracking-[0.42em]">
+              <p className="text-xs font-black uppercase tracking-[0.24em] text-white sm:text-base sm:tracking-[0.32em]">
                 MedyaTora
               </p>
 
-              <p className="mt-1 hidden text-[9px] uppercase tracking-[0.3em] text-white/35 sm:block">
+              <p className="mt-1 hidden text-[9px] uppercase tracking-[0.26em] text-white/35 sm:block">
                 {t.brandSubtitle}
               </p>
             </div>
@@ -327,22 +350,26 @@ export default function Home() {
         <div className="flex flex-1 items-center py-6 sm:py-14 lg:py-16">
           <div className="mx-auto w-full max-w-6xl">
             <div className="mx-auto max-w-4xl text-center">
-              <div className="mx-auto mb-4 inline-flex border border-white/10 bg-white/[0.045] px-4 py-2 text-[8px] font-black uppercase tracking-[0.22em] text-white/55 shadow-[0_12px_45px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:mb-6 sm:px-5 sm:text-xs sm:tracking-[0.38em]">
+              <div className="mx-auto mb-4 inline-flex border border-white/10 bg-white/[0.045] px-4 py-2 text-[8px] font-black uppercase tracking-[0.18em] text-white/55 shadow-[0_12px_45px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:mb-6 sm:px-5 sm:text-xs sm:tracking-[0.28em]">
                 {t.heroBadge}
               </div>
 
-              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center text-white drop-shadow-[0_0_38px_rgba(255,255,255,0.18)] sm:mb-7 sm:h-28 sm:w-28">
+              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center text-white drop-shadow-[0_0_30px_rgba(255,255,255,0.15)] sm:mb-7 sm:h-28 sm:w-28">
                 <LuxuryMonogram size={74} className="sm:hidden" />
                 <LuxuryMonogram size={122} className="hidden sm:block" />
               </div>
 
-              <div className="mt-title-glow-wrap mx-auto">
-                <h1 className="mt-title-glow-text mx-auto max-w-full text-center text-[30px] font-light uppercase leading-none tracking-[0.18em] text-white min-[390px]:text-[34px] sm:text-6xl sm:tracking-[0.3em] md:text-7xl lg:text-8xl">
+              <div className="relative mx-auto">
+                <div className="pointer-events-none absolute left-1/2 top-1/2 h-20 w-[74%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/[0.105] blur-3xl sm:h-28 sm:w-[82%]" />
+
+                <div className="pointer-events-none absolute left-1/2 top-1/2 h-px w-[82%] -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-transparent via-white/28 to-transparent" />
+
+                <h1 className="relative mx-auto max-w-full text-center text-[32px] font-light uppercase leading-none tracking-[0.105em] text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.32)] min-[390px]:text-[36px] sm:text-6xl sm:tracking-[0.18em] md:text-7xl lg:text-8xl lg:tracking-[0.2em]">
                   MedyaTora
                 </h1>
               </div>
 
-              <p className="mx-auto mt-4 max-w-2xl text-[11px] font-medium uppercase leading-6 tracking-[0.12em] text-white/52 sm:mt-7 sm:text-sm sm:leading-7 sm:tracking-[0.22em]">
+              <p className="mx-auto mt-4 max-w-2xl text-[11px] font-medium uppercase leading-6 tracking-[0.055em] text-white/56 sm:mt-7 sm:text-sm sm:leading-7 sm:tracking-[0.095em]">
                 {t.heroLine1}
               </p>
 
@@ -372,7 +399,7 @@ export default function Home() {
                         </div>
 
                         <div className="min-w-0 flex-1">
-                          <p className="mb-1 text-[9px] font-black uppercase tracking-[0.18em] text-white/42 sm:mb-2 sm:text-[10px] sm:tracking-[0.24em]">
+                          <p className="mb-1 text-[9px] font-black uppercase tracking-[0.14em] text-white/42 sm:mb-2 sm:text-[10px] sm:tracking-[0.18em]">
                             {card.eyebrow}
                           </p>
 
@@ -417,31 +444,67 @@ export default function Home() {
           </div>
         </div>
 
-        <footer className="flex flex-col items-center justify-between gap-3 border-t border-white/8 py-4 text-xs text-white/35 sm:flex-row">
-          <p>© MedyaTora</p>
+        <footer className="border-t border-white/8 py-5 text-xs text-white/38">
+          <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
+            <div>
+              <p className="font-semibold text-white/50">© MedyaTora</p>
 
-          <div className="flex flex-wrap items-center justify-center gap-4">
-            <Link href="/analiz" className="transition hover:text-white/70">
-              {t.footerAnalysis}
-            </Link>
+              <p className="mt-2 max-w-3xl text-[11px] leading-5 text-white/32">
+                {t.licenseText}
+              </p>
+            </div>
 
-            <Link href="/paketler" className="transition hover:text-white/70">
-              {t.footerPackages}
-            </Link>
+            <div className="flex flex-wrap items-center justify-start gap-x-4 gap-y-2 lg:justify-end">
+              <Link href="/analiz" className="transition hover:text-white/70">
+                {t.footerAnalysis}
+              </Link>
 
-            <Link href="/smmtora" className="transition hover:text-white/70">
-              SMMTora
-            </Link>
+              <Link href="/paketler" className="transition hover:text-white/70">
+                {t.footerPackages}
+              </Link>
 
-            <a
-              href="https://wa.me/905530739292"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 transition hover:text-white/70"
-            >
-              <FaWhatsapp />
-              WhatsApp
-            </a>
+              <Link href="/smmtora" className="transition hover:text-white/70">
+                SMMTora
+              </Link>
+
+              <Link
+                href="/gizlilik-politikasi"
+                className="transition hover:text-white/70"
+              >
+                {t.privacy}
+              </Link>
+
+              <Link
+                href="/kullanim-sartlari"
+                className="transition hover:text-white/70"
+              >
+                {t.terms}
+              </Link>
+
+              <Link
+                href="/mesafeli-satis-sozlesmesi"
+                className="transition hover:text-white/70"
+              >
+                {t.distanceSales}
+              </Link>
+
+              <Link
+                href="/iade-politikasi"
+                className="transition hover:text-white/70"
+              >
+                {t.refundPolicy}
+              </Link>
+
+              <a
+                href="https://wa.me/905530739292"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 transition hover:text-white/70"
+              >
+                <FaWhatsapp />
+                WhatsApp
+              </a>
+            </div>
           </div>
         </footer>
       </section>

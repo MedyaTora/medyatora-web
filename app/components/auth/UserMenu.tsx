@@ -134,8 +134,12 @@ function getWalletBalance(user: PublicUser) {
   return formatMoney(user.balance_tl, "TL");
 }
 
+function getDisplayName(user: PublicUser) {
+  return user.full_name || user.username || user.email;
+}
+
 function getInitials(user: PublicUser) {
-  const value = (user.full_name || user.email || "MT").trim();
+  const value = getDisplayName(user).trim();
   const parts = value.split(/\s+/).filter(Boolean);
 
   if (parts.length >= 2) {
@@ -250,8 +254,8 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
 
   if (loading) {
     return (
-      <div className="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.045] px-3 text-[11px] font-bold text-white/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:h-12 sm:rounded-2xl sm:px-4 sm:text-sm">
-        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white sm:h-2 sm:w-2" />
+      <div className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.045] px-4 text-xs font-black text-white/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+        <span className="h-2 w-2 animate-pulse rounded-full bg-white" />
         {text.checking}
       </div>
     );
@@ -259,18 +263,18 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
 
   return (
     <>
-      <div className="flex w-full flex-wrap items-center justify-end gap-1.5 sm:w-auto sm:gap-2">
+      <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
         {showLocaleSwitcher && (
-          <div className="flex h-9 items-center overflow-hidden rounded-full border border-white/10 bg-white/[0.05] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:h-12 sm:rounded-2xl">
+          <div className="flex h-10 items-center overflow-hidden rounded-2xl border border-white/10 bg-black/25 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:h-11">
             {localeOptions.map((locale) => (
               <button
                 key={locale}
                 type="button"
                 onClick={() => handleLocaleChange(locale)}
-                className={`h-7 rounded-full px-2 text-[9px] font-black uppercase transition sm:h-9 sm:rounded-xl sm:px-3 sm:text-[10px] ${
+                className={`h-8 rounded-xl px-3 text-[10px] font-black uppercase transition ${
                   selectedLocale === locale
-                    ? "bg-white text-black"
-                    : "text-white/60 hover:bg-white/[0.08] hover:text-white"
+                    ? "bg-white text-black shadow-[0_10px_22px_rgba(255,255,255,0.1)]"
+                    : "text-white/55 hover:bg-white/[0.08] hover:text-white"
                 }`}
                 aria-label={`${text.language}: ${locale.toUpperCase()}`}
               >
@@ -281,45 +285,45 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
         )}
 
         {user ? (
-          <>
-            <div className="flex h-9 min-w-0 items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:h-12 sm:rounded-2xl sm:px-3">
-              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-[9px] font-black text-black shadow-[0_10px_26px_rgba(255,255,255,0.12)] sm:h-9 sm:w-9 sm:rounded-xl sm:text-xs">
+          <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
+            <div className="flex h-10 min-w-0 items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.055] px-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:h-11 sm:px-3">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-white text-[10px] font-black text-black shadow-[0_10px_26px_rgba(255,255,255,0.1)] sm:h-8 sm:w-8">
                 {getInitials(user)}
               </div>
 
               <div className="min-w-0">
-                <p className="hidden text-[9px] font-black uppercase tracking-[0.16em] text-white/50 sm:block">
+                <p className="hidden text-[8px] font-black uppercase tracking-[0.14em] text-white/38 sm:block">
                   {text.welcome}
                 </p>
 
-                <p className="max-w-[74px] truncate text-[11px] font-black text-white sm:max-w-[118px] sm:text-xs">
-                  {user.full_name || user.email}
+                <p className="max-w-[96px] truncate text-[11px] font-black leading-4 text-white sm:max-w-[125px] sm:text-xs">
+                  {getDisplayName(user)}
                 </p>
               </div>
             </div>
 
             <a
               href="/hesabim/bakiye"
-              className="flex h-9 min-w-0 items-center justify-between gap-1.5 rounded-full border border-white/12 bg-white/[0.06] px-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition hover:-translate-y-0.5 hover:border-white/25 hover:bg-white/[0.1] sm:h-12 sm:rounded-2xl sm:px-3"
+              className="flex h-10 items-center gap-2 rounded-2xl border border-white/10 bg-black/25 px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition hover:-translate-y-0.5 hover:border-white/22 hover:bg-white/[0.08] sm:h-11"
             >
               <div className="min-w-0">
-                <p className="hidden text-[9px] font-black uppercase tracking-[0.16em] text-white/45 sm:block">
+                <p className="hidden text-[8px] font-black uppercase tracking-[0.14em] text-white/35 sm:block">
                   {text.wallet}
                 </p>
 
-                <p className="max-w-[82px] truncate text-[11px] font-black text-white sm:max-w-none sm:text-xs">
+                <p className="max-w-[90px] truncate text-[11px] font-black leading-4 text-white sm:max-w-[116px] sm:text-xs">
                   {walletBalance}
                 </p>
               </div>
 
-              <span className="hidden shrink-0 rounded-xl border border-white/10 bg-black/20 px-2 py-1 text-[10px] font-black text-white/70 sm:inline-flex">
+              <span className="hidden rounded-lg border border-white/10 bg-white/[0.045] px-2 py-1 text-[9px] font-black text-white/60 sm:inline-flex">
                 {user.preferred_currency}
               </span>
             </a>
 
             <a
               href="/hesabim"
-              className="inline-flex h-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] px-3 text-[11px] font-black text-white/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:bg-white/[0.1] hover:text-white sm:h-12 sm:rounded-2xl sm:px-4 sm:text-xs"
+              className="inline-flex h-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.055] px-4 text-[11px] font-black text-white/86 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:bg-white/[0.1] hover:text-white sm:h-11 sm:text-xs"
             >
               {text.account}
             </a>
@@ -327,17 +331,17 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
             <button
               type="button"
               onClick={handleLogout}
-              className="inline-flex h-9 items-center justify-center rounded-full border border-[#6b2232] bg-[#31101b]/70 px-3 text-[11px] font-black text-[#f2c7d1] transition hover:-translate-y-0.5 hover:bg-[#4a1625] sm:h-12 sm:rounded-2xl sm:px-4 sm:text-xs"
+              className="inline-flex h-10 items-center justify-center rounded-2xl border border-[#6b2232]/75 bg-[#241018]/80 px-4 text-[11px] font-black text-[#f2c7d1] transition hover:-translate-y-0.5 hover:bg-[#351321] sm:h-11 sm:text-xs"
             >
               {text.logout}
             </button>
-          </>
+          </div>
         ) : (
-          <>
+          <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
             <button
               type="button"
               onClick={() => openAuth("login")}
-              className="inline-flex h-9 items-center justify-center rounded-full border border-white/12 bg-white/[0.06] px-3 text-[11px] font-black text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:border-white/24 hover:bg-white/[0.11] sm:h-12 sm:rounded-2xl sm:px-4 sm:text-xs"
+              className="inline-flex h-10 items-center justify-center rounded-2xl border border-white/12 bg-white/[0.055] px-4 text-[11px] font-black text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:border-white/24 hover:bg-white/[0.11] sm:h-11 sm:text-xs"
             >
               {text.login}
             </button>
@@ -345,7 +349,7 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
             <button
               type="button"
               onClick={() => openAuth("register")}
-              className="inline-flex h-9 items-center justify-center rounded-full border border-white bg-white px-3 text-[11px] font-black text-black shadow-[0_16px_38px_rgba(255,255,255,0.12)] transition hover:-translate-y-0.5 hover:bg-white/90 sm:h-12 sm:rounded-2xl sm:px-4 sm:text-xs"
+              className="inline-flex h-10 items-center justify-center rounded-2xl border border-white bg-white px-4 text-[11px] font-black text-black shadow-[0_16px_38px_rgba(255,255,255,0.12)] transition hover:-translate-y-0.5 hover:bg-white/90 sm:h-11 sm:text-xs"
             >
               {text.register}
             </button>
@@ -353,12 +357,12 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
             <button
               type="button"
               onClick={handleGoogleLogin}
-              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-white/14 bg-white/[0.08] px-3 text-[11px] font-black text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:border-white/24 hover:bg-white/[0.13] sm:h-12 sm:rounded-2xl sm:px-4 sm:text-xs"
+              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-2xl border border-white/14 bg-black/25 px-4 text-[11px] font-black text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:border-white/24 hover:bg-white/[0.1] sm:h-11 sm:text-xs"
             >
               <FaGoogle className="text-[11px] sm:text-xs" />
               {text.googleLogin}
             </button>
-          </>
+          </div>
         )}
       </div>
 

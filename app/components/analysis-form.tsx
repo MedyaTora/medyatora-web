@@ -252,12 +252,12 @@ const analysisFormText: Record<Locale, AnalysisFormText> = {
     currencyTitle: "Para birimini seçin",
     currencyDesc:
       "Sonraki ekranda analiz talebi numarası, seçilen para birimi ve ödeme bilgileri gösterilecek.",
-      selectedAmount: "Seçili tutar",
-      privacyConsent:
-        "Gizlilik politikası, mesafeli satış sözleşmesi ve analiz hizmeti bilgilendirmesini okudum, onaylıyorum.",
-      privacyConsentLink: "Sözleşmeleri ve politikaları görüntüle",
-      errorPrivacyConsent:
-        "Devam etmek için gizlilik politikası ve hizmet onayını kabul etmelisin.",
+    selectedAmount: "Seçili tutar",
+    privacyConsent:
+      "Gizlilik politikası, mesafeli satış sözleşmesi ve analiz hizmeti bilgilendirmesini okudum, onaylıyorum.",
+    privacyConsentLink: "Sözleşmeleri ve politikaları görüntüle",
+    errorPrivacyConsent:
+      "Devam etmek için gizlilik politikası ve hizmet onayını kabul etmelisin.",
 
     back: "Geri",
     continue: "Devam Et",
@@ -527,12 +527,12 @@ const analysisFormText: Record<Locale, AnalysisFormText> = {
     currencyTitle: "Choose currency",
     currencyDesc:
       "On the next screen, the analysis request number, selected currency, and payment details will be shown.",
-      selectedAmount: "Selected amount",
-      privacyConsent:
-        "I have read and accept the privacy policy, distance sales agreement, and analysis service information.",
-      privacyConsentLink: "View agreements and policies",
-      errorPrivacyConsent:
-        "You must accept the privacy policy and service confirmation to continue.",
+    selectedAmount: "Selected amount",
+    privacyConsent:
+      "I have read and accept the privacy policy, distance sales agreement, and analysis service information.",
+    privacyConsentLink: "View agreements and policies",
+    errorPrivacyConsent:
+      "You must accept the privacy policy and service confirmation to continue.",
 
     back: "Back",
     continue: "Continue",
@@ -802,12 +802,12 @@ const analysisFormText: Record<Locale, AnalysisFormText> = {
     currencyTitle: "Выберите валюту",
     currencyDesc:
       "На следующем экране будет показан номер заявки, выбранная валюта и платёжная информация.",
-      selectedAmount: "Выбранная сумма",
-      privacyConsent:
-        "Я прочитал(а) и принимаю политику конфиденциальности, дистанционный договор продажи и информацию об услуге анализа.",
-      privacyConsentLink: "Посмотреть договоры и политики",
-      errorPrivacyConsent:
-        "Чтобы продолжить, необходимо принять политику конфиденциальности и условия услуги.",
+    selectedAmount: "Выбранная сумма",
+    privacyConsent:
+      "Я прочитал(а) и принимаю политику конфиденциальности, дистанционный договор продажи и информацию об услуге анализа.",
+    privacyConsentLink: "Посмотреть договоры и политики",
+    errorPrivacyConsent:
+      "Чтобы продолжить, необходимо принять политику конфиденциальности и условия услуги.",
 
     back: "Назад",
     continue: "Продолжить",
@@ -1012,7 +1012,7 @@ function FieldLabel({
   required?: boolean;
 }) {
   return (
-    <label className="mb-2 block text-[11px] font-black uppercase tracking-[0.22em] text-white/42">
+    <label className="mb-2 block text-[10px] font-black uppercase tracking-[0.18em] text-white/42 sm:text-[11px] sm:tracking-[0.22em]">
       {children}
       {required && <span className="ml-1 text-white/70">*</span>}
     </label>
@@ -1036,7 +1036,7 @@ function PremiumInput({
       onChange={onChange}
       placeholder={placeholder}
       type={type}
-      className="w-full rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3.5 text-sm font-semibold text-white outline-none placeholder:text-white/28 transition focus:border-white/25 focus:bg-white/[0.065]"
+      className="min-h-[52px] w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-4 text-[15px] font-semibold text-white outline-none placeholder:text-white/30 transition focus:border-white/25 focus:bg-white/[0.075] sm:min-h-[54px] sm:text-sm"
     />
   );
 }
@@ -1056,7 +1056,7 @@ function PremiumTextarea({
       onChange={onChange}
       placeholder={placeholder}
       rows={5}
-      className="min-h-[130px] w-full resize-none rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3.5 text-sm font-semibold leading-7 text-white outline-none placeholder:text-white/28 transition focus:border-white/25 focus:bg-white/[0.065]"
+      className="min-h-[150px] w-full resize-none rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-4 text-[15px] font-semibold leading-7 text-white outline-none placeholder:text-white/30 transition focus:border-white/25 focus:bg-white/[0.075] sm:text-sm"
     />
   );
 }
@@ -1074,7 +1074,7 @@ function PremiumSelect({
     <select
       value={value}
       onChange={onChange}
-      className="w-full rounded-2xl border border-white/10 bg-[#111318] px-4 py-3.5 text-sm font-semibold text-white outline-none transition focus:border-white/25 focus:bg-[#151820]"
+      className="min-h-[52px] w-full rounded-2xl border border-white/10 bg-[#111318] px-4 py-4 text-[15px] font-semibold text-white outline-none transition focus:border-white/25 focus:bg-[#151820] sm:min-h-[54px] sm:text-sm"
     >
       {children}
     </select>
@@ -1100,14 +1100,14 @@ function ChoiceCard({
     <button
       type="button"
       onClick={onClick}
-      className={`group relative overflow-hidden rounded-[26px] border p-5 text-left transition hover:-translate-y-0.5 ${
+      className={`group relative w-full overflow-hidden rounded-[24px] border p-4 text-left transition hover:-translate-y-0.5 sm:rounded-[26px] sm:p-5 ${
         active
           ? "border-white/24 bg-white/[0.095] text-white shadow-[0_18px_40px_rgba(0,0,0,0.32)]"
           : "border-white/10 bg-white/[0.035] text-white hover:border-white/18 hover:bg-white/[0.055]"
       }`}
     >
       <div
-        className={`mb-4 flex h-11 w-11 items-center justify-center rounded-2xl border text-base ${
+        className={`mb-3 flex h-10 w-10 items-center justify-center rounded-2xl border text-base sm:mb-4 sm:h-11 sm:w-11 ${
           active
             ? "border-white/18 bg-black/45 text-white"
             : "border-white/10 bg-black/25 text-white/82"
@@ -1116,10 +1116,10 @@ function ChoiceCard({
         {Icon ? <Icon /> : <FaCircleQuestion />}
       </div>
 
-      <h4 className="text-lg font-black">{title}</h4>
+      <h4 className="text-base font-black leading-6 sm:text-lg">{title}</h4>
 
       <p
-        className={`mt-2 text-sm leading-6 ${
+        className={`mt-2 text-[13px] leading-6 sm:text-sm ${
           active ? "text-white/74" : "text-white/58"
         }`}
       >
@@ -1149,7 +1149,7 @@ function StepPill({
 
   return (
     <div
-      className={`rounded-full border px-3 py-2 text-[11px] font-black uppercase tracking-[0.14em] transition ${
+      className={`shrink-0 rounded-full border px-3 py-2 text-[10px] font-black uppercase tracking-[0.11em] transition sm:text-[11px] sm:tracking-[0.14em] ${
         active
           ? "border-white/28 bg-white/[0.12] text-white"
           : done
@@ -1164,11 +1164,13 @@ function StepPill({
 
 function MiniInfoCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[22px] border border-white/10 bg-white/[0.04] p-4">
-      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/38">
+    <div className="rounded-[20px] border border-white/10 bg-white/[0.045] p-4 sm:rounded-[22px]">
+      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/38 sm:text-[11px] sm:tracking-[0.18em]">
         {label}
       </p>
-      <p className="mt-2 text-lg font-black leading-7 text-white">{value}</p>
+      <p className="mt-2 text-sm font-black leading-6 text-white sm:text-base sm:leading-7">
+        {value}
+      </p>
     </div>
   );
 }
@@ -1383,7 +1385,7 @@ export default function AnalysisForm() {
         data?.id ||
         "";
 
-        const isFreeAnalysis =
+      const isFreeAnalysis =
         data?.isFreeAnalysis === true ||
         data?.freeAnalysisUsed === true ||
         data?.paymentRequired === false;
@@ -1422,13 +1424,13 @@ export default function AnalysisForm() {
   return (
     <div
       ref={formTopRef}
-      className="relative scroll-mt-24 overflow-hidden rounded-[34px] border border-white/10 bg-[#080a0d] p-4 shadow-[0_28px_100px_rgba(0,0,0,0.45)] ring-1 ring-white/[0.025] sm:p-5 md:p-7"
+      className="relative -mx-1 scroll-mt-24 overflow-hidden rounded-[28px] border border-white/10 bg-[#080a0d] p-3 shadow-[0_28px_100px_rgba(0,0,0,0.45)] ring-1 ring-white/[0.025] sm:mx-0 sm:rounded-[34px] sm:p-5 md:p-7"
     >
       <div className="pointer-events-none absolute -right-32 -top-32 h-80 w-80 rounded-full bg-white/[0.03] blur-[90px]" />
       <div className="pointer-events-none absolute -bottom-40 left-1/4 h-80 w-80 rounded-full bg-white/[0.025] blur-[100px]" />
 
       <div className="relative">
-      <div className="mb-6 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-visible sm:pb-0">
+        <div className="mb-5 flex gap-2 overflow-x-auto rounded-2xl border border-white/10 bg-black/20 p-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mb-6 sm:flex-wrap sm:overflow-visible sm:border-0 sm:bg-transparent sm:p-0">
           <StepPill step={1} currentStep={step} label={t.platform} />
           <StepPill step={2} currentStep={step} label={t.target} />
           <StepPill step={3} currentStep={step} label={t.detail} />
@@ -1437,16 +1439,16 @@ export default function AnalysisForm() {
 
         <div className="mb-6 grid gap-4 lg:mb-7 lg:grid-cols-[1fr_0.82fr] lg:gap-5">
           <div>
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-white/72">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-white/72 sm:px-4 sm:text-xs sm:tracking-[0.18em]">
               <span className="h-1.5 w-1.5 rounded-full bg-white/85" />
               {t.heroBadge}
             </div>
 
-            <h2 className="text-3xl font-black tracking-tight text-white sm:text-4xl md:text-5xl">
+            <h2 className="text-[28px] font-black leading-tight tracking-tight text-white sm:text-4xl md:text-5xl">
               {t.heroTitle}
             </h2>
 
-            <p className="mt-3 max-w-3xl text-sm leading-6 text-white/64 md:mt-4 md:text-base md:leading-7">
+            <p className="mt-3 max-w-3xl text-[13px] leading-6 text-white/64 md:mt-4 md:text-base md:leading-7">
               {t.heroDesc}
             </p>
 
@@ -1477,15 +1479,15 @@ export default function AnalysisForm() {
 
         {step === 1 && (
           <>
-            <p className="text-xs font-black uppercase tracking-[0.22em] text-white/42">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/42 sm:text-xs sm:tracking-[0.22em]">
               {t.platformEyebrow}
             </p>
 
-            <h3 className="mt-2 text-2xl font-black text-white sm:text-3xl">
+            <h3 className="mt-2 text-2xl font-black leading-tight text-white sm:text-3xl">
               {t.platformTitle}
             </h3>
 
-            <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-5 grid gap-3 sm:mt-6 sm:grid-cols-2 xl:grid-cols-4">
               {platformOptions.map((platform) => (
                 <ChoiceCard
                   key={platform.key}
@@ -1503,11 +1505,11 @@ export default function AnalysisForm() {
 
         {step === 2 && (
           <>
-            <p className="text-xs font-black uppercase tracking-[0.22em] text-white/42">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/42 sm:text-xs sm:tracking-[0.22em]">
               {t.accountTypeEyebrow}
             </p>
 
-            <h3 className="mt-2 text-2xl font-black text-white sm:text-3xl">
+            <h3 className="mt-2 text-2xl font-black leading-tight text-white sm:text-3xl">
               {t.accountTypeTitle}
             </h3>
 
@@ -1515,7 +1517,7 @@ export default function AnalysisForm() {
               {t.accountTypeDesc}
             </p>
 
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
+            <div className="mt-5 grid gap-3 sm:mt-6 md:grid-cols-2">
               {accountTypeOptions.map((option) => (
                 <ChoiceCard
                   key={option.value}
@@ -1530,15 +1532,15 @@ export default function AnalysisForm() {
             </div>
 
             <div className="mt-8">
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-white/42">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/42 sm:text-xs sm:tracking-[0.22em]">
                 {t.goalEyebrow}
               </p>
 
-              <h3 className="mt-2 text-2xl font-black text-white sm:text-3xl">
+              <h3 className="mt-2 text-2xl font-black leading-tight text-white sm:text-3xl">
                 {t.goalTitle}
               </h3>
 
-              <div className="mt-6 grid gap-4 md:grid-cols-2">
+              <div className="mt-5 grid gap-3 sm:mt-6 md:grid-cols-2">
                 {goalOptions.map((option) => (
                   <ChoiceCard
                     key={option.value}
@@ -1556,15 +1558,15 @@ export default function AnalysisForm() {
 
         {step === 3 && (
           <>
-            <p className="text-xs font-black uppercase tracking-[0.22em] text-white/42">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/42 sm:text-xs sm:tracking-[0.22em]">
               {t.detailEyebrow}
             </p>
 
-            <h3 className="mt-2 text-2xl font-black text-white sm:text-3xl">
+            <h3 className="mt-2 text-2xl font-black leading-tight text-white sm:text-3xl">
               {t.detailTitle}
             </h3>
 
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
+            <div className="mt-5 grid gap-4 sm:mt-6 md:grid-cols-2">
               <div>
                 <FieldLabel required>{t.usernameLabel}</FieldLabel>
                 <PremiumInput
@@ -1642,11 +1644,11 @@ export default function AnalysisForm() {
 
         {step === 4 && (
           <>
-            <p className="text-xs font-black uppercase tracking-[0.22em] text-white/42">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/42 sm:text-xs sm:tracking-[0.22em]">
               {t.contactEyebrow}
             </p>
 
-            <h3 className="mt-2 text-2xl font-black text-white sm:text-3xl">
+            <h3 className="mt-2 text-2xl font-black leading-tight text-white sm:text-3xl">
               {t.contactTitle}
             </h3>
 
@@ -1654,18 +1656,18 @@ export default function AnalysisForm() {
               {t.contactDesc}
             </p>
 
-            <div className="mt-6 grid gap-4 md:grid-cols-3">
+            <div className="mt-5 grid gap-3 sm:mt-6 md:grid-cols-3">
               <MiniInfoCard label={t.summaryPlatform} value={selectedPlatformTitle} />
               <MiniInfoCard label={t.summaryAccountType} value={accountType || "-"} />
               <MiniInfoCard label={t.summaryGoal} value={mainGoal || "-"} />
             </div>
 
-            <div className="mt-6 rounded-[28px] border border-white/10 bg-black/20 p-5">
-              <h4 className="text-2xl font-black text-white">
+            <div className="mt-6 rounded-[26px] border border-white/10 bg-black/20 p-4 sm:rounded-[28px] sm:p-5">
+              <h4 className="text-xl font-black text-white sm:text-2xl">
                 {t.contactInfoTitle}
               </h4>
 
-              <div className="mt-5 grid gap-4 md:grid-cols-3">
+              <div className="mt-5 grid gap-4 lg:grid-cols-3">
                 <div>
                   <FieldLabel required>{t.fullNameLabel}</FieldLabel>
                   <PremiumInput
@@ -1703,14 +1705,14 @@ export default function AnalysisForm() {
               </div>
             </div>
 
-            <div className="mt-6 rounded-[28px] border border-white/10 bg-white/[0.035] p-5">
+            <div className="mt-6 rounded-[26px] border border-white/10 bg-white/[0.035] p-4 sm:rounded-[28px] sm:p-5">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                  <p className="text-xs font-black uppercase tracking-[0.18em] text-white/38">
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-white/38 sm:text-xs">
                     {t.paymentInfoLabel}
                   </p>
 
-                  <h4 className="mt-2 text-2xl font-black text-white">
+                  <h4 className="mt-2 text-xl font-black text-white sm:text-2xl">
                     {t.currencyTitle}
                   </h4>
 
@@ -1729,7 +1731,7 @@ export default function AnalysisForm() {
                 </div>
               </div>
 
-              <div className="mt-5 flex flex-wrap gap-3">
+              <div className="mt-5 grid gap-3 sm:grid-cols-3">
                 {(["TL", "USD", "RUB"] as CurrencyCode[]).map((currency) => {
                   const active = selectedCurrency === currency;
 
@@ -1738,7 +1740,7 @@ export default function AnalysisForm() {
                       key={currency}
                       type="button"
                       onClick={() => setSelectedCurrency(currency)}
-                      className={`rounded-full border px-4 py-2.5 text-sm font-black transition ${
+                      className={`rounded-2xl border px-4 py-3 text-sm font-black transition ${
                         active
                           ? "border-white/28 bg-white/[0.13] text-white"
                           : "border-white/10 bg-white/[0.035] text-white/72 hover:border-white/18 hover:bg-white/[0.055]"
@@ -1771,7 +1773,6 @@ export default function AnalysisForm() {
                   </a>
                 </span>
               </label>
-
             </div>
           </>
         )}
@@ -1782,12 +1783,12 @@ export default function AnalysisForm() {
           </div>
         )}
 
-<div className="sticky bottom-3 z-20 mt-8 flex flex-col gap-3 rounded-3xl border border-white/10 bg-[#080a0d]/95 p-3 shadow-[0_18px_60px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:static sm:flex-row sm:items-center sm:justify-between sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none sm:backdrop-blur-0">
+        <div className="sticky bottom-3 z-20 mt-8 grid gap-3 rounded-3xl border border-white/10 bg-[#080a0d]/95 p-3 shadow-[0_18px_60px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:static sm:flex sm:flex-row sm:items-center sm:justify-between sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none sm:backdrop-blur-0">
           <button
             type="button"
             onClick={previousStep}
             disabled={step === 1 || loading}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-black text-white transition hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3.5 text-sm font-black text-white transition hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
           >
             <FaArrowLeft />
             {t.back}
@@ -1797,7 +1798,7 @@ export default function AnalysisForm() {
             <button
               type="button"
               onClick={nextStep}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white/[0.92] px-6 py-3 text-sm font-black text-black transition hover:bg-white"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-white/[0.92] px-6 py-3.5 text-sm font-black text-black transition hover:bg-white sm:w-auto"
             >
               {t.continue}
               <FaArrowRight />
@@ -1807,7 +1808,7 @@ export default function AnalysisForm() {
               type="button"
               onClick={submitAnalysisAndGoToPayment}
               disabled={loading}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white/[0.92] px-6 py-3 text-sm font-black text-black transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-white/[0.92] px-6 py-3.5 text-sm font-black text-black transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
             >
               {loading ? t.creating : t.finishAndPay}
               {loading ? <FaPaperPlane /> : <FaCheck />}
