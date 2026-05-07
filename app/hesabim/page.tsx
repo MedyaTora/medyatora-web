@@ -6,7 +6,7 @@ import { getCurrentUser } from "@/lib/auth/current-user";
 import { getMysqlPool } from "@/lib/mysql";
 import UserMenu from "@/app/components/auth/UserMenu";
 import EmailVerificationCard from "@/app/components/auth/EmailVerificationCard";
-import BalanceTopUpCard from "../components/account/BalanceTopUpCard";
+import BalanceTopUpCard from "@/app/components/account/BalanceTopUpCard";
 
 type LocaleCode = "tr" | "en" | "ru";
 
@@ -544,6 +544,7 @@ function getTransactionAmountClass(value: string | number) {
 
   return "text-white/70";
 }
+
 export default async function AccountPage() {
   const user = await getCurrentUser();
 
@@ -782,19 +783,19 @@ export default async function AccountPage() {
                       </p>
                     </div>
 
-                    <div className="flex shrink-0 flex-wrap gap-2">
-                    <BalanceTopUpCard
-  userFullName={user.full_name}
-  userEmail={user.email}
-/>
+                    <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+                      <BalanceTopUpCard
+                        userFullName={user.full_name}
+                        userEmail={user.email}
+                      />
 
-  <Link
-    href="/smmtora"
-    className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-2 text-xs font-bold text-white/85 transition hover:-translate-y-0.5 hover:bg-white/[0.1] hover:text-white"
-  >
-    {t.shopWithBalance}
-  </Link>
-</div>
+                      <Link
+                        href="/smmtora"
+                        className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-2 text-xs font-black text-white transition hover:-translate-y-0.5 hover:bg-white/[0.1]"
+                      >
+                        {t.shopWithBalance}
+                      </Link>
+                    </div>
                   </div>
 
                   <div className="mt-5 grid gap-3 sm:grid-cols-3">
@@ -861,12 +862,6 @@ export default async function AccountPage() {
           initialEmailVerified={Boolean(user.email_verified)}
           initialFreeAnalysisGrantedAt={userWithExtraFields.free_analysis_granted_at}
         />
-
-<BalanceTopUpCard />
-
-  userFullName={user.full_name}
-  userEmail={user.email}
-
 
         <section className="rounded-[30px] border border-white/10 bg-[#080a0d]/92 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.28)] ring-1 ring-white/[0.025] backdrop-blur-xl md:p-6">
           <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
@@ -1230,4 +1225,4 @@ export default async function AccountPage() {
       </div>
     </main>
   );
-} 
+}

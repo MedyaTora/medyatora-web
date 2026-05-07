@@ -192,12 +192,13 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, 0, NULL)
         `<b>Ad Soyad:</b> ${escapeTelegramHtml(fullName)}`,
         `<b>E-posta:</b> ${escapeTelegramHtml(email)}`,
         `<b>Tutar:</b> ${escapeTelegramHtml(formatAmount(amount, currency))}`,
+        `<b>Ödeme Yöntemi:</b> ${escapeTelegramHtml(paymentMethod)}`,
         `<b>Destek Kanalı:</b> ${escapeTelegramHtml(supportChannel || "-")}`,
         userNote
           ? `<b>Kullanıcı Notu:</b> ${escapeTelegramHtml(userNote)}`
           : "",
         "",
-        "Kullanıcı dekont gönderdim dedi. Admin panelinden dekontu kontrol edip yatırım talebini onaylayın.",
+        "Yeni bakiye yükleme ödeme bildirimi oluşturuldu. Kullanıcı dekont ilettiğinde admin panelinden kontrol edip talebi onaylayın.",,
       ]
         .filter(Boolean)
         .join("\n")
