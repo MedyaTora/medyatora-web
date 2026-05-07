@@ -227,21 +227,32 @@ function LuxuryMonogram({
       width={size}
       height={size}
       viewBox="0 0 100 100"
-      fill="currentColor"
+      fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
       aria-hidden="true"
     >
-      {/* Left and right pillars */}
-      <rect x="10" y="16" width="8" height="68" rx="1.5" />
-      <rect x="82" y="16" width="8" height="68" rx="1.5" />
+      <path
+        d="M16 84V16H30L50 54L70 16H84V84"
+        stroke="currentColor"
+        strokeWidth="8"
+        strokeLinecap="square"
+        strokeLinejoin="miter"
+      />
 
-      {/* M shape */}
-      <polygon points="18,16 30,16 44,44 50,34 56,44 70,16 82,16 58,66 50,54 42,66" />
+      <path
+        d="M43 35H57"
+        stroke="currentColor"
+        strokeWidth="4.5"
+        strokeLinecap="square"
+      />
 
-      {/* Small centered T */}
-      <rect x="43" y="38" width="14" height="4" rx="1.5" />
-      <rect x="48" y="38" width="4" height="16" rx="1.5" />
+      <path
+        d="M50 35V49"
+        stroke="currentColor"
+        strokeWidth="4.5"
+        strokeLinecap="square"
+      />
     </svg>
   );
 }
@@ -329,13 +340,11 @@ export default function Home() {
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#040507] text-white">
-      {/* Background glows */}
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute left-1/2 top-[-12rem] h-[28rem] w-[28rem] -translate-x-1/2 rounded-full bg-white/[0.03] blur-3xl" />
-        <div className="absolute bottom-[-8rem] left-1/2 h-[20rem] w-[32rem] -translate-x-1/2 rounded-full bg-white/[0.025] blur-3xl" />
+        <div className="absolute left-1/2 top-[-14rem] h-[30rem] w-[30rem] -translate-x-1/2 rounded-full bg-white/[0.03] blur-3xl" />
+        <div className="absolute bottom-[-8rem] left-1/2 h-[20rem] w-[34rem] -translate-x-1/2 rounded-full bg-white/[0.025] blur-3xl" />
       </div>
 
-      {/* Grid background */}
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.14]"
         style={{
@@ -347,11 +356,11 @@ export default function Home() {
 
       <MinimalStars />
 
-      <section className="relative mx-auto flex min-h-screen w-full max-w-6xl flex-col px-4 py-6 sm:px-6 lg:px-8">
+      <section className="relative mx-auto flex min-h-screen w-full max-w-6xl flex-col px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
         <header className="flex items-start justify-between gap-4 border-b border-white/8 pb-5 sm:items-center">
           <Link href="/" className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-visible text-white drop-shadow-[0_0_18px_rgba(255,255,255,0.14)]">
-              <LuxuryMonogram size={34} />
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-visible text-white drop-shadow-[0_0_18px_rgba(255,255,255,0.16)]">
+              <LuxuryMonogram size={38} />
             </div>
 
             <div className="min-w-0">
@@ -370,15 +379,15 @@ export default function Home() {
           </div>
         </header>
 
-        <div className="flex flex-1 items-center justify-center py-10 sm:py-14 lg:py-16">
+        <div className="flex flex-1 items-center justify-center py-7 sm:py-12 lg:py-14">
           <div className="mx-auto w-full max-w-5xl text-center">
             <div className="mx-auto mb-5 inline-flex border border-white/10 bg-white/[0.045] px-4 py-2 text-[9px] font-black uppercase tracking-[0.22em] text-white/55 shadow-[0_12px_45px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:mb-6 sm:px-5 sm:text-xs sm:tracking-[0.28em]">
               {t.heroBadge}
             </div>
 
-            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center overflow-visible text-white drop-shadow-[0_0_28px_rgba(255,255,255,0.16)] sm:mb-7 sm:h-24 sm:w-24">
-              <LuxuryMonogram size={72} className="sm:hidden" />
-              <LuxuryMonogram size={112} className="hidden sm:block" />
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center overflow-visible text-white drop-shadow-[0_0_28px_rgba(255,255,255,0.18)] sm:mb-7 sm:h-24 sm:w-24">
+              <LuxuryMonogram size={74} className="sm:hidden" />
+              <LuxuryMonogram size={116} className="hidden sm:block" />
             </div>
 
             <div className="relative mx-auto">
@@ -399,7 +408,7 @@ export default function Home() {
               {t.heroLine2}
             </p>
 
-            <div className="mx-auto mt-10 grid max-w-5xl gap-4 md:grid-cols-3">
+            <div className="mx-auto mt-9 grid max-w-5xl gap-4 md:grid-cols-3">
               {t.actionCards.map((card) => {
                 const Icon = card.icon;
 
@@ -511,7 +520,7 @@ export default function Home() {
               </Link>
 
               <a
-                href="https://wa.me/"
+                href="https://wa.me/905530739292"
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex items-center gap-2 transition hover:text-white/70"
