@@ -25,6 +25,17 @@ function createTopupRequestNumber() {
   return `MT-TOPUP-${datePart}-${random}`;
 }
 
+function safeText(value: unknown, maxLength = 500) {
+  return String(value || "").trim().slice(0, maxLength);
+}
+
+function escapeTelegramHtml(value: unknown) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 function formatAmount(amount: number, currency: CurrencyCode) {
   return `${amount.toLocaleString("tr-TR", {
     minimumFractionDigits: 2,
@@ -62,6 +73,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           success: false,
+          ok: false,
           error: "Para yükleme talebi oluşturmak için giriş yapmalısınız.",
         },
         { status: 401 }
@@ -72,13 +84,48 @@ export async function POST(request: Request) {
 
     const currency = normalizeCurrency(body?.currency);
     const amount = Number(body?.amount || 0);
-    const userNote = String(body?.user_note || "").trim();
-    const supportChannel = String(body?.support_channel || "whatsapp").trim();
+
+    const fullName =
+      safeText(body?.full_name, 255) || safeText(user.full_name, 255) || null;
+
+    const email =
+      safeText(body?.email, 255) || safeText(user.email, 255) || null;
+
+    const phoneNumber = safeText(user.phone_number, 50) || null;
+
+    const userNote = safeText(body?.user_note, 2000);
+    const supportChannel = safeText(
+      body?.support_channel || "whatsapp_telegram",
+      50
+    );
+
+    if (!fullName) {
+      return NextResponse.json(
+        {
+          success: false,
+          ok: false,
+          error: "Ad soyad alanı zorunludur.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!email) {
+      return NextResponse.json(
+        {
+          success: false,
+          ok: false,
+          error: "E-posta alanı zorunludur.",
+        },
+        { status: 400 }
+      );
+    }
 
     if (!Number.isFinite(amount) || amount <= 0) {
       return NextResponse.json(
         {
           success: false,
+          ok: false,
           error: "Geçerli bir yükleme tutarı girin.",
         },
         { status: 400 }
@@ -89,6 +136,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           success: false,
+          ok: false,
           error: "Minimum yükleme tutarı 1 olmalıdır.",
         },
         { status: 400 }
@@ -97,10 +145,6 @@ export async function POST(request: Request) {
 
     const requestNumber = createTopupRequestNumber();
     const pool = getMysqlPool();
-
-    const fullName = user.full_name || null;
-    const email = user.email || null;
-    const phoneNumber = user.phone_number || null;
 
     const [result] = await pool.query(
       `
@@ -138,18 +182,19 @@ export async function POST(request: Request) {
 
     await sendTelegramMessage(
       [
-        "💰 <b>Yeni Bakiye Yükleme Bildirimi</b>",
+        "💰 <b>Yeni Yatırım Talebi</b>",
         "",
-        `<b>Talep No:</b> ${requestNumber}`,
-        `<b>Kullanıcı ID:</b> ${user.id}`,
-        `<b>Ad Soyad:</b> ${fullName || "-"}`,
-        `<b>E-posta:</b> ${email || "-"}`,
-        `<b>Telefon:</b> ${phoneNumber || "-"}`,
-        `<b>Tutar:</b> ${formatAmount(amount, currency)}`,
-        `<b>Destek Kanalı:</b> ${supportChannel || "-"}`,
-        userNote ? `<b>Kullanıcı Notu:</b> ${userNote}` : "",
+        `<b>Yatırım No:</b> ${escapeTelegramHtml(requestNumber)}`,
+        `<b>Kullanıcı ID:</b> ${escapeTelegramHtml(user.id)}`,
+        `<b>Ad Soyad:</b> ${escapeTelegramHtml(fullName)}`,
+        `<b>E-posta:</b> ${escapeTelegramHtml(email)}`,
+        `<b>Tutar:</b> ${escapeTelegramHtml(formatAmount(amount, currency))}`,
+        `<b>Destek Kanalı:</b> ${escapeTelegramHtml(supportChannel || "-")}`,
+        userNote
+          ? `<b>Kullanıcı Notu:</b> ${escapeTelegramHtml(userNote)}`
+          : "",
         "",
-        "Admin panelinden dekontu kontrol edip yatırım talebini onaylayın.",
+        "Kullanıcı dekont gönderdim dedi. Admin panelinden dekontu kontrol edip yatırım talebini onaylayın.",
       ]
         .filter(Boolean)
         .join("\n")
@@ -157,17 +202,21 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
+      ok: true,
       requestId: insertId,
+      request_id: insertId,
       requestNumber,
+      request_number: requestNumber,
       amount,
       currency,
       message:
-        "Para yükleme bildiriminiz alındı. Dekont kontrolünden sonra bakiyeniz hesabınıza yansıtılacaktır.",
+        "Yatırım talebiniz oluşturuldu. Dekont kontrolünden sonra bakiyeniz hesabınıza yansıtılacaktır.",
     });
   } catch (error) {
     return NextResponse.json(
       {
         success: false,
+        ok: false,
         error:
           error instanceof Error
             ? error.message
