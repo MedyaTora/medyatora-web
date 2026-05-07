@@ -578,35 +578,42 @@ export default async function AdminPage({
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <a
-                href="/admin"
-                className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/[0.08]"
-              >
-                Başvurular
-              </a>
+  <a
+    href="/admin"
+    className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/[0.08]"
+  >
+    Başvurular
+  </a>
 
-              <a
-                href="/admin/customers"
-                className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/[0.08]"
-              >
-                Müşteriler
-              </a>
+  <a
+    href="/admin/customers"
+    className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/[0.08]"
+  >
+    Müşteriler
+  </a>
 
-              <a
-                href="/admin/profit"
-                className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2.5 text-sm font-medium text-emerald-300 transition hover:bg-emerald-400/15"
-              >
-                Kâr Paneli
-              </a>
+  <a
+    href="/admin/users"
+    className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/[0.08]"
+  >
+    Kullanıcılar
+  </a>
 
-              <a
-  href="/admin/balance-topups"
-  className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/[0.08]"
->
-  Yatırımlar
-</a>
+  <a
+    href="/admin/balance-topups"
+    className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/[0.08]"
+  >
+    Yatırımlar
+  </a>
 
-            </div>
+  <a
+    href="/admin/profit"
+    className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2.5 text-sm font-medium text-emerald-300 transition hover:bg-emerald-400/15"
+  >
+    Kâr Paneli
+  </a>
+</div>
+
           </div>
         </header>
 

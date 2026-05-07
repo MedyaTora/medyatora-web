@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { FaGoogle } from "react-icons/fa6";
 import AuthModal from "./AuthModal";
 import { detectBrowserLocale, saveLocale, type Locale } from "@/lib/i18n";
 
@@ -232,10 +231,6 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
     setAuthOpen(true);
   }
 
-  function handleGoogleLogin() {
-    window.location.href = "/api/auth/google/start";
-  }
-
   function handleLocaleChange(locale: Locale) {
     setSelectedLocale(locale);
     saveLocale(locale);
@@ -286,7 +281,7 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
 
         {user ? (
           <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
-            <div className="flex h-10 min-w-0 items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.055] px-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:h-11 sm:px-3">
+           <div className="hidden h-10 min-w-0 items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.055] px-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:flex sm:h-11 sm:px-3">
               <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-white text-[10px] font-black text-black shadow-[0_10px_26px_rgba(255,255,255,0.1)] sm:h-8 sm:w-8">
                 {getInitials(user)}
               </div>
@@ -304,7 +299,7 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
 
             <a
               href="/hesabim/bakiye"
-              className="flex h-10 items-center gap-2 rounded-2xl border border-white/10 bg-black/25 px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition hover:-translate-y-0.5 hover:border-white/22 hover:bg-white/[0.08] sm:h-11"
+             className="hidden h-10 items-center gap-2 rounded-2xl border border-white/10 bg-black/25 px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition hover:-translate-y-0.5 hover:border-white/22 hover:bg-white/[0.08] md:flex md:h-11"
             >
               <div className="min-w-0">
                 <p className="hidden text-[8px] font-black uppercase tracking-[0.14em] text-white/35 sm:block">
@@ -323,7 +318,7 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
 
             <a
               href="/hesabim"
-              className="inline-flex h-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.055] px-4 text-[11px] font-black text-white/86 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:bg-white/[0.1] hover:text-white sm:h-11 sm:text-xs"
+              className="inline-flex h-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.055] px-3 text-[10px] font-black text-white/86 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:bg-white/[0.1] hover:text-white sm:h-11 sm:rounded-2xl sm:px-4 sm:text-xs"
             >
               {text.account}
             </a>
@@ -331,7 +326,7 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
             <button
               type="button"
               onClick={handleLogout}
-              className="inline-flex h-10 items-center justify-center rounded-2xl border border-[#6b2232]/75 bg-[#241018]/80 px-4 text-[11px] font-black text-[#f2c7d1] transition hover:-translate-y-0.5 hover:bg-[#351321] sm:h-11 sm:text-xs"
+              className="inline-flex h-9 items-center justify-center rounded-xl border border-[#6b2232]/75 bg-[#241018]/80 px-3 text-[10px] font-black text-[#f2c7d1] transition hover:-translate-y-0.5 hover:bg-[#351321] sm:h-11 sm:rounded-2xl sm:px-4 sm:text-xs"  
             >
               {text.logout}
             </button>
@@ -354,14 +349,6 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
               {text.register}
             </button>
 
-            <button
-              type="button"
-              onClick={handleGoogleLogin}
-              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-2xl border border-white/14 bg-black/25 px-4 text-[11px] font-black text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:border-white/24 hover:bg-white/[0.1] sm:h-11 sm:text-xs"
-            >
-              <FaGoogle className="text-[11px] sm:text-xs" />
-              {text.googleLogin}
-            </button>
           </div>
         )}
       </div>

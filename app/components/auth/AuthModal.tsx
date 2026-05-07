@@ -406,13 +406,13 @@ export default function AuthModal({
       />
 
       <div className="relative z-10 w-full max-w-[920px] overflow-hidden rounded-[34px] border border-white/10 bg-[#0b1120] text-white shadow-[0_30px_140px_rgba(0,0,0,0.72)]">
-        <div className="pointer-events-none absolute -left-28 -top-28 h-72 w-72 rounded-full bg-emerald-400/10 blur-3xl" />
-        <div className="pointer-events-none absolute -right-28 -bottom-28 h-72 w-72 rounded-full bg-sky-400/10 blur-3xl" />
+      <div className="pointer-events-none absolute -left-28 -top-28 h-72 w-72 rounded-full bg-white/[0.055] blur-3xl" />
+      <div className="pointer-events-none absolute -right-28 -bottom-28 h-72 w-72 rounded-full bg-white/[0.035] blur-3xl" />
 
         <div className="relative grid lg:grid-cols-[0.9fr_1.1fr]">
           <aside className="hidden border-r border-white/10 bg-white/[0.025] p-8 lg:block">
             <a href="/" className="inline-flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-400 text-base font-black text-black">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/12 bg-white text-base font-black text-black shadow-[0_16px_42px_rgba(255,255,255,0.10)]">
                 MT
               </div>
 
@@ -427,7 +427,7 @@ export default function AuthModal({
             </a>
 
             <div className="mt-10">
-              <p className="text-xs font-bold uppercase tracking-[0.24em] text-emerald-300">
+            <p className="text-xs font-bold uppercase tracking-[0.24em] text-white/45">
                 {t.benefitsEyebrow}
               </p>
 
@@ -442,7 +442,7 @@ export default function AuthModal({
 
             <div className="mt-8 space-y-3">
               <div className="rounded-3xl border border-white/10 bg-black/20 p-5">
-                <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl border border-emerald-400/20 bg-emerald-400/10 text-emerald-300">
+              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl border border-white/12 bg-white/[0.06] text-white">
                   <FaUserCheck />
                 </div>
                 <p className="text-sm font-bold">{t.freeAnalysisTitle}</p>
@@ -452,7 +452,7 @@ export default function AuthModal({
               </div>
 
               <div className="rounded-3xl border border-white/10 bg-black/20 p-5">
-                <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl border border-sky-400/20 bg-sky-400/10 text-sky-300">
+              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl border border-white/12 bg-white/[0.06] text-white">
                   <FaShieldHalved />
                 </div>
                 <p className="text-sm font-bold">{t.secureSessionTitle}</p>
@@ -525,7 +525,7 @@ export default function AuthModal({
               <button
                 type="button"
                 onClick={handleGoogleLogin}
-                className="flex w-full items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white px-5 py-3.5 text-sm font-black text-black transition hover:-translate-y-0.5 hover:bg-emerald-300"
+            className="flex w-full items-center justify-center gap-3 rounded-2xl border border-white/15 bg-white px-5 py-3.5 text-sm font-black text-black shadow-[0_16px_44px_rgba(255,255,255,0.10)] transition hover:-translate-y-0.5 hover:bg-white/90"
               >
                 <FaGoogle className="text-base" />
                 {t.googleButton}
@@ -551,7 +551,7 @@ export default function AuthModal({
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder={t.fullNamePlaceholder}
                     autoComplete="name"
-                    className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3.5 text-white outline-none placeholder:text-white/28 transition focus:border-emerald-300/70 focus:bg-white/[0.08]"
+                    className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3.5 text-white outline-none placeholder:text-white/28 transition focus:border-white/35 focus:bg-white/[0.08]"
                   />
                 </div>
               )}
@@ -566,7 +566,7 @@ export default function AuthModal({
                   placeholder={t.emailPlaceholder}
                   type="email"
                   autoComplete="email"
-                  className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3.5 text-white outline-none placeholder:text-white/28 transition focus:border-emerald-300/70 focus:bg-white/[0.08]"
+                  className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3.5 text-white outline-none placeholder:text-white/28 transition focus:border-white/35 focus:bg-white/[0.08]"
                 />
               </div>
 
@@ -580,7 +580,7 @@ export default function AuthModal({
                   placeholder={t.passwordPlaceholder}
                   type="password"
                   autoComplete={isRegister ? "new-password" : "current-password"}
-                  className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3.5 text-white outline-none placeholder:text-white/28 transition focus:border-emerald-300/70 focus:bg-white/[0.08]"
+                  className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3.5 text-white outline-none placeholder:text-white/28 transition focus:border-white/35 focus:bg-white/[0.08]"
                 />
               </div>
 
@@ -595,7 +595,7 @@ export default function AuthModal({
                     placeholder={t.passwordAgainPlaceholder}
                     type="password"
                     autoComplete="new-password"
-                    className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3.5 text-white outline-none placeholder:text-white/28 transition focus:border-emerald-300/70 focus:bg-white/[0.08]"
+                    className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3.5 text-white outline-none placeholder:text-white/28 transition focus:border-white/35 focus:bg-white/[0.08]"
                   />
                 </div>
               )}
@@ -610,7 +610,7 @@ export default function AuthModal({
                 type="button"
                 onClick={handleSubmit}
                 disabled={loading}
-                className="mt-2 w-full rounded-2xl bg-white px-5 py-4 text-sm font-black text-black transition hover:-translate-y-0.5 hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+             className="mt-2 w-full rounded-2xl bg-white px-5 py-4 text-sm font-black text-black shadow-[0_16px_44px_rgba(255,255,255,0.10)] transition hover:-translate-y-0.5 hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
               >
                 {loading
                   ? t.processing
