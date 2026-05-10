@@ -6,6 +6,11 @@ import type {
   RowDataPacket,
 } from "mysql2/promise";
 import { getMysqlPool } from "@/lib/mysql";
+import {
+  buildMedyatoraMailHtml,
+  buildMedyatoraMailText,
+  sendMail,
+} from "@/lib/mail";
 
 type ActionType = "approve" | "reject";
 type CurrencyCode = "TL" | "USD" | "RUB";
@@ -324,6 +329,92 @@ async function sendTelegramAdminNotification({
   }
 }
 
+async function sendTopupResultMail({
+  action,
+  to,
+  fullName,
+  requestNumber,
+  amount,
+  currency,
+  adminNote,
+  afterBalance,
+}: {
+  action: ActionType;
+  to: string | null;
+  fullName: string | null;
+  requestNumber: string;
+  amount: number;
+  currency: CurrencyCode;
+  adminNote?: string | null;
+  afterBalance?: number;
+}) {
+  if (!to) return;
+
+  const displayName = fullName || to;
+  const formattedAmount = formatMoney(amount, currency);
+  const formattedAfterBalance =
+    typeof afterBalance === "number" ? formatMoney(afterBalance, currency) : "";
+
+  const isApproved = action === "approve";
+
+  const title = isApproved
+    ? "Yatırımınız Onaylandı"
+    : "Yatırım Talebiniz Reddedildi";
+
+  const subject = isApproved
+    ? "Yatırımınız Onaylandı | MedyaTora"
+    : "Yatırım Talebiniz Reddedildi | MedyaTora";
+
+  const bodyLines = isApproved
+    ? [
+        `Yatırım Tutarı: ${formattedAmount}`,
+        `Durum: Onaylandı`,
+        formattedAfterBalance
+          ? `Güncel ${currency} Bakiyeniz: ${formattedAfterBalance}`
+          : "",
+        "Onaylanan tutar MedyaTora hesabınızdaki ilgili para birimi bakiyesine yansıtılmıştır.",
+        "Bakiyenizi kullanarak sipariş oluşturabilir veya hesap hareketlerinizi Hesabım alanından takip edebilirsiniz.",
+      ].filter(Boolean)
+    : [
+        `Yatırım Tutarı: ${formattedAmount}`,
+        `Durum: Reddedildi`,
+        adminNote
+          ? `Admin Notu: ${adminNote}`
+          : "Dekont veya ödeme bilgisi doğrulanamadığı için yatırım talebiniz reddedilmiştir.",
+        "Bilgilerin doğru olduğunu düşünüyorsanız destek hattı üzerinden bizimle iletişime geçebilirsiniz.",
+      ];
+
+  try {
+    await sendMail({
+      to,
+      subject,
+      text: buildMedyatoraMailText({
+        title,
+        intro: `Merhaba ${displayName},`,
+        highlightLabel: "Yatırım Numaranız",
+        highlightValue: requestNumber,
+        bodyLines,
+        footerNote: "İyi günler dileriz. MedyaTora Ekibi",
+      }),
+      html: buildMedyatoraMailHtml({
+        title,
+        intro: `Merhaba ${displayName},`,
+        highlightLabel: "Yatırım Numaranız",
+        highlightValue: requestNumber,
+        bodyLines,
+        footerNote: "İyi günler dileriz. MedyaTora Ekibi",
+      }),
+    });
+  } catch (mailError) {
+    console.error(
+      isApproved
+        ? "BALANCE_TOPUP_APPROVED_MAIL_ERROR"
+        : "BALANCE_TOPUP_REJECTED_MAIL_ERROR",
+      mailError
+    );
+  }
+}
+
 export async function POST(request: Request) {
   const cookieStore = await cookies();
   const adminCookie = cookieStore.get("medyatora_admin")?.value;
@@ -443,6 +534,9 @@ export async function POST(request: Request) {
     }
 
     if (action === "reject") {
+      const rejectNote =
+        adminNote || "Dekont doğrulanamadığı için bakiye yükleme reddedildi.";
+
       await connection.query<ResultSetHeader>(
         `
         UPDATE balance_topup_requests
@@ -454,10 +548,7 @@ export async function POST(request: Request) {
         WHERE id = ?
           AND status = 'pending'
         `,
-        [
-          adminNote || "Dekont doğrulanamadığı için bakiye yükleme reddedildi.",
-          requestId,
-        ]
+        [rejectNote, requestId]
       );
 
       await connection.commit();
@@ -470,6 +561,16 @@ export async function POST(request: Request) {
         email: topupRequest.email,
         amount,
         currency,
+      });
+
+      await sendTopupResultMail({
+        action,
+        to: topupRequest.email,
+        fullName: topupRequest.full_name,
+        requestNumber: topupRequest.request_number,
+        amount,
+        currency,
+        adminNote: rejectNote,
       });
 
       return NextResponse.json({
@@ -561,6 +662,16 @@ export async function POST(request: Request) {
       email: topupRequest.email || user.email,
       amount,
       currency,
+    });
+
+    await sendTopupResultMail({
+      action,
+      to: topupRequest.email || user.email,
+      fullName: topupRequest.full_name || user.full_name,
+      requestNumber: topupRequest.request_number,
+      amount,
+      currency,
+      afterBalance,
     });
 
     return NextResponse.json({

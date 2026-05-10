@@ -1602,6 +1602,49 @@ function DesktopCurrencySwitcher({
   );
 }
 
+function DesktopLanguageSwitcher({
+  selectedLocale,
+  onChange,
+}: {
+  selectedLocale: LocaleCode;
+  onChange: (locale: LocaleCode) => void;
+}) {
+  return (
+    <div className="hidden items-center overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:flex">
+      {localeOptions.map((locale) => (
+        <button
+          key={locale}
+          type="button"
+          onClick={() => onChange(locale)}
+          className={`rounded-xl px-3 py-2 text-[11px] font-black uppercase transition ${
+            selectedLocale === locale
+              ? "bg-white text-black shadow-[0_10px_24px_rgba(255,255,255,0.10)]"
+              : "text-white/56 hover:bg-white/[0.08] hover:text-white"
+          }`}
+        >
+          {locale}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function PaketlerMonogram({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 100 100"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
+      <rect x="14" y="20" width="8" height="60" />
+      <rect x="78" y="20" width="8" height="60" />
+      <polygon points="22,20 32,20 50,56 68,20 78,20 50,76" />
+      <path d="M 39 30 L 61 30 L 58 36 L 52 36 L 52 48 L 48 48 L 48 36 L 42 36 Z" />
+    </svg>
+  );
+}
+
 function formatNumber(value: number) {
   return value.toLocaleString("tr-TR");
 }
@@ -1944,6 +1987,20 @@ export default function PaketlerPage() {
     }
   }
 
+  const navHomeLabel =
+    selectedLocale === "ru"
+      ? "Главная"
+      : selectedLocale === "en"
+        ? "Home"
+        : "Ana Sayfa";
+
+  const navPackagesLabel =
+    selectedLocale === "ru"
+      ? "Пакеты"
+      : selectedLocale === "en"
+        ? "Packages"
+        : "Paketler";
+
   return (
 
     <main className="mt-premium-page text-white">
@@ -1951,62 +2008,75 @@ export default function PaketlerPage() {
       <section className="relative overflow-hidden">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_34%),linear-gradient(to_bottom,rgba(255,255,255,0.02),transparent_28%,transparent_72%,rgba(255,255,255,0.02))]" />
 
-        <div className="relative mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-16">
-          <header className="mb-8 flex flex-col gap-4 rounded-[28px] border border-white/10 bg-[#080a0d]/92 p-4 shadow-[0_18px_70px_rgba(0,0,0,0.36)] ring-1 ring-white/[0.025] backdrop-blur-xl lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="relative mx-auto max-w-6xl px-4 pt-4 pb-8 sm:px-6 sm:pt-5 md:pt-6 md:pb-14">
+        <header className="mb-8 flex flex-col gap-4 border-b border-white/5 pb-5 sm:mb-10 lg:flex-row lg:items-center lg:justify-between">
+            <Link
+              href="/"
+              className="group flex min-w-0 items-center gap-3"
+            >
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.14)]">
+                <PaketlerMonogram className="h-8 w-8" />
+              </div>
+
+              <div className="min-w-0">
+                <p className="truncate text-sm font-black uppercase tracking-[0.34em] text-white sm:text-base">
+                  MedyaTora
+                </p>
+
+                <p className="mt-1 text-[9px] font-black uppercase tracking-[0.24em] text-white/34 sm:text-[10px]">
+                  {navPackagesLabel}
+                </p>
+              </div>
+            </Link>
+
+            <nav className="flex flex-wrap items-center justify-center gap-3 lg:absolute lg:left-1/2 lg:-translate-x-1/2">
               <Link
                 href="/"
-                className="inline-flex w-fit items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-black text-white/72 transition hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
+                className="text-[12px] font-black uppercase tracking-[0.22em] text-white/62 transition hover:text-white sm:text-[13px]"
               >
-                ← {t.home}
+                {navHomeLabel}
               </Link>
 
-              <div className="flex flex-wrap items-center gap-2">
-                <MobileLanguageSwitcher
-                  selectedLocale={selectedLocale}
-                  onChange={handleLocaleChange}
-                />
+              <span className="h-5 w-px bg-white/18" />
 
-                <MobileCurrencySwitcher
-                  selectedCurrency={selectedCurrency}
-                  onChange={setSelectedCurrency}
-                />
-              </div>
-            </div>
+              <Link
+                href="/analiz"
+                className="text-[12px] font-black uppercase tracking-[0.22em] text-white/62 transition hover:text-white sm:text-[13px]"
+              >
+                {t.analysis}
+              </Link>
 
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-end">
-              <nav className="flex flex-wrap gap-2">
-                <Link
-                  href="/analiz"
-                  className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-white/70 transition hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
-                >
-                  {t.analysis}
-                </Link>
+              <span className="h-5 w-px bg-white/18" />
 
-                <Link
-                  href="/smmtora"
-                  className="rounded-2xl border border-white/12 bg-white px-4 py-2.5 text-sm font-black text-black shadow-[0_14px_34px_rgba(255,255,255,0.08)] transition hover:bg-white/90"
-                >
-                  SMMTora
-                </Link>
+              <Link
+                href="/paketler"
+                className="text-[12px] font-black uppercase tracking-[0.22em] text-white transition sm:text-[13px]"
+              >
+                {navPackagesLabel}
+              </Link>
 
-                <a
-                  href={getWhatsappLink()}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-white/70 transition hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
-                >
-                  {t.whatsappSupport}
-                </a>
-              </nav>
+              <span className="h-5 w-px bg-white/18" />
 
-              <DesktopCurrencySwitcher
+              <Link
+                href="/smmtora"
+                className="text-[12px] font-black uppercase tracking-[0.22em] text-white/62 transition hover:text-white sm:text-[13px]"
+              >
+                SMMTora
+              </Link>
+            </nav>
+
+            <div className="flex flex-wrap items-center justify-start gap-2 lg:justify-end">
+              <MobileLanguageSwitcher
                 selectedLocale={selectedLocale}
-                selectedCurrency={selectedCurrency}
-                onChange={setSelectedCurrency}
+                onChange={handleLocaleChange}
               />
 
-              <UserMenu />
+              <DesktopLanguageSwitcher
+                selectedLocale={selectedLocale}
+                onChange={handleLocaleChange}
+              />
+
+              <UserMenu showLocaleSwitcher={false} />
             </div>
           </header>
 

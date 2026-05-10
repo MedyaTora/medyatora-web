@@ -325,11 +325,6 @@ export default async function AdminBalanceTopupsPage({
                           {getStatusLabel(row.status)}
                         </span>
 
-                        {Boolean(row.receipt_sent) && (
-                          <span className="rounded-full border border-white/12 bg-white/[0.06] px-3 py-1 text-xs font-bold text-white/70">
-                            Dekont bildirildi
-                          </span>
-                        )}
                       </div>
 
                       <div className="mt-3 grid gap-1 text-sm leading-6 text-white/58">
@@ -352,13 +347,6 @@ export default async function AdminBalanceTopupsPage({
                             E-posta:
                           </span>{" "}
                           {row.email || "-"}
-                        </p>
-
-                        <p>
-                          <span className="font-bold text-white/80">
-                            Telefon:
-                          </span>{" "}
-                          {row.phone_number || "-"}
                         </p>
 
                         <p>

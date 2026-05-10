@@ -577,40 +577,47 @@ export default async function AdminPage({
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-3">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
   <a
-    href="/admin"
-    className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/[0.08]"
+    href="#basvurular"
+    className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-center text-sm font-bold text-white/85 transition hover:bg-white/[0.08]"
   >
     Başvurular
   </a>
 
   <a
-    href="/admin/customers"
-    className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/[0.08]"
+    href="#siparisler"
+    className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-center text-sm font-bold text-white/85 transition hover:bg-white/[0.08]"
   >
-    Müşteriler
-  </a>
-
-  <a
-    href="/admin/users"
-    className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/[0.08]"
-  >
-    Kullanıcılar
+    Siparişler
   </a>
 
   <a
     href="/admin/balance-topups"
-    className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/[0.08]"
+    className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-center text-sm font-bold text-white/85 transition hover:bg-white/[0.08]"
   >
     Yatırımlar
   </a>
 
   <a
+    href="/admin/users"
+    className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-center text-sm font-bold text-white/85 transition hover:bg-white/[0.08]"
+  >
+    Kullanıcılar
+  </a>
+
+  <a
     href="/admin/profit"
-    className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2.5 text-sm font-medium text-emerald-300 transition hover:bg-emerald-400/15"
+    className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2.5 text-center text-sm font-bold text-emerald-300 transition hover:bg-emerald-400/15"
   >
     Kâr Paneli
+  </a>
+
+  <a
+    href="#ziyaretciler"
+    className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-center text-sm font-bold text-white/85 transition hover:bg-white/[0.08]"
+  >
+    Ziyaretçiler
   </a>
 </div>
 
@@ -649,17 +656,18 @@ export default async function AdminPage({
             </div>
 
             <FilterSelect
-              label="Başvuru Durumu"
-              name="analysisStatus"
-              defaultValue={analysisStatus}
-              options={[
-                ["all", "Tümü"],
-                ["pending", "Bekliyor"],
-                ["in_review", "İnceleniyor"],
-                ["contacted", "İletişime Geçildi"],
-                ["completed", "Tamamlandı"],
-              ]}
-            />
+  label="Başvuru Durumu"
+  name="analysisStatus"
+  defaultValue={analysisStatus}
+  options={[
+    ["all", "Tümü"],
+    ["pending", "Bekliyor"],
+    ["in_review", "İnceleniyor"],
+    ["contacted", "İletişime Geçildi"],
+    ["completed", "Tamamlandı"],
+    ["cancelled", "İptal Edildi"],
+  ]}
+/>
 
             <FilterSelect
               label="Sipariş Durumu"
@@ -703,30 +711,36 @@ export default async function AdminPage({
           </div>
         </form>
 
-        <VisitorTrackingPanel
-          sessions={visitorPageItems}
-          events={allVisitorEvents}
-          total={filteredVisitors.length}
-          page={visitorPage}
-          totalPages={visitorTotalPages}
-          queryParams={queryParams}
-        />
+        <div id="basvurular" className="scroll-mt-8">
+  <AnalysisTable
+    items={analysisPageItems}
+    total={filteredAnalysis.length}
+    page={analysisPage}
+    totalPages={analysisTotalPages}
+    queryParams={queryParams}
+  />
+</div>
 
-        <AnalysisTable
-          items={analysisPageItems}
-          total={filteredAnalysis.length}
-          page={analysisPage}
-          totalPages={analysisTotalPages}
-          queryParams={queryParams}
-        />
+<div id="siparisler" className="scroll-mt-8">
+  <OrderTable
+    items={orderPageItems}
+    total={filteredOrders.length}
+    page={orderPage}
+    totalPages={orderTotalPages}
+    queryParams={queryParams}
+  />
+</div>
 
-        <OrderTable
-          items={orderPageItems}
-          total={filteredOrders.length}
-          page={orderPage}
-          totalPages={orderTotalPages}
-          queryParams={queryParams}
-        />
+<div id="ziyaretciler" className="scroll-mt-8">
+  <VisitorTrackingPanel
+    sessions={visitorPageItems}
+    events={allVisitorEvents}
+    total={filteredVisitors.length}
+    page={visitorPage}
+    totalPages={visitorTotalPages}
+    queryParams={queryParams}
+  />
+</div>
       </div>
     </main>
   );

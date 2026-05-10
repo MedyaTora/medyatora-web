@@ -327,11 +327,11 @@ export default function Home() {
         <div className="flex flex-1 items-center py-6 sm:py-14 lg:py-16">
           <div className="mx-auto w-full max-w-6xl">
             <div className="mx-auto max-w-4xl text-center">
-              <div className="mx-auto mb-4 inline-flex border border-white/10 bg-white/[0.045] px-4 py-2 text-[8px] font-black uppercase tracking-[0.22em] text-white/55 shadow-[0_12px_45px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:mb-6 sm:px-5 sm:text-xs sm:tracking-[0.38em]">
+              <div className="mx-auto mb-3 inline-flex border border-white/10 bg-white/[0.045] px-4 py-2 text-[8px] font-black uppercase tracking-[0.22em] text-white/55 shadow-[0_12px_45px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:mb-4 sm:px-5 sm:text-xs sm:tracking-[0.38em]">
                 {t.heroBadge}
               </div>
 
-              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center text-white drop-shadow-[0_0_38px_rgba(255,255,255,0.18)] sm:mb-7 sm:h-28 sm:w-28">
+              <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center text-white drop-shadow-[0_0_38px_rgba(255,255,255,0.18)] sm:mb-4 sm:h-28 sm:w-28">
                 <LuxuryMonogram size={74} className="sm:hidden" />
                 <LuxuryMonogram size={122} className="hidden sm:block" />
               </div>
@@ -342,15 +342,15 @@ export default function Home() {
                 </h1>
               </div>
 
-              <p className="mx-auto mt-4 max-w-2xl text-[11px] font-medium uppercase leading-6 tracking-[0.12em] text-white/52 sm:mt-7 sm:text-sm sm:leading-7 sm:tracking-[0.22em]">
+              <p className="mx-auto mt-3 max-w-2xl text-[11px] font-medium uppercase leading-6 tracking-[0.12em] text-white/52 sm:mt-5 sm:text-sm sm:leading-7 sm:tracking-[0.22em]">
                 {t.heroLine1}
               </p>
 
-              <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-white/55 sm:text-base sm:leading-7">
+              <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-white/55 sm:text-base sm:leading-7">
                 {t.heroLine2}
               </p>
 
-              <div className="mx-auto mt-7 grid max-w-5xl gap-3 sm:mt-8 md:mt-10 md:grid-cols-3 md:gap-4">
+              <div className="mx-auto mt-6 grid max-w-5xl gap-3 sm:mt-7 md:mt-8 md:grid-cols-3 md:gap-4">
                 {t.actionCards.map((card) => {
                   const Icon = card.icon;
 

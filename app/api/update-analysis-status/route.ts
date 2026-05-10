@@ -7,6 +7,7 @@ const ALLOWED_ANALYSIS_STATUSES = [
   "in_review",
   "contacted",
   "completed",
+  "cancelled",
 ] as const;
 
 type AnalysisStatus = (typeof ALLOWED_ANALYSIS_STATUSES)[number];
@@ -24,6 +25,7 @@ function getStatusLabel(status: string) {
     in_review: "İnceleniyor",
     contacted: "İletişime Geçildi",
     completed: "Tamamlandı",
+    cancelled: "İptal Edildi",
   };
 
   return map[status] || status;
@@ -134,7 +136,10 @@ export async function POST(req: Request) {
 
       await sendTelegramMessage(telegramMessage);
     } catch (telegramError) {
-      console.error("Telegram analiz status bildirimi gönderilemedi:", telegramError);
+      console.error(
+        "Telegram analiz status bildirimi gönderilemedi:",
+        telegramError
+      );
     }
 
     return NextResponse.json(

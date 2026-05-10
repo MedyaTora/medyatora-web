@@ -397,7 +397,7 @@ export default function AuthModal({
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-[2147483647] flex min-h-screen items-center justify-center overflow-y-auto bg-[#030712]/90 px-4 py-8 backdrop-blur-2xl">
+    <div className="fixed inset-0 z-[2147483647] flex min-h-screen items-center justify-center overflow-y-auto bg-[#030712]/90 px-3 py-4 backdrop-blur-2xl sm:px-4">
       <button
         type="button"
         aria-label={t.close}
@@ -405,225 +405,227 @@ export default function AuthModal({
         className="absolute inset-0 h-full w-full cursor-default"
       />
 
-      <div className="relative z-10 w-full max-w-[920px] overflow-hidden rounded-[34px] border border-white/10 bg-[#0b1120] text-white shadow-[0_30px_140px_rgba(0,0,0,0.72)]">
-      <div className="pointer-events-none absolute -left-28 -top-28 h-72 w-72 rounded-full bg-white/[0.055] blur-3xl" />
-      <div className="pointer-events-none absolute -right-28 -bottom-28 h-72 w-72 rounded-full bg-white/[0.035] blur-3xl" />
+      <div className="relative z-10 max-h-[calc(100dvh-28px)] w-full max-w-[820px] overflow-hidden rounded-[26px] border border-white/10 bg-[#0b1120] text-white shadow-[0_30px_140px_rgba(0,0,0,0.72)] sm:rounded-[30px]">
+        <div className="pointer-events-none absolute -left-24 -top-24 h-64 w-64 rounded-full bg-white/[0.055] blur-3xl" />
+        <div className="pointer-events-none absolute -right-24 -bottom-24 h-64 w-64 rounded-full bg-white/[0.035] blur-3xl" />
 
-        <div className="relative grid lg:grid-cols-[0.9fr_1.1fr]">
-          <aside className="hidden border-r border-white/10 bg-white/[0.025] p-8 lg:block">
-            <a href="/" className="inline-flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/12 bg-white text-base font-black text-black shadow-[0_16px_42px_rgba(255,255,255,0.10)]">
-                MT
-              </div>
-
-              <div>
-                <div className="text-lg font-black tracking-tight">
-                  MedyaTora
+        <div className="relative max-h-[calc(100dvh-28px)] overflow-y-auto">
+          <div className="grid lg:grid-cols-[0.82fr_1.18fr]">
+            <aside className="hidden border-r border-white/10 bg-white/[0.025] p-6 lg:block">
+              <a href="/" className="inline-flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/12 bg-white text-sm font-black text-black shadow-[0_16px_42px_rgba(255,255,255,0.10)]">
+                  MT
                 </div>
-                <div className="text-xs text-white/45">
-                  {t.brandSubtitle}
+
+                <div>
+                  <div className="text-base font-black tracking-tight">
+                    MedyaTora
+                  </div>
+                  <div className="text-[11px] text-white/45">
+                    {t.brandSubtitle}
+                  </div>
                 </div>
-              </div>
-            </a>
+              </a>
 
-            <div className="mt-10">
-            <p className="text-xs font-bold uppercase tracking-[0.24em] text-white/45">
-                {t.benefitsEyebrow}
-              </p>
-
-              <h2 className="mt-4 text-3xl font-black leading-tight tracking-tight">
-                {t.benefitsTitle}
-              </h2>
-
-              <p className="mt-4 text-sm leading-7 text-white/60">
-                {t.benefitsDesc}
-              </p>
-            </div>
-
-            <div className="mt-8 space-y-3">
-              <div className="rounded-3xl border border-white/10 bg-black/20 p-5">
-              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl border border-white/12 bg-white/[0.06] text-white">
-                  <FaUserCheck />
-                </div>
-                <p className="text-sm font-bold">{t.freeAnalysisTitle}</p>
-                <p className="mt-2 text-sm leading-6 text-white/55">
-                  {t.freeAnalysisDesc}
-                </p>
-              </div>
-
-              <div className="rounded-3xl border border-white/10 bg-black/20 p-5">
-              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl border border-white/12 bg-white/[0.06] text-white">
-                  <FaShieldHalved />
-                </div>
-                <p className="text-sm font-bold">{t.secureSessionTitle}</p>
-                <p className="mt-2 text-sm leading-6 text-white/55">
-                  {t.secureSessionDesc}
-                </p>
-              </div>
-            </div>
-          </aside>
-
-          <section className="p-5 sm:p-7 md:p-8">
-            <div className="mb-6 flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.24em] text-white/40">
-                  {t.accountEyebrow}
+              <div className="mt-7">
+                <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-white/45">
+                  {t.benefitsEyebrow}
                 </p>
 
-                <h2 className="mt-2 text-3xl font-black tracking-tight">
-                  {isRegister ? t.registerTitle : t.loginTitle}
+                <h2 className="mt-3 text-2xl font-black leading-tight tracking-tight">
+                  {t.benefitsTitle}
                 </h2>
 
-                <p className="mt-2 max-w-md text-sm leading-6 text-white/55">
-                  {isRegister ? t.registerDesc : t.loginDesc}
+                <p className="mt-3 text-sm leading-6 text-white/60">
+                  {t.benefitsDesc}
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={onClose}
-                aria-label={t.close}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white/60 transition hover:bg-white/[0.08] hover:text-white"
-              >
-                <FaXmark />
-              </button>
-            </div>
+              <div className="mt-6 space-y-3">
+                <div className="rounded-[24px] border border-white/10 bg-black/20 p-4">
+                  <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl border border-white/12 bg-white/[0.06] text-white">
+                    <FaUserCheck />
+                  </div>
+                  <p className="text-sm font-bold">{t.freeAnalysisTitle}</p>
+                  <p className="mt-1.5 text-xs leading-5 text-white/55">
+                    {t.freeAnalysisDesc}
+                  </p>
+                </div>
 
-            <div className="mb-6 grid grid-cols-2 rounded-2xl border border-white/10 bg-black/20 p-1">
-              <button
-                type="button"
-                onClick={() => {
-                  setMode("login");
-                  setError("");
-                }}
-                className={`rounded-xl px-4 py-3 text-sm font-black transition ${
-                  mode === "login"
-                    ? "bg-white text-black shadow-sm"
-                    : "text-white/55 hover:bg-white/[0.05] hover:text-white"
-                }`}
-              >
-                {t.loginTab}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setMode("register");
-                  setError("");
-                }}
-                className={`rounded-xl px-4 py-3 text-sm font-black transition ${
-                  mode === "register"
-                    ? "bg-white text-black shadow-sm"
-                    : "text-white/55 hover:bg-white/[0.05] hover:text-white"
-                }`}
-              >
-                {t.registerTab}
-              </button>
-            </div>
-
-            <div className="mb-5">
-              <button
-                type="button"
-                onClick={handleGoogleLogin}
-            className="flex w-full items-center justify-center gap-3 rounded-2xl border border-white/15 bg-white px-5 py-3.5 text-sm font-black text-black shadow-[0_16px_44px_rgba(255,255,255,0.10)] transition hover:-translate-y-0.5 hover:bg-white/90"
-              >
-                <FaGoogle className="text-base" />
-                {t.googleButton}
-              </button>
-
-              <div className="mt-4 flex items-center gap-3">
-                <div className="h-px flex-1 bg-white/10" />
-                <span className="text-center text-[11px] font-bold uppercase tracking-[0.18em] text-white/35">
-                  {t.orText}
-                </span>
-                <div className="h-px flex-1 bg-white/10" />
+                <div className="rounded-[24px] border border-white/10 bg-black/20 p-4">
+                  <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl border border-white/12 bg-white/[0.06] text-white">
+                    <FaShieldHalved />
+                  </div>
+                  <p className="text-sm font-bold">{t.secureSessionTitle}</p>
+                  <p className="mt-1.5 text-xs leading-5 text-white/55">
+                    {t.secureSessionDesc}
+                  </p>
+                </div>
               </div>
-            </div>
+            </aside>
 
-            <div className="space-y-3">
-              {isRegister && (
+            <section className="p-4 sm:p-5 md:p-6">
+              <div className="mb-4 flex items-start justify-between gap-4">
                 <div>
-                  <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-white/40">
-                    {t.fullName}
+                  <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-white/40">
+                    {t.accountEyebrow}
+                  </p>
+
+                  <h2 className="mt-1.5 text-2xl font-black tracking-tight sm:text-3xl">
+                    {isRegister ? t.registerTitle : t.loginTitle}
+                  </h2>
+
+                  <p className="mt-1.5 max-w-md text-sm leading-5 text-white/55">
+                    {isRegister ? t.registerDesc : t.loginDesc}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label={t.close}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white/60 transition hover:bg-white/[0.08] hover:text-white"
+                >
+                  <FaXmark />
+                </button>
+              </div>
+
+              <div className="mb-4 grid grid-cols-2 rounded-2xl border border-white/10 bg-black/20 p-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode("login");
+                    setError("");
+                  }}
+                  className={`rounded-xl px-4 py-2.5 text-sm font-black transition ${
+                    mode === "login"
+                      ? "bg-white text-black shadow-sm"
+                      : "text-white/55 hover:bg-white/[0.05] hover:text-white"
+                  }`}
+                >
+                  {t.loginTab}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode("register");
+                    setError("");
+                  }}
+                  className={`rounded-xl px-4 py-2.5 text-sm font-black transition ${
+                    mode === "register"
+                      ? "bg-white text-black shadow-sm"
+                      : "text-white/55 hover:bg-white/[0.05] hover:text-white"
+                  }`}
+                >
+                  {t.registerTab}
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <button
+                  type="button"
+                  onClick={handleGoogleLogin}
+                  className="flex w-full items-center justify-center gap-3 rounded-2xl border border-white/15 bg-white px-5 py-3 text-sm font-black text-black shadow-[0_16px_44px_rgba(255,255,255,0.10)] transition hover:-translate-y-0.5 hover:bg-white/90"
+                >
+                  <FaGoogle className="text-base" />
+                  {t.googleButton}
+                </button>
+
+                <div className="mt-3 flex items-center gap-3">
+                  <div className="h-px flex-1 bg-white/10" />
+                  <span className="text-center text-[10px] font-bold uppercase tracking-[0.16em] text-white/35">
+                    {t.orText}
+                  </span>
+                  <div className="h-px flex-1 bg-white/10" />
+                </div>
+              </div>
+
+              <div className="space-y-2.5">
+                {isRegister && (
+                  <div>
+                    <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-white/40">
+                      {t.fullName}
+                    </label>
+                    <input
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder={t.fullNamePlaceholder}
+                      autoComplete="name"
+                      className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm text-white outline-none placeholder:text-white/28 transition focus:border-white/35 focus:bg-white/[0.08]"
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-white/40">
+                    {t.email}
                   </label>
                   <input
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder={t.fullNamePlaceholder}
-                    autoComplete="name"
-                    className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3.5 text-white outline-none placeholder:text-white/28 transition focus:border-white/35 focus:bg-white/[0.08]"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder={t.emailPlaceholder}
+                    type="email"
+                    autoComplete="email"
+                    className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm text-white outline-none placeholder:text-white/28 transition focus:border-white/35 focus:bg-white/[0.08]"
                   />
                 </div>
-              )}
 
-              <div>
-                <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-white/40">
-                  {t.email}
-                </label>
-                <input
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder={t.emailPlaceholder}
-                  type="email"
-                  autoComplete="email"
-                  className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3.5 text-white outline-none placeholder:text-white/28 transition focus:border-white/35 focus:bg-white/[0.08]"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-white/40">
-                  {t.password}
-                </label>
-                <input
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder={t.passwordPlaceholder}
-                  type="password"
-                  autoComplete={isRegister ? "new-password" : "current-password"}
-                  className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3.5 text-white outline-none placeholder:text-white/28 transition focus:border-white/35 focus:bg-white/[0.08]"
-                />
-              </div>
-
-              {isRegister && (
                 <div>
-                  <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-white/40">
-                    {t.passwordAgain}
+                  <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-white/40">
+                    {t.password}
                   </label>
                   <input
-                    value={passwordAgain}
-                    onChange={(e) => setPasswordAgain(e.target.value)}
-                    placeholder={t.passwordAgainPlaceholder}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder={t.passwordPlaceholder}
                     type="password"
-                    autoComplete="new-password"
-                    className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3.5 text-white outline-none placeholder:text-white/28 transition focus:border-white/35 focus:bg-white/[0.08]"
+                    autoComplete={isRegister ? "new-password" : "current-password"}
+                    className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm text-white outline-none placeholder:text-white/28 transition focus:border-white/35 focus:bg-white/[0.08]"
                   />
                 </div>
-              )}
 
-              {error && (
-                <div className="rounded-2xl border border-rose-400/25 bg-rose-400/10 px-4 py-3 text-sm leading-6 text-rose-200">
-                  {error}
-                </div>
-              )}
+                {isRegister && (
+                  <div>
+                    <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-white/40">
+                      {t.passwordAgain}
+                    </label>
+                    <input
+                      value={passwordAgain}
+                      onChange={(e) => setPasswordAgain(e.target.value)}
+                      placeholder={t.passwordAgainPlaceholder}
+                      type="password"
+                      autoComplete="new-password"
+                      className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm text-white outline-none placeholder:text-white/28 transition focus:border-white/35 focus:bg-white/[0.08]"
+                    />
+                  </div>
+                )}
 
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={loading}
-             className="mt-2 w-full rounded-2xl bg-white px-5 py-4 text-sm font-black text-black shadow-[0_16px_44px_rgba(255,255,255,0.10)] transition hover:-translate-y-0.5 hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
-              >
-                {loading
-                  ? t.processing
-                  : isRegister
-                    ? t.createAccount
-                    : t.loginButton}
-              </button>
+                {error && (
+                  <div className="rounded-2xl border border-rose-400/25 bg-rose-400/10 px-4 py-2.5 text-sm leading-5 text-rose-200">
+                    {error}
+                  </div>
+                )}
 
-              <p className="text-center text-xs leading-5 text-white/38">
-                {t.footerNote}
-              </p>
-            </div>
-          </section>
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={loading}
+                  className="mt-1.5 w-full rounded-2xl bg-white px-5 py-3.5 text-sm font-black text-black shadow-[0_16px_44px_rgba(255,255,255,0.10)] transition hover:-translate-y-0.5 hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+                >
+                  {loading
+                    ? t.processing
+                    : isRegister
+                      ? t.createAccount
+                      : t.loginButton}
+                </button>
+
+                <p className="text-center text-[11px] leading-5 text-white/38">
+                  {t.footerNote}
+                </p>
+              </div>
+            </section>
+          </div>
         </div>
       </div>
     </div>,

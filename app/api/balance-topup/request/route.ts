@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { getMysqlPool } from "@/lib/mysql";
+import {
+  buildMedyatoraMailHtml,
+  buildMedyatoraMailText,
+  sendMail,
+} from "@/lib/mail";
 
 type CurrencyCode = "TL" | "USD" | "RUB";
 
@@ -192,6 +197,8 @@ export async function POST(request: Request) {
     );
 
     const insertId = Number((result as { insertId?: number }).insertId || 0);
+    const formattedAmount = formatAmount(amount, currency);
+    const paymentMethodLabel = getPaymentMethodLabel(paymentMethod);
 
     await sendTelegramMessage(
       [
@@ -201,10 +208,8 @@ export async function POST(request: Request) {
         `<b>Kullanıcı ID:</b> ${escapeTelegramHtml(user.id)}`,
         `<b>Ad Soyad:</b> ${escapeTelegramHtml(fullName)}`,
         `<b>E-posta:</b> ${escapeTelegramHtml(email)}`,
-        `<b>Tutar:</b> ${escapeTelegramHtml(formatAmount(amount, currency))}`,
-        `<b>Ödeme Yöntemi:</b> ${escapeTelegramHtml(
-          getPaymentMethodLabel(paymentMethod)
-        )}`,
+        `<b>Tutar:</b> ${escapeTelegramHtml(formattedAmount)}`,
+        `<b>Ödeme Yöntemi:</b> ${escapeTelegramHtml(paymentMethodLabel)}`,
         `<b>Destek Kanalı:</b> ${escapeTelegramHtml(supportChannel || "-")}`,
         userNote
           ? `<b>Kullanıcı Notu:</b> ${escapeTelegramHtml(userNote)}`
@@ -215,6 +220,45 @@ export async function POST(request: Request) {
         .filter(Boolean)
         .join("\n")
     );
+
+    try {
+      await sendMail({
+        to: email,
+        subject: "Yatırım Talebiniz Alındı | MedyaTora",
+        text: buildMedyatoraMailText({
+          title: "Yatırım Talebiniz Alındı",
+          intro: `Merhaba ${fullName}, MedyaTora hesabınız için oluşturduğunuz bakiye yükleme talebiniz alınmıştır.`,
+          highlightLabel: "Yatırım Numaranız",
+          highlightValue: requestNumber,
+          bodyLines: [
+            `Yatırım Tutarı: ${formattedAmount}`,
+            `Ödeme Yöntemi: ${paymentMethodLabel}`,
+            "Durum: İnceleme Bekliyor",
+            "Dekontunuz ve ödeme bilgileriniz ekiplerimiz tarafından kontrol edilecektir.",
+            "Kontrol tamamlandıktan sonra yatırımınız onaylanırsa ilgili tutar bakiyenize yansıtılacaktır.",
+            "Detaylar için Hesabım alanından yatırım ve bakiye hareketlerinizi kontrol edebilirsiniz.",
+          ],
+          footerNote: "İyi günler dileriz. MedyaTora Ekibi",
+        }),
+        html: buildMedyatoraMailHtml({
+          title: "Yatırım Talebiniz Alındı",
+          intro: `Merhaba ${fullName}, MedyaTora hesabınız için oluşturduğunuz bakiye yükleme talebiniz alınmıştır.`,
+          highlightLabel: "Yatırım Numaranız",
+          highlightValue: requestNumber,
+          bodyLines: [
+            `Yatırım Tutarı: ${formattedAmount}`,
+            `Ödeme Yöntemi: ${paymentMethodLabel}`,
+            "Durum: İnceleme Bekliyor",
+            "Dekontunuz ve ödeme bilgileriniz ekiplerimiz tarafından kontrol edilecektir.",
+            "Kontrol tamamlandıktan sonra yatırımınız onaylanırsa ilgili tutar bakiyenize yansıtılacaktır.",
+            "Detaylar için Hesabım alanından yatırım ve bakiye hareketlerinizi kontrol edebilirsiniz.",
+          ],
+          footerNote: "İyi günler dileriz. MedyaTora Ekibi",
+        }),
+      });
+    } catch (mailError) {
+      console.error("BALANCE_TOPUP_REQUEST_MAIL_ERROR", mailError);
+    }
 
     return NextResponse.json({
       success: true,

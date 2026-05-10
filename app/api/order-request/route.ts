@@ -3,6 +3,11 @@ import { NextResponse } from "next/server";
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { getMysqlPool, hasMysqlConfig } from "@/lib/mysql";
+import {
+  buildMedyatoraMailHtml,
+  buildMedyatoraMailText,
+  sendMail,
+} from "@/lib/mail";
 
 type CurrencyCode = "TL" | "USD" | "RUB";
 type ContactType = "Telegram" | "WhatsApp" | "Instagram" | "E-posta";
@@ -315,6 +320,118 @@ async function sendTelegramMessage(text: string) {
           ? `Telegram gönderim hatası: ${error.message}`
           : "Telegram gönderiminde bilinmeyen hata oluştu.",
     };
+  }
+}
+
+async function sendOrderCreatedMail({
+  to,
+  fullName,
+  batchCode,
+  orderNumbers,
+  orderItems,
+  totalPrice,
+  currency,
+  paymentMethod,
+  status,
+}: {
+  to: string | null;
+  fullName: string;
+  batchCode: string;
+  orderNumbers: string[];
+  orderItems: OrderItemPayload[];
+  totalPrice: number;
+  currency: CurrencyCode;
+  paymentMethod: PaymentMethod;
+  status: string;
+}) {
+  if (!to) return;
+
+  const paymentLabel = getPaymentMethodLabel(paymentMethod);
+  const totalText = formatMoney(totalPrice, currency);
+
+  const statusLabel =
+    status === "pending_payment"
+      ? "Ödeme Kontrolü Bekliyor"
+      : status === "pending"
+        ? "Sıraya Alındı"
+        : status;
+
+  const title =
+    paymentMethod === "balance"
+      ? "Siparişiniz Oluşturuldu"
+      : "Siparişiniz Alındı";
+
+  const subject =
+    paymentMethod === "balance"
+      ? "Siparişiniz Oluşturuldu | MedyaTora"
+      : "Siparişiniz Alındı | MedyaTora";
+
+  const serviceLines = orderItems.slice(0, 8).map((item, index) => {
+    return `${index + 1}. ${item.service_title} — ${formatNumber(
+      item.quantity
+    )} adet — ${item.target_username}`;
+  });
+
+  const moreServicesLine =
+    orderItems.length > 8
+      ? `Ek olarak ${orderItems.length - 8} hizmet daha bulunmaktadır.`
+      : "";
+
+  const paymentInfoLine =
+    paymentMethod === "balance"
+      ? "Sipariş tutarı MedyaTora bakiyenizden düşülmüştür."
+      : paymentMethod === "turkey_bank"
+        ? "Ödemeniz dekont ve ödeme bilgileri kontrol edildikten sonra onaylanacak ve siparişiniz işleme alınacaktır."
+        : "Ödeme ve işlem adımları için destek ekibimiz sizinle iletişim kanalınız üzerinden ilerleyecektir.";
+
+  try {
+    await sendMail({
+      to,
+      subject,
+      text: buildMedyatoraMailText({
+        title,
+        intro: `Merhaba ${fullName}, siparişiniz başarıyla oluşturulmuştur.`,
+        highlightLabel: "Sipariş Numaranız",
+        highlightValue: orderNumbers[0] || batchCode,
+        bodyLines: [
+          `Batch Kodu: ${batchCode}`,
+          `Sipariş Numaraları: ${orderNumbers.join(", ")}`,
+          `Toplam Tutar: ${totalText}`,
+          `Para Birimi: ${currency}`,
+          `Ödeme Yöntemi: ${paymentLabel}`,
+          `Durum: ${statusLabel}`,
+          paymentInfoLine,
+          "",
+          "Sipariş Özeti:",
+          ...serviceLines,
+          moreServicesLine,
+          "Sipariş durumunuzu Hesabım alanından veya sipariş numaranızla takip edebilirsiniz.",
+        ].filter(Boolean),
+        footerNote: "İyi günler dileriz. MedyaTora Ekibi",
+      }),
+      html: buildMedyatoraMailHtml({
+        title,
+        intro: `Merhaba ${fullName}, siparişiniz başarıyla oluşturulmuştur.`,
+        highlightLabel: "Sipariş Numaranız",
+        highlightValue: orderNumbers[0] || batchCode,
+        bodyLines: [
+          `Batch Kodu: ${batchCode}`,
+          `Sipariş Numaraları: ${orderNumbers.join(", ")}`,
+          `Toplam Tutar: ${totalText}`,
+          `Para Birimi: ${currency}`,
+          `Ödeme Yöntemi: ${paymentLabel}`,
+          `Durum: ${statusLabel}`,
+          paymentInfoLine,
+          "Sipariş Özeti:",
+          ...serviceLines,
+          moreServicesLine,
+          "Sipariş durumunuzu Hesabım alanından veya sipariş numaranızla takip edebilirsiniz.",
+        ].filter(Boolean),
+        footerNote: "İyi günler dileriz. MedyaTora Ekibi",
+      }),
+    });
+  } catch (mailError) {
+    console.error("ORDER_CREATED_MAIL_ERROR", mailError);
   }
 }
 
@@ -753,13 +870,31 @@ export async function POST(req: Request) {
       `📈 Tahmini Kâr: ${formatMoney(profit, currency)}\n\n` +
       `🧩 Sipariş Detayları:\n${itemSummary}`;
 
-    const telegramResult = await sendTelegramMessage(telegramMessage);
+      const telegramResult = await sendTelegramMessage(telegramMessage);
 
-    if (!telegramResult.ok && telegramResult.warning) {
-      console.error(telegramResult.warning);
-    }
-
-    return NextResponse.json(
+      if (!telegramResult.ok && telegramResult.warning) {
+        console.error(telegramResult.warning);
+      }
+      
+      const customerMail =
+        currentUser?.email ||
+        (contactType === "E-posta" && contactValue.includes("@")
+          ? contactValue
+          : null);
+      
+      await sendOrderCreatedMail({
+        to: customerMail,
+        fullName,
+        batchCode,
+        orderNumbers,
+        orderItems,
+        totalPrice,
+        currency,
+        paymentMethod,
+        status,
+      });
+      
+      return NextResponse.json(
       {
         success: true,
         ok: true,

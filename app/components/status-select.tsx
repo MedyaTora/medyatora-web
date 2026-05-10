@@ -8,6 +8,7 @@ const statuses = [
   { value: "in_review", label: "İnceleniyor" },
   { value: "contacted", label: "İletişime Geçildi" },
   { value: "completed", label: "Tamamlandı" },
+  { value: "cancelled", label: "İptal Edildi" },
 ];
 
 type Props = {
@@ -53,7 +54,9 @@ export default function StatusSelect({ id, initialStatus }: Props) {
       });
     } catch (error) {
       setStatus(previousStatus);
-      setMessage(error instanceof Error ? error.message : "Durum güncellenemedi.");
+      setMessage(
+        error instanceof Error ? error.message : "Durum güncellenemedi."
+      );
     }
   };
 
@@ -76,9 +79,7 @@ export default function StatusSelect({ id, initialStatus }: Props) {
         ))}
       </select>
 
-      {message ? (
-        <p className="text-xs text-white/55">{message}</p>
-      ) : null}
+      {message ? <p className="text-xs text-white/55">{message}</p> : null}
     </div>
   );
 }

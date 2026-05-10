@@ -54,12 +54,14 @@ type PaymentText = {
   paymentInfoTitle: string;
   paymentInfoDesc: string;
   receiver: string;
-  paymentDescription: string;
+  paymentReference: string;
   amount: string;
   receiverName: string;
   paymentDescriptionValue: string;
 
-  draftWarning: string;
+  channelTitle: string;
+  channelDesc: Record<CurrencyCode, string>;
+  channelBadge: Record<CurrencyCode, string>;
 
   step1Title: string;
   step1Desc: (requestId: string) => string;
@@ -85,21 +87,21 @@ const texts: Record<LocaleCode, PaymentText> = {
     badge: "Analiz ödeme ekranı",
     title: "Analiz talebiniz oluşturuldu",
     description:
-      "Ödeme işlemini tamamladıktan sonra dekont veya ödeme ekran görüntüsünü destek hattına iletin. Kontrol sonrası analiz talebiniz işleme alınır ve ekip tarafından manuel olarak incelenir.",
+      "Ödeme referansınızı koruyarak seçtiğiniz para birimine uygun ödeme kanalından işlemi tamamlayın. Dekont veya ödeme ekran görüntüsü destek hattına ulaştıktan sonra talebiniz manuel olarak kontrol edilir ve analiz süreci başlatılır.",
 
     requestNumber: "Talep numarası",
     amountToPay: "Ödenecek tutar",
     platform: "Platform",
 
-    paymentControlTitle: "Ödeme kontrolü",
+    paymentControlTitle: "Güvenli ödeme kontrolü",
     paymentControlDesc:
-      "Analiz ödemeleri manuel kontrol edilir. Bu yüzden açıklama kısmına talep numaranızı eklemeniz önemlidir.",
+      "Analiz ödemeleri manuel doğrulanır. Bu nedenle ödeme açıklaması / not alanında talep numarasının bulunması önemlidir.",
     selectedCurrency: "Seçili para birimi",
 
     paymentLabels: {
-      TL: "Türkiye ödeme bilgileri",
-      USD: "Dolar ödeme bilgileri",
-      RUB: "Ruble ödeme bilgileri",
+      TL: "Türkiye ödeme akışı",
+      USD: "USD ödeme akışı",
+      RUB: "RUB ödeme akışı",
     },
 
     fallbackPrices: {
@@ -111,45 +113,54 @@ const texts: Record<LocaleCode, PaymentText> = {
     paymentNotes: {
       TL: [
         "Ödeme açıklamasına analiz talep numaranızı yazın.",
-        "Dekontu WhatsApp veya Telegram destek hattına gönderin.",
-        "Ödeme kontrolünden sonra analiz talebiniz işleme alınır.",
+        "Dekont veya ödeme ekran görüntüsünü WhatsApp destek hattına gönderin.",
+        "Kontrol tamamlandıktan sonra analiz talebiniz işleme alınır.",
       ],
       USD: [
-        "USD ödeme için destek hattından güncel ödeme kanalını isteyin.",
-        "Ödeme açıklamasına analiz talep numaranızı ekleyin.",
-        "Dekont veya ödeme ekran görüntüsünü destek hattına gönderin.",
+        "USD ödeme kanalı için destek hattı üzerinden güncel yönlendirme alın.",
+        "Ödeme notuna analiz talep numaranızı ekleyin.",
+        "Ödeme görüntüsünü destek hattına ilettikten sonra talebiniz kontrol edilir.",
       ],
       RUB: [
-        "RUB ödeme için destek hattından güncel ödeme kanalını isteyin.",
-        "Ödeme açıklamasına analiz talep numaranızı ekleyin.",
-        "Dekont veya ödeme ekran görüntüsünü destek hattına gönderin.",
+        "RUB ödeme kanalı için destek hattı üzerinden güncel yönlendirme alın.",
+        "Ödeme notuna analiz talep numaranızı ekleyin.",
+        "Ödeme görüntüsünü destek hattına ilettikten sonra talebiniz kontrol edilir.",
       ],
     },
 
     socialMediaFallback: "Sosyal medya",
-    requestNotCreated: "Henüz oluşturulmadı",
+    requestNotCreated: "Talep numarası bekleniyor",
 
-    paymentInfoTitle: "Ödeme bilgileri",
+    paymentInfoTitle: "Ödeme referansı",
     paymentInfoDesc:
-      "Buraya banka, IBAN, Papara, ödeme sağlayıcı veya ülkeye göre kullanılacak ödeme bilgileri eklenecek.",
-    receiver: "Alıcı",
-    paymentDescription: "Ödeme açıklaması",
+      "Aşağıdaki referans bilgisini ödeme açıklaması, açıklama notu veya destek mesajınızda aynen kullanın. Bu bilgi ödeme ile analiz talebinizi eşleştirmek için kullanılır.",
+    receiver: "Alıcı / hizmet sağlayıcı",
+    paymentReference: "Ödeme referansı",
     amount: "Tutar",
     receiverName: "MedyaTora",
     paymentDescriptionValue: "Analiz Talebi",
 
-    draftWarning:
-      "Gerçek banka/ödeme bilgilerini eklemeden önce bu alanı canlıda boş bırakma. Şimdilik sayfanın 404 hatasını kapatmak ve ödeme akışını hazırlamak için güvenli taslak olarak duruyor.",
+    channelTitle: "Ödeme kanalı",
+    channelDesc: {
+      TL: "TL ödemelerde banka transferi / EFT yönlendirmesi destek hattı üzerinden teyit edilir.",
+      USD: "USD ödemelerde güncel ödeme kanalı destek hattı üzerinden paylaşılır.",
+      RUB: "RUB ödemelerde güncel ödeme kanalı destek hattı üzerinden paylaşılır.",
+    },
+    channelBadge: {
+      TL: "TL ödeme",
+      USD: "USD ödeme",
+      RUB: "RUB ödeme",
+    },
 
-    step1Title: "Ödeme açıklamasını yazın",
+    step1Title: "Referansı kopyalayın",
     step1Desc: (requestId) =>
-      `Açıklama kısmına mutlaka “Analiz Talebi - ${requestId}” yazın.`,
+      `Ödeme açıklaması veya destek mesajında “Analiz Talebi - ${requestId}” bilgisini kullanın.`,
     step2Title: "Ödemeyi tamamlayın",
     step2Desc: (price) =>
-      `${price} tutarındaki analiz ödemesini seçtiğiniz para birimine uygun şekilde yapın.`,
+      `${price} tutarındaki analiz ödemesini seçtiğiniz para birimine uygun kanaldan tamamlayın.`,
     step3Title: "Dekontu destek hattına gönderin",
     step3Desc:
-      "Dekont veya ekran görüntüsü geldikten sonra ödeme kontrolü yapılır ve analiz talebiniz işleme alınır.",
+      "Dekont veya ekran görüntüsü geldikten sonra ödeme kontrolü yapılır ve analiz talebiniz ekip tarafından işleme alınır.",
 
     importantNotes: "Önemli notlar",
     whatsappSupport: "WhatsApp destek",
@@ -165,21 +176,21 @@ const texts: Record<LocaleCode, PaymentText> = {
     badge: "Analysis payment screen",
     title: "Your analysis request has been created",
     description:
-      "After completing the payment, send the receipt or payment screenshot to the support line. After verification, your analysis request will be processed and reviewed manually by the team.",
+      "Complete the payment through the correct channel for your selected currency while keeping your payment reference. After the receipt or screenshot reaches support, your request is manually verified and the analysis process begins.",
 
     requestNumber: "Request number",
     amountToPay: "Amount to pay",
     platform: "Platform",
 
-    paymentControlTitle: "Payment verification",
+    paymentControlTitle: "Secure payment verification",
     paymentControlDesc:
-      "Analysis payments are checked manually. That is why it is important to include your request number in the payment description.",
+      "Analysis payments are verified manually. For this reason, the request number should be included in the payment description or note field.",
     selectedCurrency: "Selected currency",
 
     paymentLabels: {
-      TL: "Turkey payment details",
-      USD: "Dollar payment details",
-      RUB: "Ruble payment details",
+      TL: "Turkey payment flow",
+      USD: "USD payment flow",
+      RUB: "RUB payment flow",
     },
 
     fallbackPrices: {
@@ -191,45 +202,54 @@ const texts: Record<LocaleCode, PaymentText> = {
     paymentNotes: {
       TL: [
         "Write your analysis request number in the payment description.",
-        "Send the receipt to the WhatsApp or Telegram support line.",
-        "After payment verification, your analysis request will be processed.",
+        "Send the receipt or payment screenshot to WhatsApp support.",
+        "After verification, your analysis request will be processed.",
       ],
       USD: [
-        "For USD payment, ask support for the current payment channel.",
-        "Add your analysis request number to the payment description.",
-        "Send the receipt or payment screenshot to the support line.",
+        "Ask support for the current USD payment channel.",
+        "Add your analysis request number to the payment note.",
+        "After sending the payment screenshot to support, your request will be verified.",
       ],
       RUB: [
-        "For RUB payment, ask support for the current payment channel.",
-        "Add your analysis request number to the payment description.",
-        "Send the receipt or payment screenshot to the support line.",
+        "Ask support for the current RUB payment channel.",
+        "Add your analysis request number to the payment note.",
+        "After sending the payment screenshot to support, your request will be verified.",
       ],
     },
 
     socialMediaFallback: "Social media",
-    requestNotCreated: "Not created yet",
+    requestNotCreated: "Request number pending",
 
-    paymentInfoTitle: "Payment details",
+    paymentInfoTitle: "Payment reference",
     paymentInfoDesc:
-      "Bank, IBAN, Papara, payment provider, or country-specific payment information will be added here.",
-    receiver: "Receiver",
-    paymentDescription: "Payment description",
+      "Use the reference below exactly in the payment description, payment note, or support message. This information is used to match your payment with your analysis request.",
+    receiver: "Receiver / service provider",
+    paymentReference: "Payment reference",
     amount: "Amount",
     receiverName: "MedyaTora",
     paymentDescriptionValue: "Analysis Request",
 
-    draftWarning:
-      "Do not leave this area empty on the live site before adding real bank/payment details. For now, it is a safe draft to prevent the 404 error and prepare the payment flow.",
+    channelTitle: "Payment channel",
+    channelDesc: {
+      TL: "For TL payments, bank transfer / EFT instructions are confirmed through support.",
+      USD: "For USD payments, the current payment channel is shared through support.",
+      RUB: "For RUB payments, the current payment channel is shared through support.",
+    },
+    channelBadge: {
+      TL: "TL payment",
+      USD: "USD payment",
+      RUB: "RUB payment",
+    },
 
-    step1Title: "Write the payment description",
+    step1Title: "Copy the reference",
     step1Desc: (requestId) =>
-      `Make sure to write “Analysis Request - ${requestId}” in the description field.`,
+      `Use “Analysis Request - ${requestId}” in the payment description or support message.`,
     step2Title: "Complete the payment",
     step2Desc: (price) =>
-      `Pay the analysis amount of ${price} using the correct method for your selected currency.`,
+      `Complete the analysis payment of ${price} through the correct channel for your selected currency.`,
     step3Title: "Send the receipt to support",
     step3Desc:
-      "After the receipt or screenshot is received, the payment will be checked and your analysis request will be processed.",
+      "After the receipt or screenshot is received, the payment is verified and your analysis request is processed by the team.",
 
     importantNotes: "Important notes",
     whatsappSupport: "WhatsApp support",
@@ -245,21 +265,21 @@ const texts: Record<LocaleCode, PaymentText> = {
     badge: "Экран оплаты анализа",
     title: "Ваша заявка на анализ создана",
     description:
-      "После завершения оплаты отправьте чек или скриншот оплаты в поддержку. После проверки ваша заявка будет обработана и вручную изучена командой.",
+      "Завершите оплату через подходящий канал для выбранной валюты, сохранив платёжную ссылку. После получения чека или скриншота поддержкой заявка будет вручную проверена, и процесс анализа начнётся.",
 
     requestNumber: "Номер заявки",
     amountToPay: "Сумма к оплате",
     platform: "Платформа",
 
-    paymentControlTitle: "Проверка оплаты",
+    paymentControlTitle: "Безопасная проверка оплаты",
     paymentControlDesc:
-      "Оплата анализа проверяется вручную. Поэтому важно указать номер заявки в описании платежа.",
+      "Оплаты анализа проверяются вручную. Поэтому номер заявки должен быть указан в описании или примечании к платежу.",
     selectedCurrency: "Выбранная валюта",
 
     paymentLabels: {
-      TL: "Платёжные данные для Турции",
-      USD: "Платёжные данные в долларах",
-      RUB: "Платёжные данные в рублях",
+      TL: "Платёжный поток для Турции",
+      USD: "Платёжный поток USD",
+      RUB: "Платёжный поток RUB",
     },
 
     fallbackPrices: {
@@ -271,45 +291,54 @@ const texts: Record<LocaleCode, PaymentText> = {
     paymentNotes: {
       TL: [
         "Укажите номер заявки на анализ в описании платежа.",
-        "Отправьте чек в поддержку WhatsApp или Telegram.",
-        "После проверки оплаты заявка на анализ будет обработана.",
+        "Отправьте чек или скриншот оплаты в поддержку WhatsApp.",
+        "После проверки заявка на анализ будет обработана.",
       ],
       USD: [
-        "Для оплаты в USD запросите актуальный платёжный канал у поддержки.",
-        "Добавьте номер заявки на анализ в описание платежа.",
-        "Отправьте чек или скриншот оплаты в поддержку.",
+        "Запросите актуальный платёжный канал USD у поддержки.",
+        "Добавьте номер заявки на анализ в примечание к оплате.",
+        "После отправки скриншота оплаты заявка будет проверена.",
       ],
       RUB: [
-        "Для оплаты в RUB запросите актуальный платёжный канал у поддержки.",
-        "Добавьте номер заявки на анализ в описание платежа.",
-        "Отправьте чек или скриншот оплаты в поддержку.",
+        "Запросите актуальный платёжный канал RUB у поддержки.",
+        "Добавьте номер заявки на анализ в примечание к оплате.",
+        "После отправки скриншота оплаты заявка будет проверена.",
       ],
     },
 
     socialMediaFallback: "Социальные сети",
-    requestNotCreated: "Ещё не создано",
+    requestNotCreated: "Номер заявки ожидается",
 
-    paymentInfoTitle: "Платёжная информация",
+    paymentInfoTitle: "Платёжная ссылка",
     paymentInfoDesc:
-      "Здесь будут добавлены банк, IBAN, Papara, платёжный провайдер или платёжные данные по стране.",
-    receiver: "Получатель",
-    paymentDescription: "Описание платежа",
+      "Используйте указанную ниже ссылку в описании платежа, примечании или сообщении в поддержку. Эта информация помогает сопоставить оплату с заявкой на анализ.",
+    receiver: "Получатель / поставщик услуги",
+    paymentReference: "Платёжная ссылка",
     amount: "Сумма",
     receiverName: "MedyaTora",
     paymentDescriptionValue: "Заявка на анализ",
 
-    draftWarning:
-      "Не оставляйте этот блок пустым на живом сайте перед добавлением реальных банковских/платёжных данных. Сейчас это безопасный черновик, чтобы закрыть ошибку 404 и подготовить поток оплаты.",
+    channelTitle: "Платёжный канал",
+    channelDesc: {
+      TL: "Для оплаты в TL инструкции по банковскому переводу подтверждаются через поддержку.",
+      USD: "Для оплаты в USD актуальный платёжный канал передаётся через поддержку.",
+      RUB: "Для оплаты в RUB актуальный платёжный канал передаётся через поддержку.",
+    },
+    channelBadge: {
+      TL: "Оплата TL",
+      USD: "Оплата USD",
+      RUB: "Оплата RUB",
+    },
 
-    step1Title: "Укажите описание платежа",
+    step1Title: "Скопируйте ссылку",
     step1Desc: (requestId) =>
-      `Обязательно напишите “Заявка на анализ - ${requestId}” в поле описания.`,
+      `Используйте “Заявка на анализ - ${requestId}” в описании платежа или сообщении в поддержку.`,
     step2Title: "Завершите оплату",
     step2Desc: (price) =>
-      `Оплатите анализ на сумму ${price} способом, подходящим для выбранной валюты.`,
+      `Завершите оплату анализа на сумму ${price} через подходящий канал для выбранной валюты.`,
     step3Title: "Отправьте чек в поддержку",
     step3Desc:
-      "После получения чека или скриншота оплата будет проверена, и заявка на анализ будет обработана.",
+      "После получения чека или скриншота оплата проверяется, и заявка на анализ передаётся команде.",
 
     importantNotes: "Важные заметки",
     whatsappSupport: "Поддержка WhatsApp",
@@ -383,21 +412,24 @@ function buildWhatsappSupportLink({
 Talep numarası: ${requestId}
 Platform: ${platform}
 Tutar: ${price}
-Para birimi: ${currency}`,
+Para birimi: ${currency}
+Ödeme referansı: Analiz Talebi - ${requestId}`,
 
     en: `Hello, I would like to send the receipt for my analysis payment.
 
 Request number: ${requestId}
 Platform: ${platform}
 Amount: ${price}
-Currency: ${currency}`,
+Currency: ${currency}
+Payment reference: Analysis Request - ${requestId}`,
 
     ru: `Здравствуйте, хочу отправить чек по оплате анализа.
 
 Номер заявки: ${requestId}
 Платформа: ${platform}
 Сумма: ${price}
-Валюта: ${currency}`,
+Валюта: ${currency}
+Платёжная ссылка: Заявка на анализ - ${requestId}`,
   };
 
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
@@ -415,7 +447,7 @@ function InfoCard({
   value: string;
 }) {
   return (
-    <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-5">
+    <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
       <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-black/30 text-white">
         {icon}
       </div>
@@ -424,7 +456,28 @@ function InfoCard({
         {label}
       </p>
 
-      <p className="mt-2 text-xl font-black leading-7 text-white">{value}</p>
+      <p className="mt-2 break-words text-xl font-black leading-7 text-white">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function DetailRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/34">
+        {label}
+      </p>
+      <p className="mt-1 break-words text-sm font-black leading-6 text-white">
+        {value}
+      </p>
     </div>
   );
 }
@@ -439,7 +492,7 @@ function StepCard({
   description: string;
 }) {
   return (
-    <div className="rounded-[24px] border border-white/10 bg-white/[0.035] p-5">
+    <div className="rounded-[24px] border border-white/10 bg-white/[0.035] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
       <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-black/35 text-sm font-black text-white">
         {number}
       </div>
@@ -461,6 +514,7 @@ export default async function AnalysisPaymentPage({ searchParams }: PageProps) {
   const price = getSafeText(params.price, t.fallbackPrices[currency]);
   const platform = getSafeText(params.platform, t.socialMediaFallback);
   const requestId = getSafeText(params.request_id, t.requestNotCreated);
+  const referenceText = `${t.paymentDescriptionValue} - ${requestId}`;
 
   const whatsappSupportLink = buildWhatsappSupportLink({
     requestId,
@@ -476,7 +530,7 @@ export default async function AnalysisPaymentPage({ searchParams }: PageProps) {
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:58px_58px] opacity-[0.13]" />
 
       <section className="relative mx-auto max-w-6xl">
-        <div className="mb-6">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <Link
             href="/analiz"
             className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-black text-white/78 transition hover:bg-white/[0.075] hover:text-white"
@@ -484,6 +538,10 @@ export default async function AnalysisPaymentPage({ searchParams }: PageProps) {
             <FaArrowLeft />
             {t.backToAnalysis}
           </Link>
+
+          <div className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-[11px] font-black uppercase tracking-[0.22em] text-white/45">
+            MedyaTora
+          </div>
         </div>
 
         <div className="overflow-hidden rounded-[36px] border border-white/10 bg-[#080a0d]/95 p-5 shadow-[0_28px_100px_rgba(0,0,0,0.55)] ring-1 ring-white/[0.025] md:p-8">
@@ -523,7 +581,7 @@ export default async function AnalysisPaymentPage({ searchParams }: PageProps) {
               </div>
             </div>
 
-            <aside className="rounded-[30px] border border-white/10 bg-white/[0.045] p-5">
+            <aside className="rounded-[30px] border border-white/10 bg-white/[0.045] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
               <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-black/30 text-white">
                 <FaShieldHalved />
               </div>
@@ -549,11 +607,25 @@ export default async function AnalysisPaymentPage({ searchParams }: PageProps) {
                   {t.paymentLabels[currency]}
                 </p>
               </div>
+
+              <div className="mt-4 rounded-[24px] border border-white/10 bg-white/[0.035] p-4">
+                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/38">
+                  {t.channelTitle}
+                </p>
+
+                <div className="mt-3 inline-flex rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-black text-white">
+                  {t.channelBadge[currency]}
+                </div>
+
+                <p className="mt-3 text-sm leading-6 text-white/58">
+                  {t.channelDesc[currency]}
+                </p>
+              </div>
             </aside>
           </div>
 
           <div className="mt-8 grid gap-5 lg:grid-cols-[0.92fr_1fr]">
-            <div className="rounded-[30px] border border-white/10 bg-white/[0.035] p-5">
+            <div className="rounded-[30px] border border-white/10 bg-white/[0.035] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
               <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-black/30 text-white">
                 <FaBuildingColumns />
               </div>
@@ -566,35 +638,10 @@ export default async function AnalysisPaymentPage({ searchParams }: PageProps) {
                 {t.paymentInfoDesc}
               </p>
 
-              <div className="mt-5 space-y-3 rounded-[24px] border border-white/10 bg-black/25 p-4">
-                <div>
-                  <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/34">
-                    {t.receiver}
-                  </p>
-                  <p className="mt-1 text-sm font-black text-white">
-                    {t.receiverName}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/34">
-                    {t.paymentDescription}
-                  </p>
-                  <p className="mt-1 text-sm font-black text-white">
-                    {t.paymentDescriptionValue} - {requestId}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/34">
-                    {t.amount}
-                  </p>
-                  <p className="mt-1 text-sm font-black text-white">{price}</p>
-                </div>
-              </div>
-
-              <div className="mt-5 rounded-2xl border border-[#6b5b2a]/60 bg-[#211d11]/70 px-4 py-3 text-sm font-semibold leading-6 text-[#e7d9a4]">
-                {t.draftWarning}
+              <div className="mt-5 space-y-3">
+                <DetailRow label={t.receiver} value={t.receiverName} />
+                <DetailRow label={t.paymentReference} value={referenceText} />
+                <DetailRow label={t.amount} value={price} />
               </div>
             </div>
 

@@ -29,6 +29,16 @@ type UserRow = RowDataPacket & {
   auth_provider: string | null;
   created_at: Date | string | null;
   last_login_at: Date | string | null;
+
+  total_topup_tl: string | number;
+  total_topup_usd: string | number;
+  total_topup_rub: string | number;
+
+  total_orders: string | number;
+  total_spent_tl: string | number;
+  total_spent_usd: string | number;
+  total_spent_rub: string | number;
+  last_order_at: Date | string | null;
 };
 
 function normalizeEmailStatus(value: unknown) {
@@ -67,6 +77,14 @@ function formatMoney(value: string | number, currency: string) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })} ${currency}`;
+}
+
+function formatNumber(value: string | number | null | undefined) {
+  const numberValue = Number(value || 0);
+
+  if (!Number.isFinite(numberValue)) return "0";
+
+  return numberValue.toLocaleString("tr-TR");
 }
 
 function getEmailStatusLabel(user: UserRow) {
@@ -111,6 +129,25 @@ function StatCard({
   );
 }
 
+function MoneyLine({
+  label,
+  value,
+  currency,
+}: {
+  label: string;
+  value: string | number;
+  currency: string;
+}) {
+  return (
+    <p>
+      {label}:{" "}
+      <span className="font-black text-white">
+        {formatMoney(value, currency)}
+      </span>
+    </p>
+  );
+}
+
 export default async function AdminUsersPage({
   searchParams,
 }: {
@@ -127,18 +164,18 @@ export default async function AdminUsersPage({
 
   if (q) {
     whereParts.push(
-      `(email LIKE ? OR full_name LIKE ? OR username LIKE ? OR phone_number LIKE ? OR id = ?)`
+      `(u.email LIKE ? OR u.full_name LIKE ? OR u.username LIKE ? OR u.phone_number LIKE ? OR u.id = ?)`
     );
 
     queryParams.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, Number(q) || 0);
   }
 
   if (emailStatus === "verified") {
-    whereParts.push(`email_verified = 1`);
+    whereParts.push(`u.email_verified = 1`);
   }
 
   if (emailStatus === "unverified") {
-    whereParts.push(`email_verified = 0`);
+    whereParts.push(`u.email_verified = 0`);
   }
 
   const whereSql = whereParts.length ? `WHERE ${whereParts.join(" AND ")}` : "";
@@ -146,27 +183,63 @@ export default async function AdminUsersPage({
   const [rows] = await pool.query<UserRow[]>(
     `
     SELECT
-      id,
-      email,
-      full_name,
-      username,
-      phone_number,
-      email_verified,
-      email_verified_at,
-      balance_tl,
-      balance_usd,
-      balance_rub,
-      preferred_currency,
-      free_analysis_used,
-      welcome_bonus_claimed,
-      is_active,
-      is_admin,
-      auth_provider,
-      created_at,
-      last_login_at
-    FROM users
+      u.id,
+      u.email,
+      u.full_name,
+      u.username,
+      u.phone_number,
+      u.email_verified,
+      u.email_verified_at,
+      u.balance_tl,
+      u.balance_usd,
+      u.balance_rub,
+      u.preferred_currency,
+      u.free_analysis_used,
+      u.welcome_bonus_claimed,
+      u.is_active,
+      u.is_admin,
+      u.auth_provider,
+      u.created_at,
+      u.last_login_at,
+
+      COALESCE(topup.total_topup_tl, 0) AS total_topup_tl,
+      COALESCE(topup.total_topup_usd, 0) AS total_topup_usd,
+      COALESCE(topup.total_topup_rub, 0) AS total_topup_rub,
+
+      COALESCE(orders.total_orders, 0) AS total_orders,
+      COALESCE(orders.total_spent_tl, 0) AS total_spent_tl,
+      COALESCE(orders.total_spent_usd, 0) AS total_spent_usd,
+      COALESCE(orders.total_spent_rub, 0) AS total_spent_rub,
+      orders.last_order_at
+
+    FROM users u
+
+    LEFT JOIN (
+      SELECT
+        user_id,
+        SUM(CASE WHEN currency = 'TL' AND status = 'approved' THEN amount ELSE 0 END) AS total_topup_tl,
+        SUM(CASE WHEN currency = 'USD' AND status = 'approved' THEN amount ELSE 0 END) AS total_topup_usd,
+        SUM(CASE WHEN currency = 'RUB' AND status = 'approved' THEN amount ELSE 0 END) AS total_topup_rub
+      FROM balance_topup_requests
+      WHERE user_id IS NOT NULL
+      GROUP BY user_id
+    ) topup ON topup.user_id = u.id
+
+    LEFT JOIN (
+      SELECT
+        user_id,
+        COUNT(*) AS total_orders,
+        SUM(CASE WHEN currency = 'TL' THEN total_price ELSE 0 END) AS total_spent_tl,
+        SUM(CASE WHEN currency = 'USD' THEN total_price ELSE 0 END) AS total_spent_usd,
+        SUM(CASE WHEN currency = 'RUB' THEN total_price ELSE 0 END) AS total_spent_rub,
+        MAX(created_at) AS last_order_at
+      FROM order_requests
+      WHERE user_id IS NOT NULL
+      GROUP BY user_id
+    ) orders ON orders.user_id = u.id
+
     ${whereSql}
-    ORDER BY id DESC
+    ORDER BY u.id DESC
     LIMIT 300
     `,
     queryParams
@@ -201,8 +274,9 @@ export default async function AdminUsersPage({
               </h1>
 
               <p className="mt-2 max-w-3xl text-sm leading-6 text-white/55">
-                Sisteme kayıt olan kullanıcıları, e-posta doğrulama durumlarını,
-                bakiyelerini ve son giriş bilgilerini buradan takip edebilirsin.
+                Sisteme kayıt olan kullanıcıları, doğrulama durumlarını,
+                bakiyelerini, toplam yatırımlarını ve sipariş özetlerini buradan
+                takip edebilirsin.
               </p>
             </div>
 
@@ -336,7 +410,7 @@ export default async function AdminUsersPage({
                   key={user.id}
                   className="rounded-[28px] border border-white/10 bg-black/20 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition hover:bg-white/[0.04] md:p-5"
                 >
-                  <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr_0.75fr]">
+                  <div className="grid gap-5 xl:grid-cols-[1.05fr_0.78fr_0.88fr_0.78fr]">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-lg font-black text-white">
@@ -400,28 +474,91 @@ export default async function AdminUsersPage({
                         </p>
 
                         <div className="mt-3 grid gap-2 text-sm leading-6 text-white/65">
-                          <p>
-                            TL:{" "}
-                            <span className="font-black text-white">
-                              {formatMoney(user.balance_tl, "TL")}
-                            </span>
-                          </p>
-                          <p>
-                            USD:{" "}
-                            <span className="font-black text-white">
-                              {formatMoney(user.balance_usd, "USD")}
-                            </span>
-                          </p>
-                          <p>
-                            RUB:{" "}
-                            <span className="font-black text-white">
-                              {formatMoney(user.balance_rub, "RUB")}
-                            </span>
-                          </p>
+                          <MoneyLine
+                            label="TL"
+                            value={user.balance_tl}
+                            currency="TL"
+                          />
+                          <MoneyLine
+                            label="USD"
+                            value={user.balance_usd}
+                            currency="USD"
+                          />
+                          <MoneyLine
+                            label="RUB"
+                            value={user.balance_rub}
+                            currency="RUB"
+                          />
                         </div>
 
                         <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-xs font-bold text-white/55">
                           Tercih: {user.preferred_currency || "TL"}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="rounded-3xl border border-emerald-400/15 bg-emerald-400/[0.055] p-4">
+                        <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-100/55">
+                          Ticari Özet
+                        </p>
+
+                        <div className="mt-3 grid gap-2 text-sm leading-6 text-white/68">
+                          <p>
+                            Toplam sipariş:{" "}
+                            <span className="font-black text-white">
+                              {formatNumber(user.total_orders)}
+                            </span>
+                          </p>
+
+                          <p>
+                            Son sipariş:{" "}
+                            <span className="font-bold text-white/85">
+                              {formatDate(user.last_order_at)}
+                            </span>
+                          </p>
+
+                          <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-3">
+                            <p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-white/35">
+                              Toplam Yatırım
+                            </p>
+                            <MoneyLine
+                              label="TL"
+                              value={user.total_topup_tl}
+                              currency="TL"
+                            />
+                            <MoneyLine
+                              label="USD"
+                              value={user.total_topup_usd}
+                              currency="USD"
+                            />
+                            <MoneyLine
+                              label="RUB"
+                              value={user.total_topup_rub}
+                              currency="RUB"
+                            />
+                          </div>
+
+                          <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
+                            <p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-white/35">
+                              Toplam Harcama
+                            </p>
+                            <MoneyLine
+                              label="TL"
+                              value={user.total_spent_tl}
+                              currency="TL"
+                            />
+                            <MoneyLine
+                              label="USD"
+                              value={user.total_spent_usd}
+                              currency="USD"
+                            />
+                            <MoneyLine
+                              label="RUB"
+                              value={user.total_spent_rub}
+                              currency="RUB"
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -452,6 +589,22 @@ export default async function AdminUsersPage({
                         </div>
                       </div>
                     </div>
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap justify-end gap-3">
+                    <Link
+                      href={`/admin/users/${user.id}`}
+                      className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-bold text-white/75 transition hover:bg-white/[0.08]"
+                    >
+                      Detay
+                    </Link>
+
+                    <Link
+                      href={`/admin?q=${encodeURIComponent(user.email)}`}
+                      className="rounded-2xl bg-white px-4 py-2.5 text-sm font-black text-black transition hover:bg-white/90"
+                    >
+                      Sipariş / Başvuru Ara
+                    </Link>
                   </div>
                 </div>
               ))}

@@ -149,6 +149,31 @@ const analysisText: Record<
   },
 };
 
+function LuxuryMonogram({
+  size = 100,
+  className = "",
+}: {
+  size?: number;
+  className?: string;
+}) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 100 100"
+      fill="currentColor"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      aria-hidden="true"
+    >
+      <rect x="14" y="20" width="8" height="60" />
+      <rect x="78" y="20" width="8" height="60" />
+      <polygon points="22,20 32,20 50,56 68,20 78,20 50,76" />
+      <path d="M 39 30 L 61 30 L 58 36 L 52 36 L 52 48 L 48 48 L 48 36 L 42 36 Z" />
+    </svg>
+  );
+}
+
 function detectInitialLocale(): LocaleCode {
   if (typeof window === "undefined") return "tr";
 
@@ -164,6 +189,15 @@ function detectInitialLocale(): LocaleCode {
   if (browserLang.startsWith("ru")) return "ru";
 
   return "en";
+}
+
+function NavDivider() {
+  return (
+    <span
+      aria-hidden="true"
+      className="block h-px w-8 shrink-0 bg-gradient-to-r from-transparent via-white/38 to-transparent sm:w-10 lg:w-14"
+    />
+  );
 }
 
 export default function AnalizPage() {
@@ -199,31 +233,53 @@ export default function AnalizPage() {
       <div className="mt-bottom-fade" />
 
       <div className="mt-premium-inner mx-auto max-w-6xl space-y-4 sm:space-y-5">
-        <header className="flex flex-col gap-3 rounded-[26px] border border-white/10 bg-[#080a0d]/94 p-3 shadow-[0_18px_70px_rgba(0,0,0,0.38)] ring-1 ring-white/[0.025] backdrop-blur-xl sm:rounded-[30px] sm:p-4 lg:flex-row lg:items-center lg:justify-between">
-          <Link
-            href="/"
-            className="inline-flex w-full items-center justify-center rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-sm font-black text-white/78 transition hover:border-white/20 hover:bg-white/[0.08] hover:text-white sm:w-fit"
-          >
-            ← {t.home}
+        <header className="grid gap-4 border-b border-white/5 pb-4 sm:pb-5 lg:grid-cols-[1fr_auto_1fr] lg:items-center">
+          <Link href="/" className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center text-white drop-shadow-[0_0_18px_rgba(255,255,255,0.16)]">
+              <LuxuryMonogram size={34} />
+            </div>
+
+            <div className="min-w-0">
+              <p className="text-xs font-black uppercase tracking-[0.3em] text-white sm:text-base sm:tracking-[0.42em]">
+                MedyaTora
+              </p>
+
+              <p className="mt-1 hidden text-[9px] uppercase tracking-[0.3em] text-white/35 sm:block">
+                Professional Analysis
+              </p>
+            </div>
           </Link>
 
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-end">
-            <nav className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+          <nav className="relative flex items-center justify-center">
+            <div className="inline-flex max-w-full items-center justify-center gap-3 px-2 py-2 text-center sm:gap-4 lg:gap-5">
+              <Link
+                href="/"
+                className="whitespace-nowrap text-[12px] font-black uppercase tracking-[0.22em] text-white/78 transition duration-300 hover:text-white sm:text-[13px] lg:text-[15px] lg:tracking-[0.28em]"
+              >
+                {t.home}
+              </Link>
+
+              <NavDivider />
+
               <Link
                 href="/paketler"
-                className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-sm font-bold text-white/74 transition hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
+                className="whitespace-nowrap text-[12px] font-black uppercase tracking-[0.22em] text-white/78 transition duration-300 hover:text-white sm:text-[13px] lg:text-[15px] lg:tracking-[0.28em]"
               >
                 {t.packages}
               </Link>
 
+              <NavDivider />
+
               <Link
                 href="/smmtora"
-                className="inline-flex items-center justify-center rounded-2xl border border-white/12 bg-white px-4 py-3 text-sm font-black text-black shadow-[0_14px_34px_rgba(255,255,255,0.08)] transition hover:bg-white/90"
+                className="whitespace-nowrap text-[12px] font-black uppercase tracking-[0.22em] text-white drop-shadow-[0_0_14px_rgba(255,255,255,0.12)] transition duration-300 hover:text-white sm:text-[13px] lg:text-[15px] lg:tracking-[0.28em]"
               >
                 SMMTora
               </Link>
-            </nav>
+            </div>
+          </nav>
 
+          <div className="flex justify-end">
             <UserMenu />
           </div>
         </header>

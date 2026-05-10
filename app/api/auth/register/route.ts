@@ -253,11 +253,12 @@ export async function POST(req: Request) {
           title: "MedyaTora'ya Hoş Geldiniz",
           intro: `Merhaba ${displayName}, MedyaTora hesabın başarıyla oluşturuldu.`,
           bodyLines: [
-            "Artık hesabından siparişlerini, analiz taleplerini ve bakiye hareketlerini takip edebilirsin.",
-            "E-posta doğrulama işlemini tamamladığında hesabın daha güvenli hale gelir ve ücretsiz analiz hakkın aktifleşir.",
+            "Hesabınız üzerinden sosyal medya hizmetlerini inceleyebilir, sipariş oluşturabilir, bakiye yükleyebilir ve sipariş durumlarınızı takip edebilirsiniz.",
+            "E-posta doğrulamanızı tamamladığınızda hesabınıza tanımlanan avantajlardan yararlanabilirsiniz.",
+            "Detaylar için Hesabım alanından bakiye, sipariş ve analiz işlemlerinizi kontrol edebilirsiniz.",
           ],
           footerNote:
-            "Detaylar için Hesabım alanını kontrol edebilirsin. İyi günler dileriz. MedyaTora Ekibi",
+            "İyi günler dileriz. MedyaTora Ekibi",
         }),
         html: buildMedyatoraMailHtml({
           title: "MedyaTora'ya Hoş Geldiniz",

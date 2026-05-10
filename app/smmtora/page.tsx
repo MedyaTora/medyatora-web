@@ -132,6 +132,45 @@ const TURKEY_BANK_ACCOUNT_NAME =
 
 const TURKEY_BANK_IBAN = "TR48 0001 0001 3349 7700 5150 01";
 
+const MAX_VISIBLE_UNIT_PRICE_TL = 10000;
+
+function toSafeNumber(value: unknown) {
+  if (typeof value === "number") return value;
+
+  const normalized = String(value ?? "")
+    .replace(/\s/g, "")
+    .replace(",", ".");
+
+  const numberValue = Number(normalized);
+
+  return Number.isFinite(numberValue) ? numberValue : 0;
+}
+
+function getServiceTlUnitPrice(service: OrderServiceItem) {
+  const serviceRecord = service as unknown as Record<string, unknown>;
+
+  return (
+    toSafeNumber(service.salePriceTl) ||
+    toSafeNumber(serviceRecord.sale_price_tl) ||
+    toSafeNumber(serviceRecord.tl_sale_price) ||
+    toSafeNumber(serviceRecord.pricePer1000) ||
+    toSafeNumber(serviceRecord.price_per_1000) ||
+    toSafeNumber(serviceRecord.salePrice)
+  );
+}
+
+function isVisibleCustomerService(service: OrderServiceItem) {
+  const tlPrice = getServiceTlUnitPrice(service);
+  const min = toSafeNumber(service.min);
+  const max = toSafeNumber(service.max);
+
+  if (min > 0 && max > 0 && min > max) return false;
+
+  if (tlPrice > MAX_VISIBLE_UNIT_PRICE_TL) return false;
+
+  return true;
+}
+
 function PlatformIcon({
   slug,
   title,
@@ -865,6 +904,7 @@ export default function SmmToraPage() {
         }
 
         setServices(Array.isArray(data.items) ? data.items : []);
+
       } catch (err) {
         setError(err instanceof Error ? err.message : "Servisler yüklenemedi.");
       } finally {
@@ -962,8 +1002,9 @@ export default function SmmToraPage() {
 
     const search = normalizeSearchText(serviceSearch.trim());
 
-    const filtered = services
-      .filter((item) => {
+const filtered = services
+  .filter(isVisibleCustomerService)
+  .filter((item) => {
         if (search) return true;
         return (
           item.platform === selectedPlatform && item.category === selectedCategory
@@ -2541,15 +2582,21 @@ export default function SmmToraPage() {
                 </p>
               </div>
 
-              <input
-                value={phoneNumber}
-                onChange={(e) =>
-                  setPhoneNumber(e.target.value.replace(/\D/g, ""))
-                }
-                placeholder={t.phoneNumber}
-                inputMode="numeric"
-                className="w-full rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-white/28 focus:bg-white/[0.07]"
-              />
+              <div className="relative">
+  <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-black text-white/45">
+    +
+  </span>
+
+  <input
+    value={phoneNumber}
+    onChange={(e) =>
+      setPhoneNumber(e.target.value.replace(/[^\d\s]/g, ""))
+    }
+    placeholder="90 5xx xxx xx xx / 7 xxx xxx xx xx"
+    inputMode="tel"
+    className="w-full rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 pl-8 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-white/28 focus:bg-white/[0.07]"
+  />
+</div>
 
               <select
                 value={contactType}
