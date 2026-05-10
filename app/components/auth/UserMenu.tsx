@@ -245,7 +245,7 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
 
   if (loading) {
     return (
-      <div className="inline-flex h-9 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.045] px-3 text-[11px] font-black text-white/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:h-10 sm:px-4 sm:text-xs">
+      <div className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.045] px-3 text-[11px] font-black text-white/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:h-10 sm:px-4 sm:text-xs">
         <span className="h-2 w-2 animate-pulse rounded-full bg-white" />
         {text.checking}
       </div>
@@ -254,15 +254,15 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
 
   return (
     <>
-      <div className="flex shrink-0 flex-col items-end gap-2">
+      <div className="flex max-w-full shrink-0 flex-col items-end gap-2">
         {showLocaleSwitcher && (
-          <div className="flex h-9 items-center overflow-hidden rounded-2xl border border-white/10 bg-black/25 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:h-10">
+          <div className="flex h-9 shrink-0 items-center overflow-hidden rounded-2xl border border-white/10 bg-black/25 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:h-10">
             {localeOptions.map((locale) => (
               <button
                 key={locale}
                 type="button"
                 onClick={() => handleLocaleChange(locale)}
-                className={`h-7 rounded-xl px-3 text-[10px] font-black uppercase transition sm:h-8 ${
+                className={`h-7 rounded-xl px-2.5 text-[10px] font-black uppercase transition sm:h-8 sm:px-3 ${
                   selectedLocale === locale
                     ? "bg-white text-black shadow-[0_10px_22px_rgba(255,255,255,0.1)]"
                     : "text-white/55 hover:bg-white/[0.08] hover:text-white"
@@ -276,18 +276,18 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
         )}
 
         {user ? (
-          <div className="flex items-center gap-2">
-            <div className="hidden xl:flex h-10 min-w-0 items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.055] px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white text-[10px] font-black text-black shadow-[0_10px_26px_rgba(255,255,255,0.1)]">
+          <div className="flex max-w-full items-center justify-end gap-1.5 sm:gap-2">
+            <div className="flex h-9 min-w-0 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.055] px-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:h-10 sm:rounded-2xl sm:px-3">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white text-[9px] font-black text-black shadow-[0_10px_26px_rgba(255,255,255,0.1)] sm:h-8 sm:w-8 sm:rounded-xl sm:text-[10px]">
                 {getInitials(user)}
               </div>
 
-              <div className="min-w-0">
+              <div className="hidden min-w-0 xl:block">
                 <p className="text-[8px] font-black uppercase tracking-[0.14em] text-white/38">
                   {text.welcome}
                 </p>
 
-                <p className="max-w-[125px] truncate text-xs font-black leading-4 text-white">
+                <p className="max-w-[105px] truncate text-[11px] font-black leading-4 text-white 2xl:max-w-[130px] 2xl:text-xs">
                   {getDisplayName(user)}
                 </p>
               </div>
@@ -295,19 +295,19 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
 
             <a
               href="/hesabim/bakiye"
-              className="hidden md:flex h-10 items-center gap-2 rounded-2xl border border-white/10 bg-black/25 px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition hover:-translate-y-0.5 hover:border-white/22 hover:bg-white/[0.08]"
+              className="hidden h-10 items-center gap-2 rounded-2xl border border-white/10 bg-black/25 px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition hover:-translate-y-0.5 hover:border-white/22 hover:bg-white/[0.08] lg:flex"
             >
               <div className="min-w-0">
                 <p className="text-[8px] font-black uppercase tracking-[0.14em] text-white/35">
                   {text.wallet}
                 </p>
 
-                <p className="max-w-[116px] truncate text-xs font-black leading-4 text-white">
+                <p className="max-w-[92px] truncate text-[11px] font-black leading-4 text-white 2xl:max-w-[118px] 2xl:text-xs">
                   {walletBalance}
                 </p>
               </div>
 
-              <span className="rounded-lg border border-white/10 bg-white/[0.045] px-2 py-1 text-[9px] font-black text-white/60">
+              <span className="rounded-lg border border-white/10 bg-white/[0.045] px-1.5 py-1 text-[8px] font-black text-white/60 2xl:px-2 2xl:text-[9px]">
                 {user.preferred_currency}
               </span>
             </a>
@@ -328,7 +328,7 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
             </button>
           </div>
         ) : (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-end gap-2">
             <button
               type="button"
               onClick={() => openAuth("login")}
