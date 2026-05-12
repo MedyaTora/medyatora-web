@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AuthModal from "./AuthModal";
 import { detectBrowserLocale, saveLocale, type Locale } from "@/lib/i18n";
 
@@ -40,10 +40,13 @@ const userMenuText: Record<
     welcome: string;
     wallet: string;
     account: string;
+    balance: string;
+    orders: string;
     logout: string;
     login: string;
     register: string;
     language: string;
+    menu: string;
   }
 > = {
   tr: {
@@ -51,30 +54,39 @@ const userMenuText: Record<
     welcome: "Hoş geldin",
     wallet: "Cüzdan",
     account: "Hesabım",
+    balance: "Bakiye Yükle",
+    orders: "Siparişlerim",
     logout: "Çıkış",
     login: "Giriş Yap",
     register: "Üye Ol",
     language: "Dil",
+    menu: "Kullanıcı menüsü",
   },
   en: {
     checking: "Checking...",
     welcome: "Welcome",
     wallet: "Wallet",
     account: "Account",
+    balance: "Add Balance",
+    orders: "My Orders",
     logout: "Logout",
     login: "Login",
     register: "Sign Up",
     language: "Language",
+    menu: "User menu",
   },
   ru: {
     checking: "Проверка...",
     welcome: "Добро пожаловать",
     wallet: "Баланс",
     account: "Аккаунт",
+    balance: "Пополнить баланс",
+    orders: "Мои заказы",
     logout: "Выйти",
     login: "Войти",
     register: "Регистрация",
     language: "Язык",
+    menu: "Меню пользователя",
   },
 };
 
@@ -169,11 +181,14 @@ function notifyLocaleChange(locale: Locale) {
 }
 
 export default function UserMenu({ showLocaleSwitcher = true }: Props) {
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
   const [user, setUser] = useState<PublicUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>("login");
   const [selectedLocale, setSelectedLocale] = useState<Locale>("tr");
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
   const text = userMenuText[selectedLocale] || userMenuText.tr;
 
@@ -209,6 +224,32 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
     loadMe();
   }, []);
 
+  useEffect(() => {
+    if (!userDropdownOpen) return;
+
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Node;
+
+      if (menuRef.current && !menuRef.current.contains(target)) {
+        setUserDropdownOpen(false);
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setUserDropdownOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    window.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [userDropdownOpen]);
+
   async function handleLogout() {
     try {
       await fetch("/api/auth/logout", {
@@ -217,8 +258,10 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
       });
 
       setUser(null);
+      setUserDropdownOpen(false);
     } catch {
       setUser(null);
+      setUserDropdownOpen(false);
     }
   }
 
@@ -254,7 +297,10 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
 
   return (
     <>
-      <div className="flex max-w-full shrink-0 flex-col items-end gap-2">
+      <div
+        ref={menuRef}
+        className="relative z-[80] flex max-w-full shrink-0 items-center justify-end gap-2"
+      >
         {showLocaleSwitcher && (
           <div className="flex h-9 shrink-0 items-center overflow-hidden rounded-2xl border border-white/10 bg-black/25 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:h-10">
             {localeOptions.map((locale) => (
@@ -276,59 +322,114 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
         )}
 
         {user ? (
-          <div className="flex max-w-full items-center justify-end gap-1.5 sm:gap-2">
-            <div className="flex h-9 min-w-0 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.055] px-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:h-10 sm:rounded-2xl sm:px-3">
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white text-[9px] font-black text-black shadow-[0_10px_26px_rgba(255,255,255,0.1)] sm:h-8 sm:w-8 sm:rounded-xl sm:text-[10px]">
-                {getInitials(user)}
-              </div>
-
-              <div className="hidden min-w-0 xl:block">
-                <p className="text-[8px] font-black uppercase tracking-[0.14em] text-white/38">
-                  {text.welcome}
-                </p>
-
-                <p className="max-w-[105px] truncate text-[11px] font-black leading-4 text-white 2xl:max-w-[130px] 2xl:text-xs">
-                  {getDisplayName(user)}
-                </p>
-              </div>
-            </div>
-
-            <a
-              href="/hesabim/bakiye"
-              className="hidden h-10 items-center gap-2 rounded-2xl border border-white/10 bg-black/25 px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition hover:-translate-y-0.5 hover:border-white/22 hover:bg-white/[0.08] lg:flex"
-            >
-              <div className="min-w-0">
-                <p className="text-[8px] font-black uppercase tracking-[0.14em] text-white/35">
-                  {text.wallet}
-                </p>
-
-                <p className="max-w-[92px] truncate text-[11px] font-black leading-4 text-white 2xl:max-w-[118px] 2xl:text-xs">
-                  {walletBalance}
-                </p>
-              </div>
-
-              <span className="rounded-lg border border-white/10 bg-white/[0.045] px-1.5 py-1 text-[8px] font-black text-white/60 2xl:px-2 2xl:text-[9px]">
-                {user.preferred_currency}
-              </span>
-            </a>
-
-            <a
-              href="/hesabim"
-              className="inline-flex h-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.055] px-3 text-[10px] font-black text-white/86 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:bg-white/[0.1] hover:text-white sm:h-10 sm:rounded-2xl sm:px-4 sm:text-xs"
-            >
-              {text.account}
-            </a>
-
+          <>
             <button
               type="button"
-              onClick={handleLogout}
-              className="inline-flex h-9 items-center justify-center rounded-xl border border-[#6b2232]/75 bg-[#241018]/80 px-3 text-[10px] font-black text-[#f2c7d1] transition hover:-translate-y-0.5 hover:bg-[#351321] sm:h-10 sm:rounded-2xl sm:px-4 sm:text-xs"
+              onClick={() => setUserDropdownOpen((prev) => !prev)}
+              aria-label={text.menu}
+              className="group inline-flex h-10 max-w-[160px] shrink-0 items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.055] px-2.5 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:border-white/22 hover:bg-white/[0.09] sm:px-3"
             >
-              {text.logout}
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white text-[10px] font-black text-black shadow-[0_10px_26px_rgba(255,255,255,0.1)]">
+                {getInitials(user)}
+              </span>
+
+              <span className="hidden min-w-0 text-left 2xl:block">
+                <span className="block text-[8px] font-black uppercase tracking-[0.14em] text-white/38">
+                  {text.welcome}
+                </span>
+
+                <span className="block max-w-[92px] truncate text-xs font-black leading-4 text-white">
+                  {getDisplayName(user)}
+                </span>
+              </span>
+
+              <span
+                className={`ml-0.5 hidden h-1.5 w-1.5 shrink-0 rounded-full bg-white/55 transition sm:block ${
+                  userDropdownOpen ? "scale-125 bg-white" : ""
+                }`}
+              />
             </button>
-          </div>
+
+            {userDropdownOpen && (
+              <div className="absolute right-0 top-[calc(100%+10px)] w-[min(330px,calc(100vw-24px))] overflow-hidden rounded-[28px] border border-white/10 bg-[#080a0d]/98 p-3 text-white shadow-[0_28px_100px_rgba(0,0,0,0.65)] ring-1 ring-white/[0.035] backdrop-blur-2xl">
+                <div className="rounded-3xl border border-white/10 bg-white/[0.045] p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-sm font-black text-black shadow-[0_16px_38px_rgba(255,255,255,0.12)]">
+                      {getInitials(user)}
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-black text-white">
+                        {getDisplayName(user)}
+                      </p>
+
+                      <p className="mt-1 truncate text-xs font-semibold text-white/45">
+                        {user.email}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <a
+                  href="/hesabim/bakiye"
+                  onClick={() => setUserDropdownOpen(false)}
+                  className="mt-3 block rounded-3xl border border-white/10 bg-black/25 p-4 transition hover:border-white/18 hover:bg-white/[0.06]"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-white/38">
+                        {text.wallet}
+                      </p>
+
+                      <p className="mt-1 text-lg font-black text-white">
+                        {walletBalance}
+                      </p>
+                    </div>
+
+                    <span className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-1.5 text-xs font-black text-white/70">
+                      {user.preferred_currency}
+                    </span>
+                  </div>
+                </a>
+
+                <div className="mt-3 grid gap-2">
+                  <a
+                    href="/hesabim"
+                    onClick={() => setUserDropdownOpen(false)}
+                    className="rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-sm font-black text-white/82 transition hover:border-white/18 hover:bg-white/[0.075] hover:text-white"
+                  >
+                    {text.account}
+                  </a>
+
+                  <a
+                    href="/hesabim/bakiye"
+                    onClick={() => setUserDropdownOpen(false)}
+                    className="rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-sm font-black text-white/82 transition hover:border-white/18 hover:bg-white/[0.075] hover:text-white"
+                  >
+                    {text.balance}
+                  </a>
+
+                  <a
+                    href="/hesabim/siparisler"
+                    onClick={() => setUserDropdownOpen(false)}
+                    className="rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-sm font-black text-white/82 transition hover:border-white/18 hover:bg-white/[0.075] hover:text-white"
+                  >
+                    {text.orders}
+                  </a>
+
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="rounded-2xl border border-[#6b2232]/75 bg-[#241018]/80 px-4 py-3 text-left text-sm font-black text-[#f2c7d1] transition hover:border-[#8d3146] hover:bg-[#351321]"
+                  >
+                    {text.logout}
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         ) : (
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex shrink-0 items-center justify-end gap-2">
             <button
               type="button"
               onClick={() => openAuth("login")}
