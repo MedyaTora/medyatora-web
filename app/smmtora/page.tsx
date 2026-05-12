@@ -1543,110 +1543,113 @@ export default function SmmToraPage() {
         <ServiceTermsModal />
   
         <div className="mt-premium-inner mx-auto max-w-7xl space-y-5">
-          <header className="relative overflow-hidden rounded-[30px] border border-white/10 bg-[#07090c]/94 p-4 shadow-[0_24px_100px_rgba(0,0,0,0.52)] ring-1 ring-white/[0.025] backdrop-blur-2xl">
-            <div className="pointer-events-none absolute -right-24 -top-24 h-52 w-52 rounded-full bg-white/[0.025] blur-3xl" />
-  
-            <div className="relative flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-              <a href="/" className="inline-flex min-w-0 items-center gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/12 bg-white/[0.075] font-black text-white shadow-[0_0_24px_rgba(255,255,255,0.07)]">
-                  MT
-                </div>
-  
-                <div className="min-w-0">
-                  <div className="truncate text-lg font-black tracking-[0.14em] text-white">
-                    MEDYATORA
-                  </div>
-                  <div className="mt-1 truncate text-[10px] uppercase tracking-[0.24em] text-white/38">
-                    SMMTora servis paneli
-                  </div>
-                </div>
-              </a>
-  
-              <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-end">
-                <nav className="grid grid-cols-3 gap-2 text-center text-xs font-bold text-white/70 sm:flex sm:flex-wrap sm:items-center sm:text-sm">
-                  <a
-                    href="/"
-                    className="rounded-2xl border border-white/10 bg-white/[0.035] px-3 py-2.5 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white sm:px-4"
-                  >
-                    Ana Sayfa
-                  </a>
-  
-                  <a
-                    href="/analiz"
-                    className="rounded-2xl border border-white/10 bg-white/[0.035] px-3 py-2.5 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white sm:px-4"
-                  >
-                    Analiz
-                  </a>
-  
-                  <a
-                    href="/paketler"
-                    className="rounded-2xl border border-white/10 bg-white/[0.035] px-3 py-2.5 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white sm:px-4"
-                  >
-                    Paketler
-                  </a>
-                </nav>
-  
-                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
-                  <div className="flex w-full items-center gap-1 rounded-2xl border border-white/10 bg-black/25 p-1 sm:w-auto">
-                    <span className="hidden px-2 text-[10px] font-black uppercase tracking-[0.16em] text-white/35 sm:inline">
-                      Dil
-                    </span>
-  
-                    {localeOptions.map((locale) => {
-                      const active = selectedLocale === locale;
-  
-                      return (
-                        <button
-                          key={locale}
-                          type="button"
-                          onClick={() => setSelectedLocale(locale)}
-                          className={`h-9 flex-1 rounded-xl px-3 text-xs font-black transition sm:flex-none ${
-                            active
-                              ? "bg-white text-black shadow-[0_10px_24px_rgba(255,255,255,0.10)]"
-                              : "text-white/58 hover:bg-white/[0.08] hover:text-white"
-                          }`}
-                        >
-                          {locale.toUpperCase()}
-                        </button>
-                      );
-                    })}
-                  </div>
-  
-                  <div className="flex w-full items-center gap-1 rounded-2xl border border-white/10 bg-black/25 p-1 sm:w-auto">
-                    <span className="hidden px-2 text-[10px] font-black uppercase tracking-[0.16em] text-white/35 sm:inline">
-                      Para
-                    </span>
-  
-                    {currencyOptions.map((currency) => {
-                      const active = selectedCurrency === currency;
-  
-                      return (
-                        <button
-                          key={currency}
-                          type="button"
-                          onClick={() => {
-                            handleCurrencyChange(currency);
-                            clearStatusMessages();
-                          }}
-                          className={`h-9 flex-1 rounded-xl px-3 text-xs font-black transition sm:flex-none ${
-                            active
-                              ? "bg-white text-black shadow-[0_10px_24px_rgba(255,255,255,0.10)]"
-                              : "text-white/58 hover:bg-white/[0.08] hover:text-white"
-                          }`}
-                        >
-                          {currency}
-                        </button>
-                      );
-                    })}
-                  </div>
-  
-                  <div className="flex justify-end">
-                    <UserMenu showLocaleSwitcher={false} />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </header>
+        <header className="relative overflow-hidden rounded-[30px] border border-white/10 bg-[#07090c]/94 p-4 shadow-[0_24px_100px_rgba(0,0,0,0.52)] ring-1 ring-white/[0.025] backdrop-blur-2xl sm:p-5">
+  <div className="pointer-events-none absolute -right-24 -top-24 h-52 w-52 rounded-full bg-white/[0.025] blur-3xl" />
+  <div className="pointer-events-none absolute -left-20 bottom-0 h-44 w-44 rounded-full bg-white/[0.018] blur-3xl" />
+
+  <div className="relative flex flex-col gap-4">
+    <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+      <a href="/" className="inline-flex min-w-0 items-center gap-3">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/12 bg-white/[0.075] font-black text-white shadow-[0_0_24px_rgba(255,255,255,0.07)]">
+          MT
+        </div>
+
+        <div className="min-w-0">
+          <div className="truncate text-lg font-black tracking-[0.14em] text-white">
+            MEDYATORA
+          </div>
+          <div className="mt-1 truncate text-[10px] uppercase tracking-[0.24em] text-white/38">
+            SMMTora servis paneli
+          </div>
+        </div>
+      </a>
+
+      <nav className="grid grid-cols-3 gap-2 text-center text-xs font-bold text-white/70 sm:flex sm:flex-wrap sm:items-center sm:justify-end sm:text-sm">
+        <a
+          href="/"
+          className="rounded-2xl border border-white/10 bg-white/[0.035] px-3 py-2.5 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white sm:px-4"
+        >
+          Ana Sayfa
+        </a>
+
+        <a
+          href="/analiz"
+          className="rounded-2xl border border-white/10 bg-white/[0.035] px-3 py-2.5 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white sm:px-4"
+        >
+          Analiz
+        </a>
+
+        <a
+          href="/paketler"
+          className="rounded-2xl border border-white/10 bg-white/[0.035] px-3 py-2.5 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white sm:px-4"
+        >
+          Paketler
+        </a>
+      </nav>
+    </div>
+
+    <div className="grid gap-3 xl:grid-cols-[auto_auto_1fr] xl:items-center">
+      <div className="flex w-full items-center gap-1 rounded-2xl border border-white/10 bg-black/25 p-1 xl:w-fit">
+        <span className="hidden px-2 text-[10px] font-black uppercase tracking-[0.16em] text-white/35 sm:inline">
+          Dil
+        </span>
+
+        {localeOptions.map((locale) => {
+          const active = selectedLocale === locale;
+
+          return (
+            <button
+              key={locale}
+              type="button"
+              onClick={() => setSelectedLocale(locale)}
+              className={`h-9 flex-1 rounded-xl px-3 text-xs font-black transition xl:flex-none ${
+                active
+                  ? "bg-white text-black shadow-[0_10px_24px_rgba(255,255,255,0.10)]"
+                  : "text-white/58 hover:bg-white/[0.08] hover:text-white"
+              }`}
+            >
+              {locale.toUpperCase()}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex w-full items-center gap-1 rounded-2xl border border-white/10 bg-black/25 p-1 xl:w-fit">
+        <span className="hidden px-2 text-[10px] font-black uppercase tracking-[0.16em] text-white/35 sm:inline">
+          Para
+        </span>
+
+        {currencyOptions.map((currency) => {
+          const active = selectedCurrency === currency;
+
+          return (
+            <button
+              key={currency}
+              type="button"
+              onClick={() => {
+                handleCurrencyChange(currency);
+                clearStatusMessages();
+              }}
+              className={`h-9 flex-1 rounded-xl px-3 text-xs font-black transition xl:flex-none ${
+                active
+                  ? "bg-white text-black shadow-[0_10px_24px_rgba(255,255,255,0.10)]"
+                  : "text-white/58 hover:bg-white/[0.08] hover:text-white"
+              }`}
+            >
+              {currency}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex min-w-0 justify-start xl:justify-end">
+        <div className="max-w-full rounded-2xl border border-white/10 bg-black/20 p-1.5">
+          <UserMenu showLocaleSwitcher={false} />
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
   
           <section className="relative overflow-hidden rounded-[36px] border border-white/10 bg-[#07090c]/94 p-5 shadow-[0_30px_120px_rgba(0,0,0,0.56)] ring-1 ring-white/[0.035] backdrop-blur-2xl sm:p-6 lg:p-7">
             <div className="pointer-events-none absolute -right-32 -top-32 h-72 w-72 rounded-full bg-white/[0.035] blur-3xl" />
@@ -2027,136 +2030,155 @@ export default function SmmToraPage() {
                     className="max-h-[760px] min-h-[420px] space-y-3 overflow-y-auto pr-1"
                     style={{ scrollbarWidth: "thin" }}
                   >
-                    {filteredServices.map((service) => {
-                      const active = selectedService?.id === service.id;
-                      const unitPrice = getUnitSalePrice(
-                        service,
-                        selectedCurrency
-                      );
-  
-                      return (
-                        <button
-                          key={service.id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedServiceId(service.id);
-                            clearStatusMessages();
-  
-                            trackVisitorAction({
-                              event_type: "service_select",
-                              event_label: getLocalizedServiceTitle(
-                                service.title,
-                                selectedLocale
-                              ),
-                              event_value: String(service.siteCode),
-                              event_data: {
-                                service_id: service.id,
-                                site_code: service.siteCode,
-                                platform: service.platform,
-                                category: service.category,
-                                title: getLocalizedServiceTitle(
-                                  service.title,
-                                  selectedLocale
-                                ),
-                                level: service.level,
-                                guarantee: service.guarantee,
-                                guarantee_label: getLocalizedGuaranteeLabel(
-                                  service.guaranteeLabel,
-                                  selectedLocale
-                                ),
-                                min: service.min,
-                                max: service.max,
-                                price_per_1000: getUnitSalePrice(
-                                  service,
-                                  selectedCurrency
-                                ),
-                                currency: selectedCurrency,
-                              },
-                            });
-                          }}
-                          className={`group relative w-full overflow-hidden rounded-[26px] border p-4 text-left transition duration-200 hover:-translate-y-0.5 ${
-                            active
-                              ? "border-white/30 bg-gradient-to-br from-white/[0.13] to-white/[0.05] shadow-[0_18px_55px_rgba(0,0,0,0.32),0_0_0_1px_rgba(255,255,255,0.08)]"
-                              : "border-white/10 bg-white/[0.04] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] hover:border-white/20 hover:bg-white/[0.07] hover:shadow-[0_16px_45px_rgba(0,0,0,0.24)]"
-                          }`}
-                        >
-                          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                            <div className="min-w-0 flex-1">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <p className="line-clamp-2 text-sm font-bold text-white sm:text-base">
-                                  {getLocalizedServiceTitle(
-                                    service.title,
-                                    selectedLocale
-                                  )}
-                                </p>
-  
-                                {active && (
-                                  <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-black text-black sm:text-[11px]">
-                                    {t.selected}
-                                  </span>
-                                )}
-                              </div>
-  
-                              <div className="mt-3 flex flex-wrap gap-2">
-                                <span
-                                  className={`rounded-full border px-2.5 py-1 text-[10px] font-bold sm:text-[11px] ${getGuaranteeBadgeClass(
-                                    service.guaranteeLabel,
-                                    service.guarantee
-                                  )}`}
-                                >
-                                  {getLocalizedGuaranteeLabel(
-                                    service.guaranteeLabel,
-                                    selectedLocale
-                                  )}
-                                </span>
-  
-                                <span
-                                  className={`rounded-full border px-2.5 py-1 text-[10px] font-bold sm:text-[11px] ${getQualityBadgeClass(
-                                    service.level
-                                  )}`}
-                                >
-                                  {localizeCommonServiceText(
-                                    service.level,
-                                    selectedLocale
-                                  )}
-                                </span>
-  
-                                {service.regionLabel ? (
-                                  <span className="rounded-full border border-white/10 bg-white/[0.055] px-2.5 py-1 text-[10px] font-bold text-white/62 sm:text-[11px]">
-                                    {service.regionLabel}
-                                  </span>
-                                ) : null}
-                              </div>
-  
-                              <div className="mt-3 grid gap-1 text-xs text-white/52 sm:grid-cols-3 sm:text-sm">
-                                <p>
-                                  {t.serviceNo}: {service.siteCode}
-                                </p>
-                                <p>
-                                  {t.minMax}: {service.min} · Max: {service.max}
-                                </p>
-                                <p>
-                                  {t.speed}:{" "}
-                                  {getLocalizedSpeed(
-                                    service.speed,
-                                    selectedLocale
-                                  )}
-                                </p>
-                              </div>
-                            </div>
-  
-                            <div className="w-full rounded-2xl border border-white/12 bg-white/[0.055] px-3 py-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] sm:w-auto sm:min-w-[150px] sm:text-right">
-                              <p className="text-[11px] text-white/42 sm:text-xs">
-                                {t.per1000}
-                              </p>
-                              <p className="mt-1 text-base font-black text-white sm:text-lg">
-                                {formatPrice(unitPrice, selectedCurrency)}
-                              </p>
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })}
+{filteredServices.map((service) => {
+  const active = selectedService?.id === service.id;
+  const unitPrice = getUnitSalePrice(service, selectedCurrency);
+
+  return (
+    <button
+      key={service.id}
+      type="button"
+      onClick={() => {
+        setSelectedServiceId(service.id);
+        clearStatusMessages();
+
+        trackVisitorAction({
+          event_type: "service_select",
+          event_label: getLocalizedServiceTitle(
+            service.title,
+            selectedLocale
+          ),
+          event_value: String(service.siteCode),
+          event_data: {
+            service_id: service.id,
+            site_code: service.siteCode,
+            platform: service.platform,
+            category: service.category,
+            title: getLocalizedServiceTitle(service.title, selectedLocale),
+            level: service.level,
+            guarantee: service.guarantee,
+            guarantee_label: getLocalizedGuaranteeLabel(
+              service.guaranteeLabel,
+              selectedLocale
+            ),
+            min: service.min,
+            max: service.max,
+            price_per_1000: getUnitSalePrice(service, selectedCurrency),
+            currency: selectedCurrency,
+          },
+        });
+      }}
+      className={`group relative w-full overflow-hidden rounded-[28px] border p-4 text-left transition duration-200 hover:-translate-y-0.5 sm:p-5 ${
+        active
+          ? "border-white/30 bg-gradient-to-br from-white/[0.14] via-white/[0.075] to-white/[0.04] shadow-[0_22px_70px_rgba(0,0,0,0.38),0_0_0_1px_rgba(255,255,255,0.08)]"
+          : "border-white/10 bg-gradient-to-br from-white/[0.055] to-white/[0.025] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] hover:border-white/20 hover:bg-white/[0.07] hover:shadow-[0_16px_45px_rgba(0,0,0,0.24)]"
+      }`}
+    >
+      <div className="pointer-events-none absolute -right-14 -top-14 h-32 w-32 rounded-full bg-white/[0.045] blur-3xl transition group-hover:scale-125" />
+
+      <div className="relative flex flex-col gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full border border-white/10 bg-black/25 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-white/45">
+                #{service.siteCode}
+              </span>
+
+              {active ? (
+                <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-black text-black">
+                  {t.selected}
+                </span>
+              ) : null}
+
+              {service.regionLabel ? (
+                <span className="rounded-full border border-white/10 bg-white/[0.055] px-2.5 py-1 text-[10px] font-bold text-white/62">
+                  {service.regionLabel}
+                </span>
+              ) : null}
+            </div>
+
+            <h3 className="mt-3 line-clamp-2 text-base font-black leading-6 text-white sm:text-lg">
+              {getLocalizedServiceTitle(service.title, selectedLocale)}
+            </h3>
+
+            {service.subtitle ? (
+              <p className="mt-2 line-clamp-2 text-sm leading-6 text-white/52">
+                {getLocalizedServiceDescription(
+                  service.subtitle,
+                  selectedLocale
+                )}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="w-full rounded-2xl border border-white/12 bg-black/25 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] sm:w-[170px] sm:text-right">
+            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/38">
+              {t.per1000}
+            </p>
+            <p className="mt-1 text-xl font-black text-white">
+              {formatPrice(unitPrice, selectedCurrency)}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-2 sm:grid-cols-3">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2">
+            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/35">
+              Min / Max
+            </p>
+            <p className="mt-1 text-xs font-bold text-white/75 sm:text-sm">
+              {service.min} · {service.max}
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2">
+            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/35">
+              {t.speed}
+            </p>
+            <p className="mt-1 truncate text-xs font-bold text-white/75 sm:text-sm">
+              {getLocalizedSpeed(service.speed, selectedLocale)}
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2">
+            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/35">
+              {t.serviceNo}
+            </p>
+            <p className="mt-1 text-xs font-bold text-white/75 sm:text-sm">
+              {service.siteCode}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <span
+            className={`rounded-full border px-3 py-1.5 text-[11px] font-bold ${getGuaranteeBadgeClass(
+              service.guaranteeLabel,
+              service.guarantee
+            )}`}
+          >
+            {getLocalizedGuaranteeLabel(
+              service.guaranteeLabel,
+              selectedLocale
+            )}
+          </span>
+
+          <span
+            className={`rounded-full border px-3 py-1.5 text-[11px] font-bold ${getQualityBadgeClass(
+              service.level
+            )}`}
+          >
+            {localizeCommonServiceText(service.level, selectedLocale)}
+          </span>
+
+          <span className="ml-auto hidden rounded-full border border-white/10 bg-white/[0.055] px-3 py-1.5 text-[11px] font-black text-white/55 transition group-hover:bg-white group-hover:text-black sm:inline-flex">
+            {active ? t.selected : "Seç"}
+          </span>
+        </div>
+      </div>
+    </button>
+  );
+})}
                   </div>
                 )}
               </PremiumShellCard>
@@ -2212,191 +2234,252 @@ export default function SmmToraPage() {
           </div>
 
           <div className="flex flex-col gap-5">
-            <PremiumShellCard className="p-5 sm:p-6">
-              <SectionEyebrow title={t.orderInfo} />
+          <PremiumShellCard className="p-4 sm:p-6 xl:sticky xl:top-5">
+  <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <SectionEyebrow title={t.orderInfo} />
 
-              {selectedService ? (
-                <div className="mt-4 space-y-3">
-                  <div className="rounded-2xl border border-white/12 bg-gradient-to-br from-white/[0.085] to-white/[0.035] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-bold text-white">
-                        {getLocalizedServiceTitle(
-                          selectedService.title,
-                          selectedLocale
-                        )}
-                      </p>
+      {selectedService ? (
+        <span className="w-fit rounded-full border border-white/10 bg-white/[0.055] px-3 py-1.5 text-[11px] font-black text-white/58">
+          #{selectedService.siteCode}
+        </span>
+      ) : null}
+    </div>
 
-                      <span
-                        className={`rounded-full border px-2.5 py-1 text-[10px] font-bold sm:text-[11px] ${getGuaranteeBadgeClass(
-                          selectedService.guaranteeLabel,
-                          selectedService.guarantee
-                        )}`}
-                      >
-                        {getLocalizedGuaranteeLabel(
-                          selectedService.guaranteeLabel,
-                          selectedLocale
-                        )}
-                      </span>
+    {selectedService ? (
+      <div className="space-y-3">
+        <div className="relative overflow-hidden rounded-[26px] border border-white/12 bg-gradient-to-br from-white/[0.10] via-white/[0.055] to-white/[0.025] p-4 shadow-[0_18px_55px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.04)]">
+          <div className="pointer-events-none absolute -right-16 -top-16 h-36 w-36 rounded-full bg-white/[0.045] blur-3xl" />
 
-                      <span
-                        className={`rounded-full border px-2.5 py-1 text-[10px] font-bold sm:text-[11px] ${getQualityBadgeClass(
-                          selectedService.level
-                        )}`}
-                      >
-                        {localizeCommonServiceText(
-                          selectedService.level,
-                          selectedLocale
-                        )}
-                      </span>
-                    </div>
-
-                    <p className="mt-3 text-sm text-white/58">
-                      {t.minMax} {selectedService.min} · Max{" "}
-                      {selectedService.max}
-                    </p>
-
-                    <p className="mt-1 text-sm text-white/58">
-                      {t.speed}:{" "}
-                      {getLocalizedSpeed(selectedService.speed, selectedLocale)}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
-                    <p className="text-sm font-bold text-white/82">
-                      {t.productDescription}
-                    </p>
-                    <p className="mt-2 whitespace-pre-line text-sm leading-6 text-white/58">
-                      {getLocalizedServiceDescription(
-                        selectedService.description,
-                        selectedLocale
-                      )}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.045] p-4 text-sm text-white/50">
-                  {t.selectProductFirst}
-                </div>
-              )}
-
-              <div className="mt-4 space-y-3">
-                <input
-                  value={targetUsername}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setTargetUsername(value);
-
-                    if (value.trim().length >= 3 && selectedService) {
-                      trackVisitorAction({
-                        event_type: "target_entered",
-                        event_label: "Hedef kullanıcı adı girildi",
-                        event_value: value.trim(),
-                        event_data: {
-                          service_id: selectedService.id,
-                          site_code: selectedService.siteCode,
-                          platform: selectedPlatform,
-                          category: selectedCategory,
-                        },
-                      });
-                    }
-                  }}
-                  placeholder={t.targetUsername}
-                  className="w-full rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-white/28 focus:bg-white/[0.07]"
-                />
-
-                <input
-                  value={targetLink}
-                  onChange={(e) => setTargetLink(e.target.value)}
-                  placeholder={t.targetLink}
-                  className="w-full rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-white/28 focus:bg-white/[0.07]"
-                />
-
-                <input
-                  value={quantity}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, "");
-                    setQuantity(value);
-
-                    const numericValue = Number(value);
-
-                    if (numericValue > 0 && selectedService) {
-                      trackVisitorAction({
-                        event_type: "quantity_entered",
-                        event_label: "Miktar girildi",
-                        event_value: String(numericValue),
-                        event_data: {
-                          service_id: selectedService.id,
-                          site_code: selectedService.siteCode,
-                          platform: selectedPlatform,
-                          category: selectedCategory,
-                          quantity: numericValue,
-                          min: selectedService.min,
-                          max: selectedService.max,
-                          valid:
-                            numericValue >= selectedService.min &&
-                            numericValue <= selectedService.max,
-                        },
-                      });
-                    }
-                  }}
-                  placeholder={t.quantity}
-                  inputMode="numeric"
-                  className="w-full rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-white/28 focus:bg-white/[0.07]"
-                />
-
-                {selectedService && (
-                  <p className="text-xs leading-5 text-white/42">
-                    {t.minQuantityText
-                      .replace("{min}", String(selectedService.min))
-                      .replace("{max}", String(selectedService.max))}
-                  </p>
+          <div className="relative">
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className={`rounded-full border px-2.5 py-1 text-[10px] font-bold ${getGuaranteeBadgeClass(
+                  selectedService.guaranteeLabel,
+                  selectedService.guarantee
+                )}`}
+              >
+                {getLocalizedGuaranteeLabel(
+                  selectedService.guaranteeLabel,
+                  selectedLocale
                 )}
+              </span>
 
-                <input
-                  value={orderNote}
-                  onChange={(e) => setOrderNote(e.target.value)}
-                  placeholder={t.orderNote}
-                  className="w-full rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-white/28 focus:bg-white/[0.07]"
-                />
+              <span
+                className={`rounded-full border px-2.5 py-1 text-[10px] font-bold ${getQualityBadgeClass(
+                  selectedService.level
+                )}`}
+              >
+                {localizeCommonServiceText(
+                  selectedService.level,
+                  selectedLocale
+                )}
+              </span>
+            </div>
 
-                <div className="rounded-2xl border border-white/14 bg-gradient-to-br from-white/[0.10] to-white/[0.035] p-4 shadow-[0_14px_42px_rgba(255,255,255,0.05),inset_0_1px_0_rgba(255,255,255,0.04)]">
-                  <p className="text-sm text-white/48">{t.totalSalePrice}</p>
-                  <p className="mt-1 text-2xl font-black text-white">
-                    {totalPrice > 0
-                      ? formatPrice(totalPrice, selectedCurrency)
-                      : "-"}
-                  </p>
-                </div>
+            <h3 className="mt-3 text-base font-black leading-6 text-white sm:text-lg">
+              {getLocalizedServiceTitle(selectedService.title, selectedLocale)}
+            </h3>
 
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <button
-                    type="button"
-                    onClick={handleOpenSingleCheckout}
-                    disabled={!canUseCurrentForm}
-                    className="rounded-2xl bg-white px-4 py-3 text-sm font-black text-black shadow-[0_16px_38px_rgba(255,255,255,0.10)] transition hover:-translate-y-0.5 hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
-                  >
-                    {t.buyNow}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleAddToCart}
-                    disabled={!canUseCurrentForm}
-                    className="rounded-2xl border border-white/14 bg-white/[0.055] px-4 py-3 text-sm font-bold text-white/82 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:bg-white/[0.09] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
-                  >
-                    {t.addToCart}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={goToCart}
-                    className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-black text-white/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
-                  >
-                    {t.goToCart}
-                  </button>
-                </div>
+            <div className="mt-4 grid gap-2 sm:grid-cols-3">
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/35">
+                  Min
+                </p>
+                <p className="mt-1 text-sm font-black text-white">
+                  {selectedService.min}
+                </p>
               </div>
-            </PremiumShellCard>
+
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/35">
+                  Max
+                </p>
+                <p className="mt-1 text-sm font-black text-white">
+                  {selectedService.max}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/35">
+                  {t.per1000}
+                </p>
+                <p className="mt-1 text-sm font-black text-white">
+                  {formatPrice(selectedUnitPrice, selectedCurrency)}
+                </p>
+              </div>
+            </div>
+
+            <p className="mt-3 text-xs leading-5 text-white/45">
+              {t.speed}:{" "}
+              <span className="font-bold text-white/70">
+                {getLocalizedSpeed(selectedService.speed, selectedLocale)}
+              </span>
+            </p>
+          </div>
+        </div>
+
+        <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
+          <p className="text-sm font-bold text-white/82">
+            {t.productDescription}
+          </p>
+
+          <p className="mt-2 line-clamp-4 whitespace-pre-line text-sm leading-6 text-white/58">
+            {getLocalizedServiceDescription(
+              selectedService.description,
+              selectedLocale
+            )}
+          </p>
+        </div>
+      </div>
+    ) : (
+      <div className="rounded-[24px] border border-dashed border-white/15 bg-white/[0.04] p-5 text-sm leading-6 text-white/50">
+        {t.selectProductFirst}
+      </div>
+    )}
+
+    <div className="space-y-3">
+      <input
+        value={targetUsername}
+        onChange={(e) => {
+          const value = e.target.value;
+          setTargetUsername(value);
+
+          if (value.trim().length >= 3 && selectedService) {
+            trackVisitorAction({
+              event_type: "target_entered",
+              event_label: "Hedef kullanıcı adı girildi",
+              event_value: value.trim(),
+              event_data: {
+                service_id: selectedService.id,
+                site_code: selectedService.siteCode,
+                platform: selectedPlatform,
+                category: selectedCategory,
+              },
+            });
+          }
+        }}
+        placeholder={t.targetUsername}
+        className="w-full rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-white/28 focus:bg-white/[0.07]"
+      />
+
+      <input
+        value={targetLink}
+        onChange={(e) => setTargetLink(e.target.value)}
+        placeholder={t.targetLink}
+        className="w-full rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-white/28 focus:bg-white/[0.07]"
+      />
+
+      <input
+        value={quantity}
+        onChange={(e) => {
+          const value = e.target.value.replace(/\D/g, "");
+          setQuantity(value);
+
+          const numericValue = Number(value);
+
+          if (numericValue > 0 && selectedService) {
+            trackVisitorAction({
+              event_type: "quantity_entered",
+              event_label: "Miktar girildi",
+              event_value: String(numericValue),
+              event_data: {
+                service_id: selectedService.id,
+                site_code: selectedService.siteCode,
+                platform: selectedPlatform,
+                category: selectedCategory,
+                quantity: numericValue,
+                min: selectedService.min,
+                max: selectedService.max,
+                valid:
+                  numericValue >= selectedService.min &&
+                  numericValue <= selectedService.max,
+              },
+            });
+          }
+        }}
+        placeholder={t.quantity}
+        inputMode="numeric"
+        className="w-full rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-white/28 focus:bg-white/[0.07]"
+      />
+
+      {selectedService && (
+        <p className="text-xs leading-5 text-white/42">
+          {t.minQuantityText
+            .replace("{min}", String(selectedService.min))
+            .replace("{max}", String(selectedService.max))}
+        </p>
+      )}
+
+      <input
+        value={orderNote}
+        onChange={(e) => setOrderNote(e.target.value)}
+        placeholder={t.orderNote}
+        className="w-full rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-white/28 focus:bg-white/[0.07]"
+      />
+    </div>
+
+    <div className="relative overflow-hidden rounded-[26px] border border-white/14 bg-gradient-to-br from-white/[0.12] via-white/[0.06] to-white/[0.025] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.30),inset_0_1px_0_rgba(255,255,255,0.05)]">
+      <div className="pointer-events-none absolute -right-12 -top-12 h-28 w-28 rounded-full bg-white/[0.06] blur-3xl" />
+
+      <div className="relative flex items-end justify-between gap-3">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-white/42">
+            {t.totalSalePrice}
+          </p>
+          <p className="mt-2 text-3xl font-black text-white">
+            {totalPrice > 0 ? formatPrice(totalPrice, selectedCurrency) : "-"}
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-black/25 px-3 py-2 text-right">
+          <p className="text-[10px] font-black text-white/35">
+            {selectedCurrency}
+          </p>
+          <p className="text-xs font-bold text-white/68">
+            {quantityNumber > 0 ? quantityNumber.toLocaleString("tr-TR") : "0"}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div className="grid gap-3">
+      <button
+        type="button"
+        onClick={handleOpenSingleCheckout}
+        disabled={!canUseCurrentForm}
+        className="rounded-2xl bg-white px-4 py-3.5 text-sm font-black text-black shadow-[0_16px_38px_rgba(255,255,255,0.10)] transition hover:-translate-y-0.5 hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+      >
+        {t.buyNow}
+      </button>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={handleAddToCart}
+          disabled={!canUseCurrentForm}
+          className="rounded-2xl border border-white/14 bg-white/[0.055] px-4 py-3 text-sm font-bold text-white/82 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:bg-white/[0.09] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+        >
+          {t.addToCart}
+        </button>
+
+        <button
+          type="button"
+          onClick={goToCart}
+          className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-black text-white/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
+        >
+          {t.goToCart}
+        </button>
+      </div>
+    </div>
+
+    {!canUseCurrentForm && (
+      <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-xs leading-5 text-amber-100/80">
+        Hizmeti seç, hedef kullanıcı adını yaz ve geçerli miktar gir. Sonra satın alma veya sepete ekleme aktif olur.
+      </div>
+    )}
+  </div>
+</PremiumShellCard>
 
             <PremiumShellCard ref={cartSectionRef} className="p-5 sm:p-6">
               <div className="mb-4 flex items-center justify-between gap-3">
