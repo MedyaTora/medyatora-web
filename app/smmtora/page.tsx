@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import type { IconType } from "react-icons";
 import type { OrderServiceItem } from "@/lib/services";
 import { getDictionary, type Locale } from "@/lib/i18n";
@@ -12,8 +12,14 @@ import { trackVisitorAction } from "../components/visitor-tracker";
 import * as SiIcons from "react-icons/si";
 
 import {
+  FaArrowDown,
+  FaArrowUp,
+  FaBoxesStacked,
+  FaCartShopping,
   FaFileInvoice,
+  FaMagnifyingGlass,
   FaShieldHalved,
+  FaSliders,
   FaUserCheck,
   FaWhatsapp,
 } from "react-icons/fa6";
@@ -165,7 +171,6 @@ function isVisibleCustomerService(service: OrderServiceItem) {
   const max = toSafeNumber(service.max);
 
   if (min > 0 && max > 0 && min > max) return false;
-
   if (tlPrice > MAX_VISIBLE_UNIT_PRICE_TL) return false;
 
   return true;
@@ -347,6 +352,7 @@ function detectInitialLocale(): Locale {
   const browserLang = (navigator.language || "").toLowerCase();
   if (browserLang.startsWith("tr")) return "tr";
   if (browserLang.startsWith("ru")) return "ru";
+
   return "en";
 }
 
@@ -372,7 +378,7 @@ function getUnitCostPrice(
 
 function formatPrice(value: number, currency: CurrencyCode) {
   if (!value) return `0 ${currency}`;
-  if (currency === "TL") return `${Math.round(value)} TL`;
+  if (currency === "TL") return `${Math.round(value).toLocaleString("tr-TR")} TL`;
   return `${value.toFixed(2)} ${currency}`;
 }
 
@@ -425,17 +431,9 @@ function getGuaranteeBadgeClass(
   const dayMatch = text.match(/(\d+)/);
   const days = dayMatch ? Number(dayMatch[1]) : 0;
 
-  if (days >= 60) {
-    return "border-white/18 bg-white/[0.075] text-white";
-  }
-
-  if (days >= 30) {
-    return "border-sky-300/28 bg-sky-300/10 text-sky-100";
-  }
-
-  if (days >= 7) {
-    return "border-amber-300/30 bg-amber-300/10 text-amber-100";
-  }
+  if (days >= 60) return "border-white/18 bg-white/[0.075] text-white";
+  if (days >= 30) return "border-sky-300/28 bg-sky-300/10 text-sky-100";
+  if (days >= 7) return "border-amber-300/30 bg-amber-300/10 text-amber-100";
 
   return "border-white/15 bg-white/[0.07] text-white/72";
 }
@@ -449,14 +447,6 @@ function getQualityBadgeClass(level: string | null | undefined) {
 
   if (text.includes("plus") || text.includes("premium") || text.includes("hq")) {
     return "border-sky-300/28 bg-sky-300/10 text-sky-100";
-  }
-
-  if (
-    text.includes("core") ||
-    text.includes("basic") ||
-    text.includes("standart")
-  ) {
-    return "border-white/15 bg-white/[0.07] text-white/70";
   }
 
   return "border-white/15 bg-white/[0.07] text-white/70";
@@ -480,10 +470,8 @@ function getSelectedBalance(
   currency: CurrencyCode
 ) {
   if (!authUser) return 0;
-
   if (currency === "USD") return Number(authUser.balance_usd || 0);
   if (currency === "RUB") return Number(authUser.balance_rub || 0);
-
   return Number(authUser.balance_tl || 0);
 }
 
@@ -720,8 +708,10 @@ function OrderBeforeNotice({ t }: { t: ReturnType<typeof getDictionary> }) {
   ];
 
   return (
-    <section className="rounded-[32px] border border-white/10 bg-[#080a0d]/92 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.32)] ring-1 ring-white/[0.025] backdrop-blur-xl sm:p-6">
-      <div className="mb-5">
+    <section className="relative overflow-hidden rounded-[32px] border border-white/10 bg-[#080a0d]/92 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.32)] ring-1 ring-white/[0.025] backdrop-blur-xl sm:p-6">
+      <div className="pointer-events-none absolute -right-24 -top-24 h-48 w-48 rounded-full bg-white/[0.025] blur-3xl" />
+
+      <div className="relative mb-5">
         <p className="text-xs font-black uppercase tracking-[0.22em] text-white/42">
           {t.orderBeforeBadge}
         </p>
@@ -735,7 +725,7 @@ function OrderBeforeNotice({ t }: { t: ReturnType<typeof getDictionary> }) {
         </p>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="relative grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         {notices.map((item) => (
           <div
             key={item.title}
@@ -753,6 +743,7 @@ function OrderBeforeNotice({ t }: { t: ReturnType<typeof getDictionary> }) {
     </section>
   );
 }
+
 
 export default function SmmToraPage() {
   const platforms = getAllPlatforms();
@@ -904,7 +895,6 @@ export default function SmmToraPage() {
         }
 
         setServices(Array.isArray(data.items) ? data.items : []);
-
       } catch (err) {
         setError(err instanceof Error ? err.message : "Servisler yüklenemedi.");
       } finally {
@@ -921,6 +911,7 @@ export default function SmmToraPage() {
 
   const availablePlatforms = useMemo(() => {
     if (servicesLoading) return platforms;
+
     return platforms.filter((platform) =>
       availablePlatformSlugs.has(platform.slug)
     );
@@ -1002,10 +993,11 @@ export default function SmmToraPage() {
 
     const search = normalizeSearchText(serviceSearch.trim());
 
-const filtered = services
-  .filter(isVisibleCustomerService)
-  .filter((item) => {
+    const filtered = services
+      .filter(isVisibleCustomerService)
+      .filter((item) => {
         if (search) return true;
+
         return (
           item.platform === selectedPlatform && item.category === selectedCategory
         );
@@ -1034,6 +1026,7 @@ const filtered = services
       .filter((item) => {
         if (search) return true;
         if (qualityFilter === "all") return true;
+
         return item.level === qualityFilter;
       })
       .filter((item) => {
@@ -1046,6 +1039,7 @@ const filtered = services
           item.guaranteeLabel !== "Garantisiz";
 
         if (guaranteeFilter === "guaranteed") return isGuaranteed;
+
         return !isGuaranteed;
       })
       .filter((item) => {
@@ -1120,6 +1114,7 @@ const filtered = services
   const totalPrice = useMemo(() => {
     if (!selectedService) return 0;
     if (!quantityNumber) return 0;
+
     if (
       quantityNumber < selectedService.min ||
       quantityNumber > selectedService.max
@@ -1133,6 +1128,7 @@ const filtered = services
   const totalCostPrice = useMemo(() => {
     if (!selectedService) return 0;
     if (!quantityNumber) return 0;
+
     if (
       quantityNumber < selectedService.min ||
       quantityNumber > selectedService.max
@@ -1161,299 +1157,228 @@ const filtered = services
     !!paymentMethod &&
     paymentTermsAccepted;
 
-  const scrollProducts = (direction: "up" | "down") => {
-    if (!productsScrollRef.current) return;
-
-    productsScrollRef.current.scrollBy({
-      top: direction === "down" ? 320 : -320,
-      behavior: "smooth",
-    });
-  };
-
-  const goToCart = () => {
-    cartSectionRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
-  };
-
-  const resetItemForm = () => {
-    setQuantity("");
-    setTargetUsername("");
-    setTargetLink("");
-    setOrderNote("");
-  };
-
-  const resetCheckoutForm = () => {
-    setFullName("");
-    setPhoneNumber("");
-    setContactType("");
-    setContactValue("");
-    setPaymentMethod("");
-    setPaymentTermsAccepted(false);
-  };
-
-  const buildCurrentItem = (): CartItem | null => {
-    if (!selectedService || !canUseCurrentForm) return null;
-
-    return {
-      cartId: makeCartId(),
-      service_id: selectedService.id,
-      site_code: selectedService.siteCode,
-      service_title: getLocalizedServiceTitle(
-        selectedService.title,
-        selectedLocale
-      ),
-      platform: selectedPlatform,
-      category: selectedCategory,
-      quantity: quantityNumber,
-      unit_price: selectedUnitPrice,
-      total_price: totalPrice,
-      unit_cost_price: selectedUnitCostPrice,
-      total_cost_price: totalCostPrice,
-      guarantee_label: getLocalizedGuaranteeLabel(
-        selectedService.guaranteeLabel,
-        selectedLocale
-      ),
-      speed: getLocalizedSpeed(selectedService.speed, selectedLocale),
-      target_username: targetUsername.trim(),
-      target_link: targetLink.trim(),
-      order_note: orderNote.trim(),
+    const scrollProducts = (direction: "up" | "down") => {
+      if (!productsScrollRef.current) return;
+  
+      productsScrollRef.current.scrollBy({
+        top: direction === "down" ? 320 : -320,
+        behavior: "smooth",
+      });
     };
-  };
-
-  const repriceCartItem = (item: CartItem, currency: CurrencyCode): CartItem => {
-    const service =
-      services.find(
-        (serviceItem) =>
-          serviceItem.id === item.service_id &&
-          serviceItem.siteCode === item.site_code
-      ) || services.find((serviceItem) => serviceItem.id === item.service_id);
-
-    if (!service) {
-      return item;
-    }
-
-    const unitPrice = roundMoney(getUnitSalePrice(service, currency));
-    const unitCostPrice = roundMoney(getUnitCostPrice(service, currency));
-    const totalPrice = roundMoney((item.quantity / 1000) * unitPrice);
-    const totalCostPrice = roundMoney((item.quantity / 1000) * unitCostPrice);
-
-    return {
-      ...item,
-      service_title: getLocalizedServiceTitle(service.title, selectedLocale),
-      guarantee_label: getLocalizedGuaranteeLabel(
-        service.guaranteeLabel,
-        selectedLocale
-      ),
-      speed: getLocalizedSpeed(service.speed, selectedLocale),
-      unit_price: unitPrice,
-      total_price: totalPrice,
-      unit_cost_price: unitCostPrice,
-      total_cost_price: totalCostPrice,
+  
+    const goToCart = () => {
+      cartSectionRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
     };
-  };
-
-  const handleCurrencyChange = (currency: CurrencyCode) => {
-    setSelectedCurrency(currency);
-    setError("");
-    setCartMessage("");
-    setPaymentReviewMessage("");
-    setPaymentReviewError("");
-
-    setCartItems((prev) => prev.map((item) => repriceCartItem(item, currency)));
-
-    setCheckoutItems((prev) =>
-      prev.map((item) => repriceCartItem(item, currency))
-    );
-
-    trackVisitorAction({
-      event_type: "payment_method_select",
-      event_label: `Para birimi seçildi: ${currency}`,
-      event_value: currency,
-      event_data: {
-        checkout_mode: checkoutMode,
-        item_count: checkoutItems.length,
-        selected_currency: currency,
-      },
-    });
-  };
-
-  const clearStatusMessages = () => {
-    setError("");
-    setCartMessage("");
-    setCreatedOrderNumbers([]);
-    setCreatedPaymentInfo(null);
-    setPaymentReviewMessage("");
-    setPaymentReviewError("");
-    setSuccessOpen(false);
-  };
-
-  const handleAddToCart = () => {
-    const item = buildCurrentItem();
-    if (!item) return;
-
-    trackVisitorAction({
-      event_type: "add_to_cart",
-      event_label: item.service_title,
-      event_value: String(item.site_code),
-      event_data: {
-        service_id: item.service_id,
-        site_code: item.site_code,
-        platform: item.platform,
-        category: item.category,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        total_price: item.total_price,
-        currency: selectedCurrency,
-        target_username: item.target_username,
-        has_target_link: Boolean(item.target_link),
-      },
-    });
-
-    setCartItems((prev) => [...prev, item]);
-    resetItemForm();
-    setCartMessage(t.successOrder);
-    setError("");
-    setCreatedOrderNumbers([]);
-    setCreatedPaymentInfo(null);
-    setSuccessOpen(false);
-  };
-
-  const handleRemoveCartItem = (cartId: string) => {
-    setCartItems((prev) => prev.filter((item) => item.cartId !== cartId));
-  };
-
-  const handleEditCartItem = (cartId: string) => {
-    const item = cartItems.find((x) => x.cartId === cartId);
-    if (!item) return;
-
-    setSelectedPlatform(item.platform);
-    setSelectedCategory(item.category);
-    setSelectedServiceId(item.service_id);
-    setQuantity(String(item.quantity));
-    setTargetUsername(item.target_username);
-    setTargetLink(item.target_link);
-    setOrderNote(item.order_note);
-
-    setCartItems((prev) => prev.filter((x) => x.cartId !== cartId));
-    setCartMessage(t.edit);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const handleOpenSingleCheckout = () => {
-    const item = buildCurrentItem();
-    if (!item) return;
-
-    trackVisitorAction({
-      event_type: "checkout_open",
-      event_label: item.service_title,
-      event_value: String(item.site_code),
-      event_data: {
-        mode: "single",
-        service_id: item.service_id,
-        site_code: item.site_code,
-        platform: item.platform,
-        category: item.category,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        total_price: item.total_price,
-        currency: selectedCurrency,
-        target_username: item.target_username,
-        has_target_link: Boolean(item.target_link),
-      },
-    });
-
-    setCheckoutItems([item]);
-    setCheckoutMode("single");
-    setPaymentTermsAccepted(false);
-    setError("");
-  };
-
-  const handleOpenCartCheckout = () => {
-    if (cartItems.length === 0) return;
-
-    trackVisitorAction({
-      event_type: "checkout_open",
-      event_label: "Sepet ödeme ekranı",
-      event_value: String(cartItems.length),
-      event_data: {
-        mode: "cart",
-        item_count: cartItems.length,
-        total_price: cartTotal,
-        currency: selectedCurrency,
-        items: cartItems.map((item) => ({
+  
+    const resetItemForm = () => {
+      setQuantity("");
+      setTargetUsername("");
+      setTargetLink("");
+      setOrderNote("");
+    };
+  
+    const resetCheckoutForm = () => {
+      setFullName("");
+      setPhoneNumber("");
+      setContactType("");
+      setContactValue("");
+      setPaymentMethod("");
+      setPaymentTermsAccepted(false);
+    };
+  
+    const buildCurrentItem = (): CartItem | null => {
+      if (!selectedService || !canUseCurrentForm) return null;
+  
+      return {
+        cartId: makeCartId(),
+        service_id: selectedService.id,
+        site_code: selectedService.siteCode,
+        service_title: getLocalizedServiceTitle(
+          selectedService.title,
+          selectedLocale
+        ),
+        platform: selectedPlatform,
+        category: selectedCategory,
+        quantity: quantityNumber,
+        unit_price: selectedUnitPrice,
+        total_price: totalPrice,
+        unit_cost_price: selectedUnitCostPrice,
+        total_cost_price: totalCostPrice,
+        guarantee_label: getLocalizedGuaranteeLabel(
+          selectedService.guaranteeLabel,
+          selectedLocale
+        ),
+        speed: getLocalizedSpeed(selectedService.speed, selectedLocale),
+        target_username: targetUsername.trim(),
+        target_link: targetLink.trim(),
+        order_note: orderNote.trim(),
+      };
+    };
+  
+    const repriceCartItem = (item: CartItem, currency: CurrencyCode): CartItem => {
+      const service =
+        services.find(
+          (serviceItem) =>
+            serviceItem.id === item.service_id &&
+            serviceItem.siteCode === item.site_code
+        ) || services.find((serviceItem) => serviceItem.id === item.service_id);
+  
+      if (!service) return item;
+  
+      const unitPrice = roundMoney(getUnitSalePrice(service, currency));
+      const unitCostPrice = roundMoney(getUnitCostPrice(service, currency));
+      const totalPrice = roundMoney((item.quantity / 1000) * unitPrice);
+      const totalCostPrice = roundMoney((item.quantity / 1000) * unitCostPrice);
+  
+      return {
+        ...item,
+        service_title: getLocalizedServiceTitle(service.title, selectedLocale),
+        guarantee_label: getLocalizedGuaranteeLabel(
+          service.guaranteeLabel,
+          selectedLocale
+        ),
+        speed: getLocalizedSpeed(service.speed, selectedLocale),
+        unit_price: unitPrice,
+        total_price: totalPrice,
+        unit_cost_price: unitCostPrice,
+        total_cost_price: totalCostPrice,
+      };
+    };
+  
+    const handleCurrencyChange = (currency: CurrencyCode) => {
+      setSelectedCurrency(currency);
+      setError("");
+      setCartMessage("");
+      setPaymentReviewMessage("");
+      setPaymentReviewError("");
+  
+      setCartItems((prev) => prev.map((item) => repriceCartItem(item, currency)));
+      setCheckoutItems((prev) =>
+        prev.map((item) => repriceCartItem(item, currency))
+      );
+  
+      trackVisitorAction({
+        event_type: "payment_method_select",
+        event_label: `Para birimi seçildi: ${currency}`,
+        event_value: currency,
+        event_data: {
+          checkout_mode: checkoutMode,
+          item_count: checkoutItems.length,
+          selected_currency: currency,
+        },
+      });
+    };
+  
+    const clearStatusMessages = () => {
+      setError("");
+      setCartMessage("");
+      setCreatedOrderNumbers([]);
+      setCreatedPaymentInfo(null);
+      setPaymentReviewMessage("");
+      setPaymentReviewError("");
+      setSuccessOpen(false);
+    };
+  
+    const handleAddToCart = () => {
+      const item = buildCurrentItem();
+      if (!item) return;
+  
+      trackVisitorAction({
+        event_type: "add_to_cart",
+        event_label: item.service_title,
+        event_value: String(item.site_code),
+        event_data: {
           service_id: item.service_id,
           site_code: item.site_code,
-          service_title: item.service_title,
           platform: item.platform,
           category: item.category,
           quantity: item.quantity,
+          unit_price: item.unit_price,
           total_price: item.total_price,
-        })),
-      },
-    });
-
-    setCheckoutItems(cartItems);
-    setCheckoutMode("cart");
-    setPaymentTermsAccepted(false);
-    setError("");
-  };
-
-  const submitItems = async () => {
-    if (!isCheckoutValid || checkoutItems.length === 0) return;
-
-    const checkoutTotalAmount = checkoutItems.reduce(
-      (sum, item) => sum + item.total_price,
-      0
-    );
-
-    setLoading(true);
-    setError("");
-    setCartMessage("");
-    setCreatedOrderNumbers([]);
-    setCreatedPaymentInfo(null);
-    setPaymentReviewMessage("");
-    setPaymentReviewError("");
-
-    try {
-      const res = await fetch("/api/order-request", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+          currency: selectedCurrency,
+          target_username: item.target_username,
+          has_target_link: Boolean(item.target_link),
         },
-        body: JSON.stringify({
-          full_name: fullName,
-          phone_number: phoneNumber,
-          contact_type: contactType,
-          contact_value: contactValue,
-          currency: selectedCurrency,
-          payment_method: paymentMethod,
-          items: checkoutItems,
-        }),
       });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Sipariş oluşturulamadı.");
+  
+      setCartItems((prev) => [...prev, item]);
+      resetItemForm();
+      setCartMessage(t.successOrder);
+      setError("");
+      setCreatedOrderNumbers([]);
+      setCreatedPaymentInfo(null);
+      setSuccessOpen(false);
+    };
+  
+    const handleRemoveCartItem = (cartId: string) => {
+      setCartItems((prev) => prev.filter((item) => item.cartId !== cartId));
+    };
+  
+    const handleEditCartItem = (cartId: string) => {
+      const item = cartItems.find((x) => x.cartId === cartId);
+      if (!item) return;
+  
+      setSelectedPlatform(item.platform);
+      setSelectedCategory(item.category);
+      setSelectedServiceId(item.service_id);
+      setQuantity(String(item.quantity));
+      setTargetUsername(item.target_username);
+      setTargetLink(item.target_link);
+      setOrderNote(item.order_note);
+  
+      setCartItems((prev) => prev.filter((x) => x.cartId !== cartId));
+      setCartMessage(t.edit);
+  
+      if (typeof window !== "undefined") {
+        window.scrollTo({ top: 0, behavior: "smooth" });
       }
-
+    };
+  
+    const handleOpenSingleCheckout = () => {
+      const item = buildCurrentItem();
+      if (!item) return;
+  
       trackVisitorAction({
-        event_type: "order_created",
-        event_label: "Sipariş oluşturuldu",
-        event_value: Array.isArray(data.orderNumbers)
-          ? data.orderNumbers.join(", ")
-          : "",
+        event_type: "checkout_open",
+        event_label: item.service_title,
+        event_value: String(item.site_code),
         event_data: {
-          order_numbers: data.orderNumbers || [],
-          checkout_mode: checkoutMode,
-          item_count: checkoutItems.length,
-          total_price: checkoutTotalAmount,
+          mode: "single",
+          service_id: item.service_id,
+          site_code: item.site_code,
+          platform: item.platform,
+          category: item.category,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total_price: item.total_price,
           currency: selectedCurrency,
-          payment_method: paymentMethod,
-          contact_type: contactType,
-          items: checkoutItems.map((item) => ({
+          target_username: item.target_username,
+          has_target_link: Boolean(item.target_link),
+        },
+      });
+  
+      setCheckoutItems([item]);
+      setCheckoutMode("single");
+      setPaymentTermsAccepted(false);
+      setError("");
+    };
+  
+    const handleOpenCartCheckout = () => {
+      if (cartItems.length === 0) return;
+  
+      trackVisitorAction({
+        event_type: "checkout_open",
+        event_label: "Sepet ödeme ekranı",
+        event_value: String(cartItems.length),
+        event_data: {
+          mode: "cart",
+          item_count: cartItems.length,
+          total_price: cartTotal,
+          currency: selectedCurrency,
+          items: cartItems.map((item) => ({
             service_id: item.service_id,
             site_code: item.site_code,
             service_title: item.service_title,
@@ -1464,730 +1389,779 @@ const filtered = services
           })),
         },
       });
-
-      const createdNumbers = Array.isArray(data.orderNumbers)
-        ? data.orderNumbers
-        : [];
-
-      setCreatedOrderNumbers(createdNumbers);
-
-      setCreatedPaymentInfo({
-        fullName: fullName.trim(),
-        phoneNumber: phoneNumber.trim(),
-        paymentMethod,
-        currency: selectedCurrency,
-        totalAmount: checkoutTotalAmount,
-        orderNumbers: createdNumbers,
-      });
-
-      setSuccessOpen(true);
-      setCheckoutMode(null);
-
-      if (checkoutMode === "cart") {
-        setCartItems([]);
-      }
-
-      resetItemForm();
-      resetCheckoutForm();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Bir hata oluştu");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handlePaymentCompleted = async () => {
-    if (!createdPaymentInfo || !createdPaymentInfo.orderNumbers.length) {
-      setPaymentReviewError("Sipariş numarası bulunamadı.");
-      return;
-    }
-
-    setPaymentReviewLoading(true);
-    setPaymentReviewMessage("");
-    setPaymentReviewError("");
-
-    try {
-      const res = await fetch("/api/order-request/payment-review", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          order_numbers: createdPaymentInfo.orderNumbers,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "Ödeme bildirimi alınamadı.");
-      }
-
-      setPaymentReviewMessage(
-        data.message || "Ödeme bildirimi alındı. Sipariş kontrol edilecek."
+  
+      setCheckoutItems(cartItems);
+      setCheckoutMode("cart");
+      setPaymentTermsAccepted(false);
+      setError("");
+    };
+  
+    const submitItems = async () => {
+      if (!isCheckoutValid || checkoutItems.length === 0) return;
+  
+      const checkoutTotalAmount = checkoutItems.reduce(
+        (sum, item) => sum + item.total_price,
+        0
       );
-    } catch (err) {
-      setPaymentReviewError(
-        err instanceof Error
-          ? err.message
-          : "Ödeme bildirimi sırasında hata oluştu."
-      );
-    } finally {
-      setPaymentReviewLoading(false);
-    }
-  };
-
-  return (
-    <main className="mt-premium-page px-4 py-6 text-white sm:px-6">
-      <div className="mt-top-fade" />
-      <div className="mt-bottom-fade" />
-
-      <ServiceTermsModal />
-
-      <div className="mt-premium-inner mx-auto max-w-7xl space-y-5">
-        <header className="flex flex-col gap-4 rounded-[30px] border border-white/10 bg-[#07090c]/94 p-4 shadow-[0_24px_100px_rgba(0,0,0,0.52)] ring-1 ring-white/[0.025] backdrop-blur-2xl xl:flex-row xl:items-center xl:justify-between">
-          <a href="/" className="inline-flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/12 bg-white/[0.075] font-black text-white shadow-[0_0_24px_rgba(255,255,255,0.07)]">
-              MT
-            </div>
-
-            <div>
-              <div className="text-lg font-black tracking-[0.14em] text-white">
-                MEDYATORA
-              </div>
-              <div className="mt-1 text-[10px] uppercase tracking-[0.24em] text-white/38">
-                SMMTora servis paneli
-              </div>
-            </div>
-          </a>
-
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-end">
-            <nav className="flex flex-wrap items-center gap-2 text-sm font-semibold text-white/70">
-              <a
-                href="/"
-                className="rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-2.5 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white"
-              >
-                Ana Sayfa
+  
+      setLoading(true);
+      setError("");
+      setCartMessage("");
+      setCreatedOrderNumbers([]);
+      setCreatedPaymentInfo(null);
+      setPaymentReviewMessage("");
+      setPaymentReviewError("");
+  
+      try {
+        const res = await fetch("/api/order-request", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            full_name: fullName,
+            phone_number: phoneNumber,
+            contact_type: contactType,
+            contact_value: contactValue,
+            currency: selectedCurrency,
+            payment_method: paymentMethod,
+            items: checkoutItems,
+          }),
+        });
+  
+        const data = await res.json();
+  
+        if (!res.ok) {
+          throw new Error(data.error || "Sipariş oluşturulamadı.");
+        }
+  
+        trackVisitorAction({
+          event_type: "order_created",
+          event_label: "Sipariş oluşturuldu",
+          event_value: Array.isArray(data.orderNumbers)
+            ? data.orderNumbers.join(", ")
+            : "",
+          event_data: {
+            order_numbers: data.orderNumbers || [],
+            checkout_mode: checkoutMode,
+            item_count: checkoutItems.length,
+            total_price: checkoutTotalAmount,
+            currency: selectedCurrency,
+            payment_method: paymentMethod,
+            contact_type: contactType,
+            items: checkoutItems.map((item) => ({
+              service_id: item.service_id,
+              site_code: item.site_code,
+              service_title: item.service_title,
+              platform: item.platform,
+              category: item.category,
+              quantity: item.quantity,
+              total_price: item.total_price,
+            })),
+          },
+        });
+  
+        const createdNumbers = Array.isArray(data.orderNumbers)
+          ? data.orderNumbers
+          : [];
+  
+        setCreatedOrderNumbers(createdNumbers);
+  
+        setCreatedPaymentInfo({
+          fullName: fullName.trim(),
+          phoneNumber: phoneNumber.trim(),
+          paymentMethod,
+          currency: selectedCurrency,
+          totalAmount: checkoutTotalAmount,
+          orderNumbers: createdNumbers,
+        });
+  
+        setSuccessOpen(true);
+        setCheckoutMode(null);
+  
+        if (checkoutMode === "cart") {
+          setCartItems([]);
+        }
+  
+        resetItemForm();
+        resetCheckoutForm();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Bir hata oluştu");
+      } finally {
+        setLoading(false);
+      }
+    };
+  
+    const handlePaymentCompleted = async () => {
+      if (!createdPaymentInfo || !createdPaymentInfo.orderNumbers.length) {
+        setPaymentReviewError("Sipariş numarası bulunamadı.");
+        return;
+      }
+  
+      setPaymentReviewLoading(true);
+      setPaymentReviewMessage("");
+      setPaymentReviewError("");
+  
+      try {
+        const res = await fetch("/api/order-request/payment-review", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            order_numbers: createdPaymentInfo.orderNumbers,
+          }),
+        });
+  
+        const data = await res.json();
+  
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || "Ödeme bildirimi alınamadı.");
+        }
+  
+        setPaymentReviewMessage(
+          data.message || "Ödeme bildirimi alındı. Sipariş kontrol edilecek."
+        );
+      } catch (err) {
+        setPaymentReviewError(
+          err instanceof Error
+            ? err.message
+            : "Ödeme bildirimi sırasında hata oluştu."
+        );
+      } finally {
+        setPaymentReviewLoading(false);
+      }
+    };
+  
+    return (
+      <main className="mt-premium-page px-3 py-4 text-white sm:px-6 sm:py-6">
+        <div className="mt-top-fade" />
+        <div className="mt-bottom-fade" />
+  
+        <ServiceTermsModal />
+  
+        <div className="mt-premium-inner mx-auto max-w-7xl space-y-5">
+          <header className="relative overflow-hidden rounded-[30px] border border-white/10 bg-[#07090c]/94 p-4 shadow-[0_24px_100px_rgba(0,0,0,0.52)] ring-1 ring-white/[0.025] backdrop-blur-2xl">
+            <div className="pointer-events-none absolute -right-24 -top-24 h-52 w-52 rounded-full bg-white/[0.025] blur-3xl" />
+  
+            <div className="relative flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+              <a href="/" className="inline-flex min-w-0 items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/12 bg-white/[0.075] font-black text-white shadow-[0_0_24px_rgba(255,255,255,0.07)]">
+                  MT
+                </div>
+  
+                <div className="min-w-0">
+                  <div className="truncate text-lg font-black tracking-[0.14em] text-white">
+                    MEDYATORA
+                  </div>
+                  <div className="mt-1 truncate text-[10px] uppercase tracking-[0.24em] text-white/38">
+                    SMMTora servis paneli
+                  </div>
+                </div>
               </a>
-
-              <a
-                href="/analiz"
-                className="rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-2.5 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white"
-              >
-                Analiz
-              </a>
-
-              <a
-                href="/paketler"
-                className="rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-2.5 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white"
-              >
-                Paketler
-              </a>
-            </nav>
-
-            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
-              <div className="flex items-center gap-1 rounded-2xl border border-white/10 bg-black/25 p-1">
-                <span className="hidden px-2 text-[10px] font-black uppercase tracking-[0.16em] text-white/35 sm:inline">
-                  Dil
-                </span>
-
-                {localeOptions.map((locale) => {
-                  const active = selectedLocale === locale;
-
-                  return (
-                    <button
-                      key={locale}
-                      type="button"
-                      onClick={() => setSelectedLocale(locale)}
-                      className={`rounded-xl px-3 py-2 text-xs font-black transition ${
-                        active
-                          ? "bg-white text-black shadow-[0_10px_24px_rgba(255,255,255,0.10)]"
-                          : "text-white/58 hover:bg-white/[0.08] hover:text-white"
-                      }`}
-                    >
-                      {locale.toUpperCase()}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="flex items-center gap-1 rounded-2xl border border-white/10 bg-black/25 p-1">
-                <span className="hidden px-2 text-[10px] font-black uppercase tracking-[0.16em] text-white/35 sm:inline">
-                  Para
-                </span>
-
-                {currencyOptions.map((currency) => {
-                  const active = selectedCurrency === currency;
-
-                  return (
-                    <button
-                      key={currency}
-                      type="button"
-                      onClick={() => {
-                        handleCurrencyChange(currency);
-                        clearStatusMessages();
-                      }}
-                      className={`rounded-xl px-3 py-2 text-xs font-black transition ${
-                        active
-                          ? "bg-white text-black shadow-[0_10px_24px_rgba(255,255,255,0.10)]"
-                          : "text-white/58 hover:bg-white/[0.08] hover:text-white"
-                      }`}
-                    >
-                      {currency}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <UserMenu showLocaleSwitcher={false} />
-            </div>
-          </div>
-        </header>
-
-        <section className="relative overflow-hidden rounded-[36px] border border-white/10 bg-[#07090c]/94 p-5 shadow-[0_30px_120px_rgba(0,0,0,0.56)] ring-1 ring-white/[0.035] backdrop-blur-2xl sm:p-6 lg:p-7">
-          <div className="pointer-events-none absolute -right-32 -top-32 h-72 w-72 rounded-full bg-white/[0.035] blur-3xl" />
-          <div className="pointer-events-none absolute -left-24 bottom-0 h-64 w-64 rounded-full bg-white/[0.025] blur-3xl" />
-
-          <div className="relative flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
-            <div className="min-w-0">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-white/72">
-                <span className="h-1.5 w-1.5 rounded-full bg-white/80" />
-                {t.smmHeroBadge}
-              </div>
-
-              <h1 className="text-3xl font-black tracking-tight text-white sm:text-4xl lg:text-5xl">
-                {t.smmHeroTitle}
-              </h1>
-
-              <p className="mt-4 max-w-3xl text-sm leading-7 text-white/60 sm:text-base">
-                {t.smmHeroDesc}
-              </p>
-
-              <div className="mt-5 grid gap-3 text-sm text-white/70 sm:grid-cols-2 xl:grid-cols-4">
-                {[
-                  [t.smmTaxIncluded, FaFileInvoice],
-                  [t.smmOrderTracking, FaUserCheck],
-                  [t.smmSupport, FaWhatsapp],
-                  [t.smmDataUse, FaShieldHalved],
-                ].map(([title, Icon]) => {
-                  const IconComponent = Icon as IconType;
-
-                  return (
-                    <div
-                      key={title as string}
-                      className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:border-white/18 hover:bg-white/[0.065]"
-                    >
-                      <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-black/25 text-white/82">
-                        <IconComponent />
-                      </span>
-                      <span className="leading-5">{title as string}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <OrderBeforeNotice t={t} />
-
-        <section className="rounded-[34px] border border-white/10 bg-[#080a0d]/92 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.36)] ring-1 ring-white/[0.025] backdrop-blur-xl sm:p-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-white/42">
-                {t.platformSelection}
-              </p>
-              <p className="mt-1 text-sm text-white/52">
-                {t.platformSelectionDesc}
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={goToCart}
-              className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-black text-white/72 transition hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
-            >
-              {t.goToCart}
-            </button>
-          </div>
-
-          {servicesLoading ? (
-            <div className="mt-4 rounded-2xl border border-dashed border-white/15 bg-white/[0.04] px-4 py-6 text-sm text-white/50">
-              {t.platformLoading}
-            </div>
-          ) : availablePlatforms.length === 0 ? (
-            <div className="mt-4 rounded-2xl border border-dashed border-white/15 bg-white/[0.04] px-4 py-6 text-sm text-white/50">
-              {t.noActivePlatform}
-            </div>
-          ) : (
-            <>
-              <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-                {visiblePlatforms.map((platform) => {
-                  const active = selectedPlatform === platform.slug;
-
-                  return (
-                    <button
-                      key={platform.slug}
-                      type="button"
-                      onClick={() => {
-                        setSelectedPlatform(platform.slug);
-                        setSelectedServiceId(null);
-                        resetServiceFilters();
-                        clearStatusMessages();
-
-                        trackVisitorAction({
-                          event_type: "platform_select",
-                          event_label: platform.title,
-                          event_value: platform.slug,
-                          event_data: {
-                            platform_slug: platform.slug,
-                            platform_title: platform.title,
-                          },
-                        });
-                      }}
-                      className={`group relative overflow-hidden rounded-[26px] border p-4 text-left transition duration-200 hover:-translate-y-1 ${
-                        active
-                          ? "border-white/30 bg-white/[0.105] shadow-[0_18px_55px_rgba(0,0,0,0.34),0_0_0_1px_rgba(255,255,255,0.08)]"
-                          : "border-white/10 bg-white/[0.038] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] hover:border-white/20 hover:bg-white/[0.07] hover:shadow-[0_16px_45px_rgba(0,0,0,0.24)]"
-                      }`}
-                    >
-                      <div
-                        className={`pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full ${
-                          platform.brandGlow || "bg-white/10"
-                        } blur-3xl transition group-hover:scale-125`}
-                      />
-
-                      <div className="relative">
-                        <div
-                          className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border ${
+  
+              <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-end">
+                <nav className="grid grid-cols-3 gap-2 text-center text-xs font-bold text-white/70 sm:flex sm:flex-wrap sm:items-center sm:text-sm">
+                  <a
+                    href="/"
+                    className="rounded-2xl border border-white/10 bg-white/[0.035] px-3 py-2.5 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white sm:px-4"
+                  >
+                    Ana Sayfa
+                  </a>
+  
+                  <a
+                    href="/analiz"
+                    className="rounded-2xl border border-white/10 bg-white/[0.035] px-3 py-2.5 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white sm:px-4"
+                  >
+                    Analiz
+                  </a>
+  
+                  <a
+                    href="/paketler"
+                    className="rounded-2xl border border-white/10 bg-white/[0.035] px-3 py-2.5 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white sm:px-4"
+                  >
+                    Paketler
+                  </a>
+                </nav>
+  
+                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+                  <div className="flex w-full items-center gap-1 rounded-2xl border border-white/10 bg-black/25 p-1 sm:w-auto">
+                    <span className="hidden px-2 text-[10px] font-black uppercase tracking-[0.16em] text-white/35 sm:inline">
+                      Dil
+                    </span>
+  
+                    {localeOptions.map((locale) => {
+                      const active = selectedLocale === locale;
+  
+                      return (
+                        <button
+                          key={locale}
+                          type="button"
+                          onClick={() => setSelectedLocale(locale)}
+                          className={`h-9 flex-1 rounded-xl px-3 text-xs font-black transition sm:flex-none ${
                             active
-                              ? "border-white/18 bg-white/[0.08] text-white"
-                              : "border-white/10 bg-black/25 text-white/82"
+                              ? "bg-white text-black shadow-[0_10px_24px_rgba(255,255,255,0.10)]"
+                              : "text-white/58 hover:bg-white/[0.08] hover:text-white"
                           }`}
                         >
-                          <PlatformIcon
-                            slug={platform.slug}
-                            title={platform.shortTitle || platform.title}
-                          />
-                        </div>
-
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="truncate text-sm font-bold text-white sm:text-base">
-                              {platform.title}
-                            </div>
-                            <div className="mt-1 text-xs text-white/42">
-                              {t.singleServices}
-                            </div>
-                          </div>
-
-                          {active && (
-                            <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-black text-black">
-                              {t.selected}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {availablePlatforms.length > 10 && (
-                <div className="mt-5 flex justify-center">
-                  <button
-                    type="button"
-                    onClick={() => setShowAllPlatforms((prev) => !prev)}
-                    className="rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-bold text-white/75 transition hover:-translate-y-0.5 hover:bg-white/[0.08] hover:text-white"
-                  >
-                    {showAllPlatforms
-                      ? t.showLessPlatforms
-                      : `${t.showMorePlatforms} (${hiddenPlatformCount} ${t.moreCount})`}
-                  </button>
-                </div>
-              )}
-            </>
-          )}
-        </section>
-
-        <section className="rounded-[34px] border border-white/10 bg-[#080a0d]/92 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.36)] ring-1 ring-white/[0.025] backdrop-blur-xl sm:p-6">
-          <p className="mb-4 text-xs font-black uppercase tracking-[0.2em] text-white/42">
-            {t.categorySelection}
-          </p>
-
-          {servicesLoading ? (
-            <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.04] px-4 py-6 text-sm text-white/50">
-              {t.servicesLoading}
-            </div>
-          ) : categories.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.04] px-4 py-6 text-sm text-white/50">
-              {t.noActiveServiceForPlatform}
-            </div>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {categories.map((category) => {
-                const active = selectedCategory === category.slug;
-
-                return (
-                  <button
-                    key={category.slug}
-                    type="button"
-                    onClick={() => {
-                      setSelectedCategory(category.slug);
-                      setSelectedServiceId(null);
-                      resetServiceFilters();
-                      clearStatusMessages();
-
-                      trackVisitorAction({
-                        event_type: "category_select",
-                        event_label: getCategoryLabel(
-                          category.name,
-                          selectedLocale
-                        ),
-                        event_value: category.slug,
-                        event_data: {
-                          platform: selectedPlatform,
-                          category_slug: category.slug,
-                          category_name: category.name,
-                          locale: selectedLocale,
-                        },
-                      });
-                    }}
-                    className={`rounded-full border px-4 py-2 text-xs font-bold transition sm:text-sm ${
-                      active
-                        ? "border-white bg-white text-black shadow-[0_10px_28px_rgba(255,255,255,0.10)]"
-                        : "border-white/10 bg-white/[0.055] text-white/78 hover:border-white/20 hover:bg-white/[0.09]"
-                    }`}
-                  >
-                    {getCategoryLabel(category.name, selectedLocale)}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </section>
-
-        <section className="grid items-start gap-5 xl:grid-cols-[1.12fr_0.88fr]">
-          <div className="flex flex-col gap-5">
-            <div className="flex min-h-[760px] flex-col rounded-[34px] border border-white/10 bg-[#121826]/90 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.34)] ring-1 ring-white/[0.025] backdrop-blur-xl sm:p-6">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.2em] text-white/42">
-                    {t.serviceListTitle}
-                  </p>
-                  <p className="mt-1 text-sm text-white/48">
-                    {t.serviceListDesc}
-                  </p>
-                </div>
-
-                {filteredServices.length > 0 && (
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => scrollProducts("up")}
-                      className="rounded-xl border border-white/10 bg-white/[0.045] px-3 py-2 text-xs font-medium text-white/78 transition hover:-translate-y-0.5 hover:bg-white/[0.08] sm:text-sm"
-                    >
-                      {t.up}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => scrollProducts("down")}
-                      className="rounded-xl border border-white/10 bg-white/[0.045] px-3 py-2 text-xs font-medium text-white/78 transition hover:-translate-y-0.5 hover:bg-white/[0.08] sm:text-sm"
-                    >
-                      {t.down}
-                    </button>
+                          {locale.toUpperCase()}
+                        </button>
+                      );
+                    })}
                   </div>
-                )}
+  
+                  <div className="flex w-full items-center gap-1 rounded-2xl border border-white/10 bg-black/25 p-1 sm:w-auto">
+                    <span className="hidden px-2 text-[10px] font-black uppercase tracking-[0.16em] text-white/35 sm:inline">
+                      Para
+                    </span>
+  
+                    {currencyOptions.map((currency) => {
+                      const active = selectedCurrency === currency;
+  
+                      return (
+                        <button
+                          key={currency}
+                          type="button"
+                          onClick={() => {
+                            handleCurrencyChange(currency);
+                            clearStatusMessages();
+                          }}
+                          className={`h-9 flex-1 rounded-xl px-3 text-xs font-black transition sm:flex-none ${
+                            active
+                              ? "bg-white text-black shadow-[0_10px_24px_rgba(255,255,255,0.10)]"
+                              : "text-white/58 hover:bg-white/[0.08] hover:text-white"
+                          }`}
+                        >
+                          {currency}
+                        </button>
+                      );
+                    })}
+                  </div>
+  
+                  <div className="flex justify-end">
+                    <UserMenu showLocaleSwitcher={false} />
+                  </div>
+                </div>
               </div>
-
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowServiceFilters((prev) => !prev)}
-                  className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-sm font-bold text-white/78 transition hover:-translate-y-0.5 hover:bg-white/[0.08] hover:text-white"
-                >
-                  <span>{t.filter}</span>
-                </button>
-
-                <p className="text-xs text-white/42">
-                  {filteredServices.length} {t.servicesShown}
+            </div>
+          </header>
+  
+          <section className="relative overflow-hidden rounded-[36px] border border-white/10 bg-[#07090c]/94 p-5 shadow-[0_30px_120px_rgba(0,0,0,0.56)] ring-1 ring-white/[0.035] backdrop-blur-2xl sm:p-6 lg:p-7">
+            <div className="pointer-events-none absolute -right-32 -top-32 h-72 w-72 rounded-full bg-white/[0.035] blur-3xl" />
+            <div className="pointer-events-none absolute -left-24 bottom-0 h-64 w-64 rounded-full bg-white/[0.025] blur-3xl" />
+  
+            <div className="relative flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
+              <div className="min-w-0">
+                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-white/72">
+                  <span className="h-1.5 w-1.5 rounded-full bg-white/80" />
+                  {t.smmHeroBadge}
+                </div>
+  
+                <h1 className="max-w-4xl text-3xl font-black tracking-tight text-white sm:text-4xl lg:text-5xl">
+                  {t.smmHeroTitle}
+                </h1>
+  
+                <p className="mt-4 max-w-3xl text-sm leading-7 text-white/60 sm:text-base">
+                  {t.smmHeroDesc}
                 </p>
-              </div>
-
-              <div className="mb-4">
-                <input
-                  value={serviceSearch}
-                  onChange={(e) => setServiceSearch(e.target.value)}
-                  placeholder={t.searchPlaceholder}
-                  className="w-full rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-sm text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-white/28 focus:bg-white/[0.07]"
-                />
-
-                {serviceSearch.trim() ? (
-                  <p className="mt-2 text-xs text-white/42">
-                    “{serviceSearch.trim()}” — {filteredServices.length}{" "}
-                    {t.searchResultText}
-                  </p>
-                ) : null}
-              </div>
-
-              {showServiceFilters && (
-                <div className="mb-4 rounded-3xl border border-white/10 bg-black/25 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
-                  <div className="grid gap-3 md:grid-cols-4">
-                    <div>
-                      <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-white/38">
-                        {t.quality}
-                      </label>
-                      <select
-                        value={qualityFilter}
-                        onChange={(event) =>
-                          setQualityFilter(event.target.value as QualityFilter)
-                        }
-                        className="w-full rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-sm text-white outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-white/28 focus:bg-white/[0.07]"
+  
+                <div className="mt-5 grid gap-3 text-sm text-white/70 sm:grid-cols-2 xl:grid-cols-4">
+                  {[
+                    [t.smmTaxIncluded, FaFileInvoice],
+                    [t.smmOrderTracking, FaUserCheck],
+                    [t.smmSupport, FaWhatsapp],
+                    [t.smmDataUse, FaShieldHalved],
+                  ].map(([title, Icon]) => {
+                    const IconComponent = Icon as IconType;
+  
+                    return (
+                      <div
+                        key={title as string}
+                        className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:border-white/18 hover:bg-white/[0.065]"
                       >
-                        <option value="all" className="bg-[#080a0d]">
-                          {t.all}
-                        </option>
-                        <option value="Core" className="bg-[#080a0d]">
-                          {t.coreQuality}
-                        </option>
-                        <option value="Plus" className="bg-[#080a0d]">
-                          {t.plusQuality}
-                        </option>
-                        <option value="Prime" className="bg-[#080a0d]">
-                          {t.primeQuality}
-                        </option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-white/38">
-                        {t.guarantee}
-                      </label>
-                      <select
-                        value={guaranteeFilter}
-                        onChange={(event) =>
-                          setGuaranteeFilter(
-                            event.target.value as GuaranteeFilter
-                          )
-                        }
-                        className="w-full rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-sm text-white outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-white/28 focus:bg-white/[0.07]"
-                      >
-                        <option value="all" className="bg-[#080a0d]">
-                          {t.all}
-                        </option>
-                        <option value="guaranteed" className="bg-[#080a0d]">
-                          {t.guaranteed}
-                        </option>
-                        <option value="no-guarantee" className="bg-[#080a0d]">
-                          {t.noGuarantee}
-                        </option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-white/38">
-                        {t.region}
-                      </label>
-                      <select
-                        value={regionFilter}
-                        onChange={(event) =>
-                          setRegionFilter(event.target.value as RegionFilter)
-                        }
-                        className="w-full rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-sm text-white outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-white/28 focus:bg-white/[0.07]"
-                      >
-                        <option value="all" className="bg-[#080a0d]">
-                          {t.all}
-                        </option>
-                        <option value="TR" className="bg-[#080a0d]">
-                          TR
-                        </option>
-                        <option value="RU" className="bg-[#080a0d]">
-                          RU
-                        </option>
-                        <option value="Global" className="bg-[#080a0d]">
-                          Global
-                        </option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-white/38">
-                        {t.sort}
-                      </label>
-                      <select
-                        value={priceSort}
-                        onChange={(event) =>
-                          setPriceSort(event.target.value as PriceSort)
-                        }
-                        className="w-full rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-sm text-white outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-white/28 focus:bg-white/[0.07]"
-                      >
-                        <option value="smart" className="bg-[#080a0d]">
-                          {t.recommendedSort}
-                        </option>
-                        <option value="price-asc" className="bg-[#080a0d]">
-                          {t.priceAsc}
-                        </option>
-                        <option value="price-desc" className="bg-[#080a0d]">
-                          {t.priceDesc}
-                        </option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 flex justify-end">
-                    <button
-                      type="button"
-                      onClick={resetServiceFilters}
-                      className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-bold text-white/70 transition hover:-translate-y-0.5 hover:bg-white/[0.08] hover:text-white"
-                    >
-                      {t.clearFilters}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {servicesLoading ? (
-                <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.04] px-4 py-6 text-sm text-white/50">
-                  {t.productsLoading}
-                </div>
-              ) : filteredServices.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.04] px-4 py-6 text-sm text-white/50">
-                  {t.noProductsFound}
-                </div>
-              ) : (
-                <div
-                  ref={productsScrollRef}
-                  className="max-h-[760px] min-h-[420px] space-y-2 overflow-y-auto pr-1"
-                  style={{ scrollbarWidth: "thin" }}
-                >
-                  {filteredServices.map((service) => {
-                    const active = selectedService?.id === service.id;
-                    const unitPrice = getUnitSalePrice(
-                      service,
-                      selectedCurrency
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-black/25 text-white/82">
+                          <IconComponent />
+                        </span>
+                        <span className="leading-5">{title as string}</span>
+                      </div>
                     );
-
+                  })}
+                </div>
+              </div>
+            </div>
+          </section>
+  
+          <OrderBeforeNotice t={t} />
+  
+          <PremiumShellCard className="p-5 sm:p-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <SectionEyebrow
+                title={t.platformSelection}
+                description={t.platformSelectionDesc}
+              />
+  
+              <button
+                type="button"
+                onClick={goToCart}
+                className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-black text-white/72 transition hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
+              >
+                {t.goToCart}
+              </button>
+            </div>
+  
+            {servicesLoading ? (
+              <div className="mt-4 rounded-2xl border border-dashed border-white/15 bg-white/[0.04] px-4 py-6 text-sm text-white/50">
+                {t.platformLoading}
+              </div>
+            ) : availablePlatforms.length === 0 ? (
+              <div className="mt-4 rounded-2xl border border-dashed border-white/15 bg-white/[0.04] px-4 py-6 text-sm text-white/50">
+                {t.noActivePlatform}
+              </div>
+            ) : (
+              <>
+                <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+                  {visiblePlatforms.map((platform) => {
+                    const active = selectedPlatform === platform.slug;
+  
                     return (
                       <button
-                        key={service.id}
+                        key={platform.slug}
                         type="button"
                         onClick={() => {
-                          setSelectedServiceId(service.id);
+                          setSelectedPlatform(platform.slug);
+                          setSelectedServiceId(null);
+                          resetServiceFilters();
                           clearStatusMessages();
-
+  
                           trackVisitorAction({
-                            event_type: "service_select",
-                            event_label: getLocalizedServiceTitle(
-                              service.title,
-                              selectedLocale
-                            ),
-                            event_value: String(service.siteCode),
+                            event_type: "platform_select",
+                            event_label: platform.title,
+                            event_value: platform.slug,
                             event_data: {
-                              service_id: service.id,
-                              site_code: service.siteCode,
-                              platform: service.platform,
-                              category: service.category,
-                              title: getLocalizedServiceTitle(
-                                service.title,
-                                selectedLocale
-                              ),
-                              level: service.level,
-                              guarantee: service.guarantee,
-                              guarantee_label: getLocalizedGuaranteeLabel(
-                                service.guaranteeLabel,
-                                selectedLocale
-                              ),
-                              min: service.min,
-                              max: service.max,
-                              price_per_1000: getUnitSalePrice(
-                                service,
-                                selectedCurrency
-                              ),
-                              currency: selectedCurrency,
+                              platform_slug: platform.slug,
+                              platform_title: platform.title,
                             },
                           });
                         }}
-                        className={`group relative w-full overflow-hidden rounded-3xl border px-4 py-4 text-left transition duration-200 hover:-translate-y-0.5 ${
+                        className={`group relative overflow-hidden rounded-[26px] border p-4 text-left transition duration-200 hover:-translate-y-1 ${
                           active
-                            ? "border-white/28 bg-gradient-to-br from-white/[0.12] to-white/[0.05] shadow-[0_18px_55px_rgba(0,0,0,0.32),0_0_0_1px_rgba(255,255,255,0.08)]"
-                            : "border-white/10 bg-white/[0.04] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] hover:border-white/20 hover:bg-white/[0.07] hover:shadow-[0_16px_45px_rgba(0,0,0,0.24)]"
+                            ? "border-white/30 bg-white/[0.105] shadow-[0_18px_55px_rgba(0,0,0,0.34),0_0_0_1px_rgba(255,255,255,0.08)]"
+                            : "border-white/10 bg-white/[0.038] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] hover:border-white/20 hover:bg-white/[0.07] hover:shadow-[0_16px_45px_rgba(0,0,0,0.24)]"
                         }`}
                       >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="min-w-0 flex-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <p className="line-clamp-2 text-sm font-bold text-white sm:text-base">
-                                {getLocalizedServiceTitle(
-                                  service.title,
-                                  selectedLocale
-                                )}
-                              </p>
-
-                              {active && (
-                                <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-black text-black sm:text-[11px]">
-                                  {t.selected}
-                                </span>
-                              )}
-
-                              <span
-                                className={`rounded-full border px-2.5 py-1 text-[10px] font-bold sm:text-[11px] ${getGuaranteeBadgeClass(
-                                  service.guaranteeLabel,
-                                  service.guarantee
-                                )}`}
-                              >
-                                {getLocalizedGuaranteeLabel(
-                                  service.guaranteeLabel,
-                                  selectedLocale
-                                )}
-                              </span>
-
-                              <span
-                                className={`rounded-full border px-2.5 py-1 text-[10px] font-bold sm:text-[11px] ${getQualityBadgeClass(
-                                  service.level
-                                )}`}
-                              >
-                                {localizeCommonServiceText(
-                                  service.level,
-                                  selectedLocale
-                                )}
-                              </span>
-                            </div>
-
-                            <div className="mt-3 grid gap-1 text-xs text-white/52 sm:text-sm">
-                              <p>
-                                {t.serviceNo}: {service.siteCode}
-                              </p>
-                              <p>
-                                {t.minMax}: {service.min} · Max: {service.max}
-                              </p>
-                              <p>
-                                {t.speed}:{" "}
-                                {getLocalizedSpeed(
-                                  service.speed,
-                                  selectedLocale
-                                )}
-                              </p>
-                            </div>
+                        <div
+                          className={`pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full ${
+                            platform.brandGlow || "bg-white/10"
+                          } blur-3xl transition group-hover:scale-125`}
+                        />
+  
+                        <div className="relative">
+                          <div
+                            className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border ${
+                              active
+                                ? "border-white/18 bg-white/[0.08] text-white"
+                                : "border-white/10 bg-black/25 text-white/82"
+                            }`}
+                          >
+                            <PlatformIcon
+                              slug={platform.slug}
+                              title={platform.shortTitle || platform.title}
+                            />
                           </div>
-
-                          <div className="shrink-0 rounded-2xl border border-white/12 bg-white/[0.055] px-3 py-2 text-right shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
-                            <p className="text-[11px] text-white/42 sm:text-xs">
-                              {t.per1000}
-                            </p>
-                            <p className="mt-1 text-base font-black text-white sm:text-lg">
-                              {formatPrice(unitPrice, selectedCurrency)}
-                            </p>
+  
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="truncate text-sm font-bold text-white sm:text-base">
+                                {platform.title}
+                              </div>
+                              <div className="mt-1 text-xs text-white/42">
+                                {t.singleServices}
+                              </div>
+                            </div>
+  
+                            {active && (
+                              <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-black text-black">
+                                {t.selected}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </button>
                     );
                   })}
                 </div>
-              )}
-            </div>
+  
+                {availablePlatforms.length > 10 && (
+                  <div className="mt-5 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => setShowAllPlatforms((prev) => !prev)}
+                      className="rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-bold text-white/75 transition hover:-translate-y-0.5 hover:bg-white/[0.08] hover:text-white"
+                    >
+                      {showAllPlatforms
+                        ? t.showLessPlatforms
+                        : `${t.showMorePlatforms} (${hiddenPlatformCount} ${t.moreCount})`}
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </PremiumShellCard>
+  
+          <PremiumShellCard className="p-5 sm:p-6">
+            <SectionEyebrow title={t.categorySelection} />
+  
+            {servicesLoading ? (
+              <div className="mt-4 rounded-2xl border border-dashed border-white/15 bg-white/[0.04] px-4 py-6 text-sm text-white/50">
+                {t.servicesLoading}
+              </div>
+            ) : categories.length === 0 ? (
+              <div className="mt-4 rounded-2xl border border-dashed border-white/15 bg-white/[0.04] px-4 py-6 text-sm text-white/50">
+                {t.noActiveServiceForPlatform}
+              </div>
+            ) : (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {categories.map((category) => {
+                  const active = selectedCategory === category.slug;
+  
+                  return (
+                    <button
+                      key={category.slug}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCategory(category.slug);
+                        setSelectedServiceId(null);
+                        resetServiceFilters();
+                        clearStatusMessages();
+  
+                        trackVisitorAction({
+                          event_type: "category_select",
+                          event_label: getCategoryLabel(
+                            category.name,
+                            selectedLocale
+                          ),
+                          event_value: category.slug,
+                          event_data: {
+                            platform: selectedPlatform,
+                            category_slug: category.slug,
+                            category_name: category.name,
+                            locale: selectedLocale,
+                          },
+                        });
+                      }}
+                      className={`rounded-full border px-4 py-2 text-xs font-bold transition sm:text-sm ${
+                        active
+                          ? "border-white bg-white text-black shadow-[0_10px_28px_rgba(255,255,255,0.10)]"
+                          : "border-white/10 bg-white/[0.055] text-white/78 hover:border-white/20 hover:bg-white/[0.09]"
+                      }`}
+                    >
+                      {getCategoryLabel(category.name, selectedLocale)}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </PremiumShellCard>
+  
+          <section className="grid items-start gap-5 xl:grid-cols-[1.12fr_0.88fr]">
+            <div className="flex flex-col gap-5">
+              <PremiumShellCard className="p-4 sm:p-6">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <SectionEyebrow
+                    title={t.serviceListTitle}
+                    description={t.serviceListDesc}
+                  />
+  
+                  {filteredServices.length > 0 && (
+                    <div className="hidden items-center gap-2 sm:flex">
+                      <button
+                        type="button"
+                        onClick={() => scrollProducts("up")}
+                        className="rounded-xl border border-white/10 bg-white/[0.045] px-3 py-2 text-xs font-medium text-white/78 transition hover:-translate-y-0.5 hover:bg-white/[0.08] sm:text-sm"
+                      >
+                        {t.up}
+                      </button>
+  
+                      <button
+                        type="button"
+                        onClick={() => scrollProducts("down")}
+                        className="rounded-xl border border-white/10 bg-white/[0.045] px-3 py-2 text-xs font-medium text-white/78 transition hover:-translate-y-0.5 hover:bg-white/[0.08] sm:text-sm"
+                      >
+                        {t.down}
+                      </button>
+                    </div>
+                  )}
+                </div>
+  
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowServiceFilters((prev) => !prev)}
+                    className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-sm font-bold text-white/78 transition hover:-translate-y-0.5 hover:bg-white/[0.08] hover:text-white"
+                  >
+                    <span>{t.filter}</span>
+                  </button>
+  
+                  <p className="text-xs text-white/42">
+                    {filteredServices.length} {t.servicesShown}
+                  </p>
+                </div>
+  
+                <div className="mb-4">
+                  <input
+                    value={serviceSearch}
+                    onChange={(e) => setServiceSearch(e.target.value)}
+                    placeholder={t.searchPlaceholder}
+                    className="w-full rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-sm text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-white/28 focus:bg-white/[0.07]"
+                  />
+  
+                  {serviceSearch.trim() ? (
+                    <p className="mt-2 text-xs text-white/42">
+                      “{serviceSearch.trim()}” — {filteredServices.length}{" "}
+                      {t.searchResultText}
+                    </p>
+                  ) : null}
+                </div>
+  
+                {showServiceFilters && (
+                  <div className="mb-4 rounded-3xl border border-white/10 bg-black/25 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
+                    <div className="grid gap-3 md:grid-cols-4">
+                      <div>
+                        <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-white/38">
+                          {t.quality}
+                        </label>
+                        <select
+                          value={qualityFilter}
+                          onChange={(event) =>
+                            setQualityFilter(event.target.value as QualityFilter)
+                          }
+                          className="w-full rounded-2xl border border-white/10 bg-[#080a0d] px-4 py-3 text-sm text-white outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-white/28"
+                        >
+                          <option value="all">{t.all}</option>
+                          <option value="Core">{t.coreQuality}</option>
+                          <option value="Plus">{t.plusQuality}</option>
+                          <option value="Prime">{t.primeQuality}</option>
+                        </select>
+                      </div>
+  
+                      <div>
+                        <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-white/38">
+                          {t.guarantee}
+                        </label>
+                        <select
+                          value={guaranteeFilter}
+                          onChange={(event) =>
+                            setGuaranteeFilter(
+                              event.target.value as GuaranteeFilter
+                            )
+                          }
+                          className="w-full rounded-2xl border border-white/10 bg-[#080a0d] px-4 py-3 text-sm text-white outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-white/28"
+                        >
+                          <option value="all">{t.all}</option>
+                          <option value="guaranteed">{t.guaranteed}</option>
+                          <option value="no-guarantee">{t.noGuarantee}</option>
+                        </select>
+                      </div>
+  
+                      <div>
+                        <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-white/38">
+                          {t.region}
+                        </label>
+                        <select
+                          value={regionFilter}
+                          onChange={(event) =>
+                            setRegionFilter(event.target.value as RegionFilter)
+                          }
+                          className="w-full rounded-2xl border border-white/10 bg-[#080a0d] px-4 py-3 text-sm text-white outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-white/28"
+                        >
+                          <option value="all">{t.all}</option>
+                          <option value="TR">TR</option>
+                          <option value="RU">RU</option>
+                          <option value="Global">Global</option>
+                        </select>
+                      </div>
+  
+                      <div>
+                        <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-white/38">
+                          {t.sort}
+                        </label>
+                        <select
+                          value={priceSort}
+                          onChange={(event) =>
+                            setPriceSort(event.target.value as PriceSort)
+                          }
+                          className="w-full rounded-2xl border border-white/10 bg-[#080a0d] px-4 py-3 text-sm text-white outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-white/28"
+                        >
+                          <option value="smart">{t.recommendedSort}</option>
+                          <option value="price-asc">{t.priceAsc}</option>
+                          <option value="price-desc">{t.priceDesc}</option>
+                        </select>
+                      </div>
+                    </div>
+  
+                    <div className="mt-4 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={resetServiceFilters}
+                        className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-bold text-white/70 transition hover:-translate-y-0.5 hover:bg-white/[0.08] hover:text-white"
+                      >
+                        {t.clearFilters}
+                      </button>
+                    </div>
+                  </div>
+                )}
+  
+                {servicesLoading ? (
+                  <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.04] px-4 py-6 text-sm text-white/50">
+                    {t.productsLoading}
+                  </div>
+                ) : filteredServices.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.04] px-4 py-6 text-sm text-white/50">
+                    {t.noProductsFound}
+                  </div>
+                ) : (
+                  <div
+                    ref={productsScrollRef}
+                    className="max-h-[760px] min-h-[420px] space-y-3 overflow-y-auto pr-1"
+                    style={{ scrollbarWidth: "thin" }}
+                  >
+                    {filteredServices.map((service) => {
+                      const active = selectedService?.id === service.id;
+                      const unitPrice = getUnitSalePrice(
+                        service,
+                        selectedCurrency
+                      );
+  
+                      return (
+                        <button
+                          key={service.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedServiceId(service.id);
+                            clearStatusMessages();
+  
+                            trackVisitorAction({
+                              event_type: "service_select",
+                              event_label: getLocalizedServiceTitle(
+                                service.title,
+                                selectedLocale
+                              ),
+                              event_value: String(service.siteCode),
+                              event_data: {
+                                service_id: service.id,
+                                site_code: service.siteCode,
+                                platform: service.platform,
+                                category: service.category,
+                                title: getLocalizedServiceTitle(
+                                  service.title,
+                                  selectedLocale
+                                ),
+                                level: service.level,
+                                guarantee: service.guarantee,
+                                guarantee_label: getLocalizedGuaranteeLabel(
+                                  service.guaranteeLabel,
+                                  selectedLocale
+                                ),
+                                min: service.min,
+                                max: service.max,
+                                price_per_1000: getUnitSalePrice(
+                                  service,
+                                  selectedCurrency
+                                ),
+                                currency: selectedCurrency,
+                              },
+                            });
+                          }}
+                          className={`group relative w-full overflow-hidden rounded-[26px] border p-4 text-left transition duration-200 hover:-translate-y-0.5 ${
+                            active
+                              ? "border-white/30 bg-gradient-to-br from-white/[0.13] to-white/[0.05] shadow-[0_18px_55px_rgba(0,0,0,0.32),0_0_0_1px_rgba(255,255,255,0.08)]"
+                              : "border-white/10 bg-white/[0.04] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] hover:border-white/20 hover:bg-white/[0.07] hover:shadow-[0_16px_45px_rgba(0,0,0,0.24)]"
+                          }`}
+                        >
+                          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="line-clamp-2 text-sm font-bold text-white sm:text-base">
+                                  {getLocalizedServiceTitle(
+                                    service.title,
+                                    selectedLocale
+                                  )}
+                                </p>
+  
+                                {active && (
+                                  <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-black text-black sm:text-[11px]">
+                                    {t.selected}
+                                  </span>
+                                )}
+                              </div>
+  
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                <span
+                                  className={`rounded-full border px-2.5 py-1 text-[10px] font-bold sm:text-[11px] ${getGuaranteeBadgeClass(
+                                    service.guaranteeLabel,
+                                    service.guarantee
+                                  )}`}
+                                >
+                                  {getLocalizedGuaranteeLabel(
+                                    service.guaranteeLabel,
+                                    selectedLocale
+                                  )}
+                                </span>
+  
+                                <span
+                                  className={`rounded-full border px-2.5 py-1 text-[10px] font-bold sm:text-[11px] ${getQualityBadgeClass(
+                                    service.level
+                                  )}`}
+                                >
+                                  {localizeCommonServiceText(
+                                    service.level,
+                                    selectedLocale
+                                  )}
+                                </span>
+  
+                                {service.regionLabel ? (
+                                  <span className="rounded-full border border-white/10 bg-white/[0.055] px-2.5 py-1 text-[10px] font-bold text-white/62 sm:text-[11px]">
+                                    {service.regionLabel}
+                                  </span>
+                                ) : null}
+                              </div>
+  
+                              <div className="mt-3 grid gap-1 text-xs text-white/52 sm:grid-cols-3 sm:text-sm">
+                                <p>
+                                  {t.serviceNo}: {service.siteCode}
+                                </p>
+                                <p>
+                                  {t.minMax}: {service.min} · Max: {service.max}
+                                </p>
+                                <p>
+                                  {t.speed}:{" "}
+                                  {getLocalizedSpeed(
+                                    service.speed,
+                                    selectedLocale
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+  
+                            <div className="w-full rounded-2xl border border-white/12 bg-white/[0.055] px-3 py-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] sm:w-auto sm:min-w-[150px] sm:text-right">
+                              <p className="text-[11px] text-white/42 sm:text-xs">
+                                {t.per1000}
+                              </p>
+                              <p className="mt-1 text-base font-black text-white sm:text-lg">
+                                {formatPrice(unitPrice, selectedCurrency)}
+                              </p>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </PremiumShellCard>
 
-            <div className="rounded-[34px] border border-white/10 bg-[#080a0d]/92 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.36)] ring-1 ring-white/[0.025] backdrop-blur-xl sm:p-6">
+              <PremiumShellCard className="p-5 sm:p-6">
               <div className="mb-4 flex flex-wrap gap-2">
                 {[
                   ["service", t.serviceInfo],
@@ -2234,17 +2208,15 @@ const filtered = services
                   <p>{t.note4}</p>
                 </div>
               )}
-            </div>
+            </PremiumShellCard>
           </div>
 
           <div className="flex flex-col gap-5">
-            <div className="flex min-h-[760px] flex-col rounded-[34px] border border-white/10 bg-[#121826]/90 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.34)] ring-1 ring-white/[0.025] backdrop-blur-xl sm:p-6">
-              <p className="mb-4 text-xs font-black uppercase tracking-[0.2em] text-white/42">
-                {t.orderInfo}
-              </p>
+            <PremiumShellCard className="p-5 sm:p-6">
+              <SectionEyebrow title={t.orderInfo} />
 
               {selectedService ? (
-                <div className="mb-4 space-y-3">
+                <div className="mt-4 space-y-3">
                   <div className="rounded-2xl border border-white/12 bg-gradient-to-br from-white/[0.085] to-white/[0.035] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="font-bold text-white">
@@ -2302,12 +2274,12 @@ const filtered = services
                   </div>
                 </div>
               ) : (
-                <div className="mb-4 rounded-2xl border border-white/10 bg-white/[0.045] p-4 text-sm text-white/50">
+                <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.045] p-4 text-sm text-white/50">
                   {t.selectProductFirst}
                 </div>
               )}
 
-              <div className="space-y-3">
+              <div className="mt-4 space-y-3">
                 <input
                   value={targetUsername}
                   onChange={(e) => {
@@ -2368,6 +2340,7 @@ const filtered = services
                     }
                   }}
                   placeholder={t.quantity}
+                  inputMode="numeric"
                   className="w-full rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-white/28 focus:bg-white/[0.07]"
                 />
 
@@ -2423,16 +2396,11 @@ const filtered = services
                   </button>
                 </div>
               </div>
-            </div>
+            </PremiumShellCard>
 
-            <div
-              ref={cartSectionRef}
-              className="rounded-[34px] border border-white/10 bg-[#080a0d]/92 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.36)] ring-1 ring-white/[0.025] backdrop-blur-xl sm:p-6"
-            >
+            <PremiumShellCard ref={cartSectionRef} className="p-5 sm:p-6">
               <div className="mb-4 flex items-center justify-between gap-3">
-                <p className="text-xs font-black uppercase tracking-[0.2em] text-white/42">
-                  {t.cart}
-                </p>
+                <SectionEyebrow title={t.cart} />
 
                 {cartItems.length > 0 && (
                   <button
@@ -2456,7 +2424,7 @@ const filtered = services
                       key={item.cartId}
                       className="rounded-3xl border border-white/10 bg-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition hover:border-white/15 hover:bg-white/[0.07]"
                     >
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0">
                           <p className="text-sm font-bold text-white">
                             {item.service_title}
@@ -2488,7 +2456,7 @@ const filtered = services
                           </div>
                         </div>
 
-                        <div className="flex flex-col gap-2">
+                        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-col">
                           <button
                             type="button"
                             onClick={() => handleEditCartItem(item.cartId)}
@@ -2537,7 +2505,7 @@ const filtered = services
                   </div>
                 )}
               </div>
-            </div>
+            </PremiumShellCard>
           </div>
         </section>
       </div>
@@ -2583,31 +2551,29 @@ const filtered = services
               </div>
 
               <div className="relative">
-  <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-black text-white/45">
-    +
-  </span>
+                <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-black text-white/45">
+                  +
+                </span>
 
-  <input
-    value={phoneNumber}
-    onChange={(e) =>
-      setPhoneNumber(e.target.value.replace(/[^\d\s]/g, ""))
-    }
-    placeholder="90 5xx xxx xx xx / 7 xxx xxx xx xx"
-    inputMode="tel"
-    className="w-full rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 pl-8 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-white/28 focus:bg-white/[0.07]"
-  />
-</div>
+                <input
+                  value={phoneNumber}
+                  onChange={(e) =>
+                    setPhoneNumber(e.target.value.replace(/[^\d\s]/g, ""))
+                  }
+                  placeholder="90 5xx xxx xx xx / 7 xxx xxx xx xx"
+                  inputMode="tel"
+                  className="w-full rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 pl-8 text-white outline-none placeholder:text-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-white/28 focus:bg-white/[0.07]"
+                />
+              </div>
 
               <select
                 value={contactType}
                 onChange={(e) => setContactType(e.target.value as ContactType)}
-                className="w-full rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-white outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-white/28 focus:bg-white/[0.07]"
+                className="w-full rounded-2xl border border-white/10 bg-[#080a0d] px-4 py-3 text-white outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition focus:border-white/28"
               >
-                <option value="" className="bg-[#080a0d]">
-                  {t.contactTypeSelect}
-                </option>
+                <option value="">{t.contactTypeSelect}</option>
                 {contactTypes.map((item) => (
-                  <option key={item} value={item} className="bg-[#080a0d]">
+                  <option key={item} value={item}>
                     {getContactTypeLabel(item, selectedLocale)}
                   </option>
                 ))}
@@ -2894,7 +2860,7 @@ const filtered = services
                   onChange={(event) =>
                     setPaymentTermsAccepted(event.target.checked)
                   }
-                  className="mt-1 h-4 w-4 accent-white"
+                  className="mt-1 h-4 w-4 shrink-0 accent-white"
                 />
 
                 <span className="text-sm font-semibold text-white">
@@ -2933,7 +2899,7 @@ const filtered = services
                 type="button"
                 onClick={submitItems}
                 disabled={!isCheckoutValid || loading}
-                className="rounded-2xl bg-white px-5 py-3 text-sm font-black text-black shadow-[0_16px_38px_rgba(255,255,255,0.10)] transition hover:-translate-y-0.5 hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+                className="w-full rounded-2xl bg-white px-5 py-3 text-sm font-black text-black shadow-[0_16px_38px_rgba(255,255,255,0.10)] transition hover:-translate-y-0.5 hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 sm:w-auto"
               >
                 {loading ? t.sending : t.confirmPurchase}
               </button>
@@ -3149,5 +3115,44 @@ const filtered = services
         </div>
       )}
     </main>
+  );
+}
+
+type PremiumShellCardProps = {
+  children: React.ReactNode;
+  className?: string;
+};
+
+const PremiumShellCard = React.forwardRef<HTMLDivElement, PremiumShellCardProps>(
+  function PremiumShellCard({ children, className = "" }, ref) {
+    return (
+      <section
+        ref={ref}
+        className={`relative overflow-hidden rounded-[34px] border border-white/10 bg-[#080a0d]/92 shadow-[0_20px_90px_rgba(0,0,0,0.36)] ring-1 ring-white/[0.025] backdrop-blur-xl ${className}`}
+      >
+        <div className="pointer-events-none absolute -right-24 -top-24 h-52 w-52 rounded-full bg-white/[0.025] blur-3xl" />
+        <div className="relative">{children}</div>
+      </section>
+    );
+  }
+);
+
+function SectionEyebrow({
+  title,
+  description,
+}: {
+  title: string;
+  description?: string;
+}) {
+  return (
+    <div>
+      <p className="text-xs font-black uppercase tracking-[0.2em] text-white/42">
+        {title}
+      </p>
+
+      {description ? (
+        <p className="mt-1 text-sm leading-6 text-white/52">{description}</p>
+      ) : null}
+    </div>
   );
 }
