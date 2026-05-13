@@ -182,13 +182,19 @@ function notifyLocaleChange(locale: Locale) {
 
 export default function UserMenu({ showLocaleSwitcher = true }: Props) {
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
 
   const [user, setUser] = useState<PublicUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>("login");
+  const [menuOpen, setMenuOpen] = useState(false);
   const [selectedLocale, setSelectedLocale] = useState<Locale>("tr");
-  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState({
+    top: 64,
+    right: 12,
+  });
 
   const text = userMenuText[selectedLocale] || userMenuText.tr;
 
@@ -214,6 +220,27 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
     }
   }
 
+  function updateDropdownPosition() {
+    if (typeof window === "undefined") return;
+    if (!triggerRef.current) return;
+
+    const rect = triggerRef.current.getBoundingClientRect();
+    const dropdownWidth = 280;
+    const safeGap = 12;
+
+    let right = window.innerWidth - rect.right;
+    right = Math.max(safeGap, right);
+
+    if (right + dropdownWidth > window.innerWidth - safeGap) {
+      right = safeGap;
+    }
+
+    setDropdownPosition({
+      top: Math.max(safeGap, rect.bottom + 10),
+      right,
+    });
+  }
+
   useEffect(() => {
     const detectedLocale = detectBrowserLocale();
 
@@ -225,30 +252,43 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
   }, []);
 
   useEffect(() => {
-    if (!userDropdownOpen) return;
+    if (!menuOpen) return;
+
+    updateDropdownPosition();
 
     function handleClickOutside(event: MouseEvent) {
       const target = event.target as Node;
 
-      if (menuRef.current && !menuRef.current.contains(target)) {
-        setUserDropdownOpen(false);
+      const clickedTrigger = menuRef.current?.contains(target);
+      const clickedDropdown = dropdownRef.current?.contains(target);
+
+      if (!clickedTrigger && !clickedDropdown) {
+        setMenuOpen(false);
       }
     }
 
     function handleEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        setUserDropdownOpen(false);
+        setMenuOpen(false);
       }
+    }
+
+    function handleReposition() {
+      updateDropdownPosition();
     }
 
     document.addEventListener("mousedown", handleClickOutside);
     window.addEventListener("keydown", handleEscape);
+    window.addEventListener("resize", handleReposition);
+    window.addEventListener("scroll", handleReposition, true);
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
       window.removeEventListener("keydown", handleEscape);
+      window.removeEventListener("resize", handleReposition);
+      window.removeEventListener("scroll", handleReposition, true);
     };
-  }, [userDropdownOpen]);
+  }, [menuOpen]);
 
   async function handleLogout() {
     try {
@@ -258,10 +298,10 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
       });
 
       setUser(null);
-      setUserDropdownOpen(false);
+      setMenuOpen(false);
     } catch {
       setUser(null);
-      setUserDropdownOpen(false);
+      setMenuOpen(false);
     }
   }
 
@@ -299,7 +339,7 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
     <>
       <div
         ref={menuRef}
-        className="relative z-[80] flex max-w-full shrink-0 items-center justify-end gap-2"
+        className="relative z-[9999] flex max-w-full shrink-0 items-center justify-end gap-2"
       >
         {showLocaleSwitcher && (
           <div className="flex h-9 shrink-0 items-center overflow-hidden rounded-2xl border border-white/10 bg-black/25 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:h-10">
@@ -322,112 +362,36 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
         )}
 
         {user ? (
-          <>
+          <div className="relative flex max-w-full justify-end">
             <button
+              ref={triggerRef}
               type="button"
-              onClick={() => setUserDropdownOpen((prev) => !prev)}
+              onClick={() => {
+                updateDropdownPosition();
+                setMenuOpen((prev) => !prev);
+              }}
               aria-label={text.menu}
-              className="group inline-flex h-10 max-w-[160px] shrink-0 items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.055] px-2.5 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:border-white/22 hover:bg-white/[0.09] sm:px-3"
+              className="inline-flex h-10 max-w-[220px] items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.06] px-2.5 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.10]"
             >
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white text-[10px] font-black text-black shadow-[0_10px_26px_rgba(255,255,255,0.1)]">
                 {getInitials(user)}
               </span>
 
-              <span className="hidden min-w-0 text-left 2xl:block">
-                <span className="block text-[8px] font-black uppercase tracking-[0.14em] text-white/38">
-                  {text.welcome}
+              <span className="min-w-0 text-left">
+                <span className="block max-w-[105px] truncate text-[11px] font-black leading-4 text-white sm:max-w-[120px]">
+                  {getDisplayName(user)}
                 </span>
 
-                <span className="block max-w-[92px] truncate text-xs font-black leading-4 text-white">
-                  {getDisplayName(user)}
+                <span className="block max-w-[105px] truncate text-[9px] font-bold uppercase tracking-[0.12em] text-white/42 sm:max-w-[120px]">
+                  {walletBalance}
                 </span>
               </span>
 
-              <span
-                className={`ml-0.5 hidden h-1.5 w-1.5 shrink-0 rounded-full bg-white/55 transition sm:block ${
-                  userDropdownOpen ? "scale-125 bg-white" : ""
-                }`}
-              />
+              <span className="ml-1 text-[10px] font-black text-white/45">
+                ▾
+              </span>
             </button>
-
-            {userDropdownOpen && (
-              <div className="absolute right-0 top-[calc(100%+10px)] w-[min(330px,calc(100vw-24px))] overflow-hidden rounded-[28px] border border-white/10 bg-[#080a0d]/98 p-3 text-white shadow-[0_28px_100px_rgba(0,0,0,0.65)] ring-1 ring-white/[0.035] backdrop-blur-2xl">
-                <div className="rounded-3xl border border-white/10 bg-white/[0.045] p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-sm font-black text-black shadow-[0_16px_38px_rgba(255,255,255,0.12)]">
-                      {getInitials(user)}
-                    </div>
-
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-black text-white">
-                        {getDisplayName(user)}
-                      </p>
-
-                      <p className="mt-1 truncate text-xs font-semibold text-white/45">
-                        {user.email}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <a
-                  href="/hesabim/bakiye"
-                  onClick={() => setUserDropdownOpen(false)}
-                  className="mt-3 block rounded-3xl border border-white/10 bg-black/25 p-4 transition hover:border-white/18 hover:bg-white/[0.06]"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-white/38">
-                        {text.wallet}
-                      </p>
-
-                      <p className="mt-1 text-lg font-black text-white">
-                        {walletBalance}
-                      </p>
-                    </div>
-
-                    <span className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-1.5 text-xs font-black text-white/70">
-                      {user.preferred_currency}
-                    </span>
-                  </div>
-                </a>
-
-                <div className="mt-3 grid gap-2">
-                  <a
-                    href="/hesabim"
-                    onClick={() => setUserDropdownOpen(false)}
-                    className="rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-sm font-black text-white/82 transition hover:border-white/18 hover:bg-white/[0.075] hover:text-white"
-                  >
-                    {text.account}
-                  </a>
-
-                  <a
-                    href="/hesabim/bakiye"
-                    onClick={() => setUserDropdownOpen(false)}
-                    className="rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-sm font-black text-white/82 transition hover:border-white/18 hover:bg-white/[0.075] hover:text-white"
-                  >
-                    {text.balance}
-                  </a>
-
-                  <a
-                    href="/hesabim/siparisler"
-                    onClick={() => setUserDropdownOpen(false)}
-                    className="rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3 text-sm font-black text-white/82 transition hover:border-white/18 hover:bg-white/[0.075] hover:text-white"
-                  >
-                    {text.orders}
-                  </a>
-
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="rounded-2xl border border-[#6b2232]/75 bg-[#241018]/80 px-4 py-3 text-left text-sm font-black text-[#f2c7d1] transition hover:border-[#8d3146] hover:bg-[#351321]"
-                  >
-                    {text.logout}
-                  </button>
-                </div>
-              </div>
-            )}
-          </>
+          </div>
         ) : (
           <div className="flex shrink-0 items-center justify-end gap-2">
             <button
@@ -449,11 +413,84 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
         )}
       </div>
 
+      {user && menuOpen && (
+        <div
+          ref={dropdownRef}
+          className="fixed z-[99999] w-[min(280px,calc(100vw-24px))] overflow-hidden rounded-3xl border border-white/10 bg-[#080a0d]/98 p-2 shadow-[0_26px_90px_rgba(0,0,0,0.72)] ring-1 ring-white/[0.035] backdrop-blur-2xl"
+          style={{
+            top: dropdownPosition.top,
+            right: dropdownPosition.right,
+          }}
+        >
+          <div className="rounded-2xl border border-white/10 bg-white/[0.045] p-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/38">
+              {text.welcome}
+            </p>
+
+            <p className="mt-1 truncate text-sm font-black text-white">
+              {getDisplayName(user)}
+            </p>
+
+            <p className="mt-1 truncate text-xs text-white/45">{user.email}</p>
+          </div>
+
+          <a
+            href="/hesabim/bakiye"
+            onClick={() => setMenuOpen(false)}
+            className="mt-2 flex items-center justify-between rounded-2xl border border-white/10 bg-black/25 px-3 py-3 text-sm transition hover:bg-white/[0.08]"
+          >
+            <span className="font-bold text-white/75">{text.wallet}</span>
+            <span className="font-black text-white">{walletBalance}</span>
+          </a>
+
+          <a
+            href="/hesabim/bakiye"
+            onClick={() => setMenuOpen(false)}
+            className="mt-2 flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.045] px-3 py-3 text-sm font-bold text-white/78 transition hover:bg-white/[0.08] hover:text-white"
+          >
+            <span>{text.balance}</span>
+            <span className="text-white/35">→</span>
+          </a>
+
+          <a
+            href="/hesabim/siparisler"
+            onClick={() => setMenuOpen(false)}
+            className="mt-2 flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.045] px-3 py-3 text-sm font-bold text-white/78 transition hover:bg-white/[0.08] hover:text-white"
+          >
+            <span>{text.orders}</span>
+            <span className="text-white/35">→</span>
+          </a>
+
+          <a
+            href="/hesabim"
+            onClick={() => setMenuOpen(false)}
+            className="mt-2 flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.045] px-3 py-3 text-sm font-bold text-white/78 transition hover:bg-white/[0.08] hover:text-white"
+          >
+            <span>{text.account}</span>
+            <span className="text-white/35">→</span>
+          </a>
+
+          <button
+            type="button"
+            onClick={() => {
+              setMenuOpen(false);
+              handleLogout();
+            }}
+            className="mt-2 w-full rounded-2xl border border-[#6b2232]/75 bg-[#241018]/80 px-3 py-3 text-left text-sm font-black text-[#f2c7d1] transition hover:bg-[#351321]"
+          >
+            {text.logout}
+          </button>
+        </div>
+      )}
+
       <AuthModal
         open={authOpen}
         initialMode={authMode}
         onClose={() => setAuthOpen(false)}
-        onAuthenticated={(nextUser) => setUser(normalizePublicUser(nextUser))}
+        onAuthenticated={(nextUser) => {
+          setUser(normalizePublicUser(nextUser));
+          setAuthOpen(false);
+        }}
       />
     </>
   );
