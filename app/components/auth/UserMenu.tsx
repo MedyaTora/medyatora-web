@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import AuthModal from "./AuthModal";
 import { detectBrowserLocale, saveLocale, type Locale } from "@/lib/i18n";
 
@@ -180,11 +181,15 @@ function notifyLocaleChange(locale: Locale) {
   );
 }
 
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
 export default function UserMenu({ showLocaleSwitcher = true }: Props) {
-  const menuRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
+  const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState<PublicUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [authOpen, setAuthOpen] = useState(false);
@@ -193,7 +198,7 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
   const [selectedLocale, setSelectedLocale] = useState<Locale>("tr");
   const [dropdownPosition, setDropdownPosition] = useState({
     top: 64,
-    right: 12,
+    left: 12,
   });
 
   const text = userMenuText[selectedLocale] || userMenuText.tr;
@@ -225,23 +230,26 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
     if (!triggerRef.current) return;
 
     const rect = triggerRef.current.getBoundingClientRect();
-    const dropdownWidth = 280;
     const safeGap = 12;
+    const dropdownWidth = Math.min(280, window.innerWidth - safeGap * 2);
 
-    let right = window.innerWidth - rect.right;
-    right = Math.max(safeGap, right);
+    const left = clamp(
+      rect.right - dropdownWidth,
+      safeGap,
+      window.innerWidth - dropdownWidth - safeGap
+    );
 
-    if (right + dropdownWidth > window.innerWidth - safeGap) {
-      right = safeGap;
-    }
+    const top = clamp(rect.bottom + 10, safeGap, window.innerHeight - safeGap);
 
     setDropdownPosition({
-      top: Math.max(safeGap, rect.bottom + 10),
-      right,
+      top,
+      left,
     });
   }
 
   useEffect(() => {
+    setMounted(true);
+
     const detectedLocale = detectBrowserLocale();
 
     setSelectedLocale(detectedLocale);
@@ -259,7 +267,7 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
     function handleClickOutside(event: MouseEvent) {
       const target = event.target as Node;
 
-      const clickedTrigger = menuRef.current?.contains(target);
+      const clickedTrigger = triggerRef.current?.contains(target);
       const clickedDropdown = dropdownRef.current?.contains(target);
 
       if (!clickedTrigger && !clickedDropdown) {
@@ -326,6 +334,82 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
     return getWalletBalance(user);
   }, [user]);
 
+  const dropdown =
+    mounted && user && menuOpen
+      ? createPortal(
+          <div
+            ref={dropdownRef}
+            className="fixed z-[2147483647] w-[min(280px,calc(100vw-24px))] overflow-hidden rounded-3xl border border-white/10 bg-[#080a0d]/98 p-2 shadow-[0_26px_90px_rgba(0,0,0,0.72)] ring-1 ring-white/[0.035] backdrop-blur-2xl"
+            style={{
+              top: dropdownPosition.top,
+              left: dropdownPosition.left,
+            }}
+          >
+            <div className="rounded-2xl border border-white/10 bg-white/[0.045] p-3">
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/38">
+                {text.welcome}
+              </p>
+
+              <p className="mt-1 truncate text-sm font-black text-white">
+                {getDisplayName(user)}
+              </p>
+
+              <p className="mt-1 truncate text-xs text-white/45">
+                {user.email}
+              </p>
+            </div>
+
+            <a
+              href="/hesabim/bakiye"
+              onClick={() => setMenuOpen(false)}
+              className="mt-2 flex items-center justify-between rounded-2xl border border-white/10 bg-black/25 px-3 py-3 text-sm transition hover:bg-white/[0.08]"
+            >
+              <span className="font-bold text-white/75">{text.wallet}</span>
+              <span className="font-black text-white">{walletBalance}</span>
+            </a>
+
+            <a
+              href="/hesabim/bakiye"
+              onClick={() => setMenuOpen(false)}
+              className="mt-2 flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.045] px-3 py-3 text-sm font-bold text-white/78 transition hover:bg-white/[0.08] hover:text-white"
+            >
+              <span>{text.balance}</span>
+              <span className="text-white/35">→</span>
+            </a>
+
+            <a
+              href="/hesabim/siparisler"
+              onClick={() => setMenuOpen(false)}
+              className="mt-2 flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.045] px-3 py-3 text-sm font-bold text-white/78 transition hover:bg-white/[0.08] hover:text-white"
+            >
+              <span>{text.orders}</span>
+              <span className="text-white/35">→</span>
+            </a>
+
+            <a
+              href="/hesabim"
+              onClick={() => setMenuOpen(false)}
+              className="mt-2 flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.045] px-3 py-3 text-sm font-bold text-white/78 transition hover:bg-white/[0.08] hover:text-white"
+            >
+              <span>{text.account}</span>
+              <span className="text-white/35">→</span>
+            </a>
+
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                handleLogout();
+              }}
+              className="mt-2 w-full rounded-2xl border border-[#6b2232]/75 bg-[#241018]/80 px-3 py-3 text-left text-sm font-black text-[#f2c7d1] transition hover:bg-[#351321]"
+            >
+              {text.logout}
+            </button>
+          </div>,
+          document.body
+        )
+      : null;
+
   if (loading) {
     return (
       <div className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.045] px-3 text-[11px] font-black text-white/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:h-10 sm:px-4 sm:text-xs">
@@ -337,10 +421,7 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
 
   return (
     <>
-      <div
-        ref={menuRef}
-        className="relative z-[9999] flex max-w-full shrink-0 items-center justify-end gap-2"
-      >
+      <div className="relative z-[9999] flex max-w-full shrink-0 items-center justify-end gap-2">
         {showLocaleSwitcher && (
           <div className="flex h-9 shrink-0 items-center overflow-hidden rounded-2xl border border-white/10 bg-black/25 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:h-10">
             {localeOptions.map((locale) => (
@@ -362,36 +443,32 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
         )}
 
         {user ? (
-          <div className="relative flex max-w-full justify-end">
-            <button
-              ref={triggerRef}
-              type="button"
-              onClick={() => {
-                updateDropdownPosition();
-                setMenuOpen((prev) => !prev);
-              }}
-              aria-label={text.menu}
-              className="inline-flex h-10 max-w-[220px] items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.06] px-2.5 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.10]"
-            >
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white text-[10px] font-black text-black shadow-[0_10px_26px_rgba(255,255,255,0.1)]">
-                {getInitials(user)}
+          <button
+            ref={triggerRef}
+            type="button"
+            onClick={() => {
+              updateDropdownPosition();
+              setMenuOpen((prev) => !prev);
+            }}
+            aria-label={text.menu}
+            className="inline-flex h-10 max-w-[220px] items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.06] px-2.5 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.10]"
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white text-[10px] font-black text-black shadow-[0_10px_26px_rgba(255,255,255,0.1)]">
+              {getInitials(user)}
+            </span>
+
+            <span className="min-w-0 text-left">
+              <span className="block max-w-[105px] truncate text-[11px] font-black leading-4 text-white sm:max-w-[120px]">
+                {getDisplayName(user)}
               </span>
 
-              <span className="min-w-0 text-left">
-                <span className="block max-w-[105px] truncate text-[11px] font-black leading-4 text-white sm:max-w-[120px]">
-                  {getDisplayName(user)}
-                </span>
-
-                <span className="block max-w-[105px] truncate text-[9px] font-bold uppercase tracking-[0.12em] text-white/42 sm:max-w-[120px]">
-                  {walletBalance}
-                </span>
+              <span className="block max-w-[105px] truncate text-[9px] font-bold uppercase tracking-[0.12em] text-white/42 sm:max-w-[120px]">
+                {walletBalance}
               </span>
+            </span>
 
-              <span className="ml-1 text-[10px] font-black text-white/45">
-                ▾
-              </span>
-            </button>
-          </div>
+            <span className="ml-1 text-[10px] font-black text-white/45">▾</span>
+          </button>
         ) : (
           <div className="flex shrink-0 items-center justify-end gap-2">
             <button
@@ -413,75 +490,7 @@ export default function UserMenu({ showLocaleSwitcher = true }: Props) {
         )}
       </div>
 
-      {user && menuOpen && (
-        <div
-          ref={dropdownRef}
-          className="fixed z-[99999] w-[min(280px,calc(100vw-24px))] overflow-hidden rounded-3xl border border-white/10 bg-[#080a0d]/98 p-2 shadow-[0_26px_90px_rgba(0,0,0,0.72)] ring-1 ring-white/[0.035] backdrop-blur-2xl"
-          style={{
-            top: dropdownPosition.top,
-            right: dropdownPosition.right,
-          }}
-        >
-          <div className="rounded-2xl border border-white/10 bg-white/[0.045] p-3">
-            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/38">
-              {text.welcome}
-            </p>
-
-            <p className="mt-1 truncate text-sm font-black text-white">
-              {getDisplayName(user)}
-            </p>
-
-            <p className="mt-1 truncate text-xs text-white/45">{user.email}</p>
-          </div>
-
-          <a
-            href="/hesabim/bakiye"
-            onClick={() => setMenuOpen(false)}
-            className="mt-2 flex items-center justify-between rounded-2xl border border-white/10 bg-black/25 px-3 py-3 text-sm transition hover:bg-white/[0.08]"
-          >
-            <span className="font-bold text-white/75">{text.wallet}</span>
-            <span className="font-black text-white">{walletBalance}</span>
-          </a>
-
-          <a
-            href="/hesabim/bakiye"
-            onClick={() => setMenuOpen(false)}
-            className="mt-2 flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.045] px-3 py-3 text-sm font-bold text-white/78 transition hover:bg-white/[0.08] hover:text-white"
-          >
-            <span>{text.balance}</span>
-            <span className="text-white/35">→</span>
-          </a>
-
-          <a
-            href="/hesabim/siparisler"
-            onClick={() => setMenuOpen(false)}
-            className="mt-2 flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.045] px-3 py-3 text-sm font-bold text-white/78 transition hover:bg-white/[0.08] hover:text-white"
-          >
-            <span>{text.orders}</span>
-            <span className="text-white/35">→</span>
-          </a>
-
-          <a
-            href="/hesabim"
-            onClick={() => setMenuOpen(false)}
-            className="mt-2 flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.045] px-3 py-3 text-sm font-bold text-white/78 transition hover:bg-white/[0.08] hover:text-white"
-          >
-            <span>{text.account}</span>
-            <span className="text-white/35">→</span>
-          </a>
-
-          <button
-            type="button"
-            onClick={() => {
-              setMenuOpen(false);
-              handleLogout();
-            }}
-            className="mt-2 w-full rounded-2xl border border-[#6b2232]/75 bg-[#241018]/80 px-3 py-3 text-left text-sm font-black text-[#f2c7d1] transition hover:bg-[#351321]"
-          >
-            {text.logout}
-          </button>
-        </div>
-      )}
+      {dropdown}
 
       <AuthModal
         open={authOpen}

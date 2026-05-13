@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { RowDataPacket } from "mysql2";
+import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { getMysqlPool } from "@/lib/mysql";
@@ -8,10 +9,8 @@ import {
   formatOrderDate,
   formatOrderMoney,
   getOrderStatusClass,
-  getOrderStatusDescription,
-  getOrderStatusLabel,
-  getPaymentMethodLabel,
 } from "@/lib/order-status";
+import type { Locale } from "@/lib/i18n";
 
 type OrderDetailRow = RowDataPacket & {
   id: number;
@@ -50,6 +49,411 @@ type RefundSummaryRow = RowDataPacket & {
   latest_refund_created_at: string | null;
 };
 
+type OrderDetailText = {
+  brandSubtitle: string;
+  account: string;
+  myOrders: string;
+  orderCenter: string;
+  orderDetail: string;
+  orderNo: string;
+  totalAmount: string;
+  paymentMethod: string;
+  partialCompleted: string;
+  partialRefundTitle: string;
+  partialRefundDesc: string;
+  orderQuantity: string;
+  delivered: string;
+  missing: string;
+  refundedAmount: string;
+  refundNote: string;
+  refundNoteFallback: string;
+  refundInfo: string;
+  refundInfoDesc: string;
+  orderAmount: string;
+  refunded: string;
+  remainingRefund: string;
+  platform: string;
+  category: string;
+  productCode: string;
+  quantity: string;
+  unitPrice: string;
+  totalPrice: string;
+  guarantee: string;
+  deliverySpeed: string;
+  targetInfo: string;
+  targetUser: string;
+  targetLink: string;
+  orderNote: string;
+  noNote: string;
+  supportTitle: string;
+  supportDesc: string;
+  telegramSupport: string;
+  whatsappSupport: string;
+  readyMessage: string;
+  supportMessage: (orderNumber: string) => string;
+  statuses: Record<string, string>;
+  statusDescriptions: Record<string, string>;
+  deliverySpeedFallbacks: Record<string, string>;
+  refundBox: {
+    none: string;
+    full: string;
+    partial: string;
+    exists: string;
+  };
+  paymentMethods: Record<string, string>;
+};
+
+const orderDetailTexts: Record<Locale, OrderDetailText> = {
+  tr: {
+    brandSubtitle: "Sipariş detayı",
+    account: "Hesabım",
+    myOrders: "Siparişlerim",
+    orderCenter: "Sipariş Merkezi",
+    orderDetail: "Sipariş Detayı",
+    orderNo: "Sipariş No",
+    totalAmount: "Toplam Tutar",
+    paymentMethod: "Ödeme yöntemi",
+    partialCompleted: "Kısmi Tamamlandı",
+    partialRefundTitle:
+      "Siparişinizin teslim edilemeyen kısmı için iade yapıldı.",
+    partialRefundDesc:
+      "Siparişinizin büyük kısmı tamamlandı. Eksik kalan bölüm için ilgili tutar aynı para birimindeki bakiyenize geri yansıtıldı.",
+    orderQuantity: "Sipariş Miktarı",
+    delivered: "Teslim Edilen",
+    missing: "Eksik Kalan",
+    refundedAmount: "İade Edilen Tutar",
+    refundNote: "İade Açıklaması",
+    refundNoteFallback:
+      "Teslim edilemeyen kısım için ilgili tutar bakiyenize geri yansıtılmıştır.",
+    refundInfo: "İade Bilgisi",
+    refundInfoDesc:
+      "İade varsa, iade edilen tutar siparişin para birimiyle gösterilir. TL, USD ve RUB bakiyeleri ayrı ayrı tutulur.",
+    orderAmount: "Sipariş Tutarı",
+    refunded: "İade Edilen",
+    remainingRefund: "Kalan İade",
+    platform: "Platform",
+    category: "Kategori",
+    productCode: "Ürün Kodu",
+    quantity: "Miktar",
+    unitPrice: "Birim Fiyat",
+    totalPrice: "Toplam Fiyat",
+    guarantee: "Garanti",
+    deliverySpeed: "Gönderim Hızı",
+    targetInfo: "Hedef Bilgileri",
+    targetUser: "Hedef Kullanıcı",
+    targetLink: "Hedef Link",
+    orderNote: "Sipariş Notu",
+    noNote: "Not eklenmemiş.",
+    supportTitle: "Desteğe Ulaş",
+    supportDesc:
+      "Bu siparişle ilgili destek almak istersen aşağıdaki butonlardan bize ulaşabilirsin.",
+    telegramSupport: "Telegram ile Destek Al",
+    whatsappSupport: "WhatsApp ile Destek Al",
+    readyMessage: "Hazır mesaj",
+    supportMessage: (orderNumber) =>
+      `Merhaba, MedyaTora siparişim hakkında destek almak istiyorum. Sipariş No: ${orderNumber}`,
+    statuses: {
+      pending_payment: "Ödeme Bekliyor",
+      pending: "Sipariş Alındı",
+      processing: "İşleniyor",
+      in_progress: "Devam Ediyor",
+      completed: "Tamamlandı",
+      cancelled: "İptal Edildi",
+      refunded: "İade Edildi",
+      partial_refunded: "Kısmi Tamamlandı",
+      failed: "Başarısız",
+    },
+    statusDescriptions: {
+      pending_payment: "Siparişiniz oluşturuldu, ödeme onayı bekleniyor.",
+      pending: "Siparişiniz alındı ve sıraya eklendi.",
+      processing: "Siparişiniz işleme hazırlanıyor.",
+      in_progress: "Siparişiniz aktif olarak gönderiliyor.",
+      completed: "Siparişiniz başarıyla tamamlandı.",
+      cancelled: "Siparişiniz iptal edildi.",
+      refunded: "Sipariş tutarı iade edildi.",
+      partial_refunded:
+        "Siparişinizin büyük kısmı tamamlandı. Teslim edilemeyen kısım için bakiye iadesi yapılmıştır.",
+      failed: "Sipariş tamamlanamadı.",
+    },
+    deliverySpeedFallbacks: {
+      pending_payment: "Ödeme onayı bekleniyor",
+      pending: "Sipariş sıraya alındı",
+      processing: "Gönderim hazırlanıyor",
+      in_progress: "Gönderim devam ediyor",
+      completed: "Gönderim tamamlandı",
+      refunded: "Sipariş tutarı iade edildi",
+      partial_refunded: "Sipariş kısmi olarak tamamlandı",
+      cancelled: "Sipariş iptal edildi",
+      failed: "İşlem başarısız oldu",
+    },
+    refundBox: {
+      none: "Bu sipariş için henüz iade kaydı bulunmuyor.",
+      full: "Bu sipariş için tam iade kaydı oluşturulmuş.",
+      partial: "Sipariş kısmi olarak tamamlandı ve eksik kalan kısım için iade yapıldı.",
+      exists: "Bu sipariş için iade kaydı bulunuyor.",
+    },
+    paymentMethods: {
+      turkey_bank: "Havale / EFT",
+      balance: "MedyaTora Bakiyesi",
+      support: "Destek ile ödeme",
+    },
+  },
+
+  en: {
+    brandSubtitle: "Order detail",
+    account: "Account",
+    myOrders: "My Orders",
+    orderCenter: "Order Center",
+    orderDetail: "Order Detail",
+    orderNo: "Order No",
+    totalAmount: "Total Amount",
+    paymentMethod: "Payment method",
+    partialCompleted: "Partially Completed",
+    partialRefundTitle:
+      "A refund has been issued for the undelivered part of your order.",
+    partialRefundDesc:
+      "Most of your order has been completed. The amount for the missing part has been returned to your balance in the same currency.",
+    orderQuantity: "Order Quantity",
+    delivered: "Delivered",
+    missing: "Missing",
+    refundedAmount: "Refunded Amount",
+    refundNote: "Refund Note",
+    refundNoteFallback:
+      "The amount for the undelivered part has been returned to your balance.",
+    refundInfo: "Refund Information",
+    refundInfoDesc:
+      "If there is a refund, the refunded amount is shown in the order currency. TL, USD, and RUB balances are kept separately.",
+    orderAmount: "Order Amount",
+    refunded: "Refunded",
+    remainingRefund: "Remaining Refund",
+    platform: "Platform",
+    category: "Category",
+    productCode: "Product Code",
+    quantity: "Quantity",
+    unitPrice: "Unit Price",
+    totalPrice: "Total Price",
+    guarantee: "Guarantee",
+    deliverySpeed: "Delivery Speed",
+    targetInfo: "Target Information",
+    targetUser: "Target User",
+    targetLink: "Target Link",
+    orderNote: "Order Note",
+    noNote: "No note added.",
+    supportTitle: "Contact Support",
+    supportDesc:
+      "If you need help with this order, you can contact us using the buttons below.",
+    telegramSupport: "Get Support on Telegram",
+    whatsappSupport: "Get Support on WhatsApp",
+    readyMessage: "Ready message",
+    supportMessage: (orderNumber) =>
+      `Hello, I would like to get support about my MedyaTora order. Order No: ${orderNumber}`,
+    statuses: {
+      pending_payment: "Payment Pending",
+      pending: "Order Received",
+      processing: "Processing",
+      in_progress: "In Progress",
+      completed: "Completed",
+      cancelled: "Cancelled",
+      refunded: "Refunded",
+      partial_refunded: "Partially Completed",
+      failed: "Failed",
+    },
+    statusDescriptions: {
+      pending_payment: "Your order has been created and is waiting for payment confirmation.",
+      pending: "Your order has been received and added to the queue.",
+      processing: "Your order is being prepared for processing.",
+      in_progress: "Your order is currently being delivered.",
+      completed: "Your order has been completed successfully.",
+      cancelled: "Your order has been cancelled.",
+      refunded: "The order amount has been refunded.",
+      partial_refunded:
+        "Most of your order has been completed. A balance refund has been issued for the undelivered part.",
+      failed: "The order could not be completed.",
+    },
+    deliverySpeedFallbacks: {
+      pending_payment: "Waiting for payment confirmation",
+      pending: "Order queued",
+      processing: "Delivery is being prepared",
+      in_progress: "Delivery in progress",
+      completed: "Delivery completed",
+      refunded: "Order amount refunded",
+      partial_refunded: "Order partially completed",
+      cancelled: "Order cancelled",
+      failed: "Process failed",
+    },
+    refundBox: {
+      none: "There is no refund record for this order yet.",
+      full: "A full refund record has been created for this order.",
+      partial:
+        "The order was partially completed and the missing part has been refunded.",
+      exists: "There is a refund record for this order.",
+    },
+    paymentMethods: {
+      turkey_bank: "Bank Transfer / EFT",
+      balance: "MedyaTora Balance",
+      support: "Support payment",
+    },
+  },
+
+  ru: {
+    brandSubtitle: "Детали заказа",
+    account: "Аккаунт",
+    myOrders: "Мои заказы",
+    orderCenter: "Центр заказов",
+    orderDetail: "Детали заказа",
+    orderNo: "Номер заказа",
+    totalAmount: "Итоговая сумма",
+    paymentMethod: "Способ оплаты",
+    partialCompleted: "Частично завершено",
+    partialRefundTitle:
+      "За недоставленную часть заказа был выполнен возврат.",
+    partialRefundDesc:
+      "Большая часть заказа выполнена. Сумма за недостающую часть возвращена на ваш баланс в той же валюте.",
+    orderQuantity: "Количество в заказе",
+    delivered: "Доставлено",
+    missing: "Недостает",
+    refundedAmount: "Сумма возврата",
+    refundNote: "Комментарий к возврату",
+    refundNoteFallback:
+      "Сумма за недоставленную часть была возвращена на ваш баланс.",
+    refundInfo: "Информация о возврате",
+    refundInfoDesc:
+      "Если есть возврат, сумма возврата отображается в валюте заказа. Балансы TL, USD и RUB хранятся отдельно.",
+    orderAmount: "Сумма заказа",
+    refunded: "Возвращено",
+    remainingRefund: "Остаток возврата",
+    platform: "Платформа",
+    category: "Категория",
+    productCode: "Код услуги",
+    quantity: "Количество",
+    unitPrice: "Цена за единицу",
+    totalPrice: "Итоговая цена",
+    guarantee: "Гарантия",
+    deliverySpeed: "Скорость выполнения",
+    targetInfo: "Информация о цели",
+    targetUser: "Целевой пользователь",
+    targetLink: "Целевая ссылка",
+    orderNote: "Примечание к заказу",
+    noNote: "Примечание не добавлено.",
+    supportTitle: "Связаться с поддержкой",
+    supportDesc:
+      "Если вам нужна помощь по этому заказу, свяжитесь с нами через кнопки ниже.",
+    telegramSupport: "Поддержка в Telegram",
+    whatsappSupport: "Поддержка в WhatsApp",
+    readyMessage: "Готовое сообщение",
+    supportMessage: (orderNumber) =>
+      `Здравствуйте, хочу получить поддержку по заказу MedyaTora. Номер заказа: ${orderNumber}`,
+    statuses: {
+      pending_payment: "Ожидает оплаты",
+      pending: "Заказ принят",
+      processing: "В обработке",
+      in_progress: "Выполняется",
+      completed: "Завершено",
+      cancelled: "Отменено",
+      refunded: "Возврат выполнен",
+      partial_refunded: "Частично завершено",
+      failed: "Ошибка",
+    },
+    statusDescriptions: {
+      pending_payment: "Ваш заказ создан и ожидает подтверждения оплаты.",
+      pending: "Ваш заказ принят и добавлен в очередь.",
+      processing: "Ваш заказ готовится к обработке.",
+      in_progress: "Ваш заказ сейчас выполняется.",
+      completed: "Ваш заказ успешно завершен.",
+      cancelled: "Ваш заказ отменен.",
+      refunded: "Сумма заказа была возвращена.",
+      partial_refunded:
+        "Большая часть заказа выполнена. За недоставленную часть выполнен возврат на баланс.",
+      failed: "Заказ не удалось завершить.",
+    },
+    deliverySpeedFallbacks: {
+      pending_payment: "Ожидает подтверждения оплаты",
+      pending: "Заказ добавлен в очередь",
+      processing: "Доставка готовится",
+      in_progress: "Доставка выполняется",
+      completed: "Доставка завершена",
+      refunded: "Сумма заказа возвращена",
+      partial_refunded: "Заказ частично завершен",
+      cancelled: "Заказ отменен",
+      failed: "Операция завершилась ошибкой",
+    },
+    refundBox: {
+      none: "Для этого заказа пока нет записи о возврате.",
+      full: "Для этого заказа создана запись о полном возврате.",
+      partial:
+        "Заказ был частично выполнен, а за недостающую часть был сделан возврат.",
+      exists: "Для этого заказа есть запись о возврате.",
+    },
+    paymentMethods: {
+      turkey_bank: "Банковский перевод / EFT",
+      balance: "Баланс MedyaTora",
+      support: "Оплата через поддержку",
+    },
+  },
+};
+
+function normalizeLocale(value: unknown): Locale {
+  const locale = String(value || "").trim().toLowerCase();
+
+  if (locale === "tr" || locale === "en" || locale === "ru") {
+    return locale;
+  }
+
+  return "tr";
+}
+
+function localizeCommonText(value: string | null | undefined, locale: Locale) {
+  if (!value || locale === "tr") return value || "";
+
+  const enMap: Record<string, string> = {
+    Takipçi: "Followers",
+    Beğeni: "Likes",
+    Yorum: "Comments",
+    İzlenme: "Views",
+    Kaydetme: "Saves",
+    Paylaşım: "Shares",
+    Abone: "Subscribers",
+    Üye: "Members",
+    Reaksiyon: "Reactions",
+    Kalite: "Quality",
+    Garantisiz: "No Guarantee",
+    Garantili: "Guaranteed",
+    Gün: "Days",
+    Hızlı: "Fast",
+    Yavaş: "Slow",
+    Türk: "Turkish",
+    Rus: "Russian",
+    Yabancı: "Global",
+  };
+
+  const ruMap: Record<string, string> = {
+    Takipçi: "Подписчики",
+    Beğeni: "Лайки",
+    Yorum: "Комментарии",
+    İzlenme: "Просмотры",
+    Kaydetme: "Сохранения",
+    Paylaşım: "Репосты",
+    Abone: "Подписчики",
+    Üye: "Участники",
+    Reaksiyon: "Реакции",
+    Kalite: "Качество",
+    Garantisiz: "Без гарантии",
+    Garantili: "С гарантией",
+    Gün: "дней",
+    Hızlı: "Быстро",
+    Yavaş: "Медленно",
+    Türk: "Турция",
+    Rus: "Россия",
+    Yabancı: "Глобальный",
+  };
+
+  const map = locale === "en" ? enMap : ruMap;
+
+  return Object.entries(map).reduce((text, [from, to]) => {
+    return text.replaceAll(from, to);
+  }, value);
+}
+
 function roundMoney(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
@@ -79,51 +483,51 @@ function InfoCard({
   );
 }
 
-function createSupportMessage(orderNumber: string) {
-  return `Merhaba, MedyaTora siparişim hakkında destek almak istiyorum. Sipariş No: ${orderNumber}`;
+function getCustomerStatusLabel(status: string, text: OrderDetailText) {
+  return text.statuses[status] || status;
 }
 
-function getCustomerStatusLabel(status: string) {
-  if (status === "partial_refunded") return "Kısmi Tamamlandı";
-  return getOrderStatusLabel(status);
+function getCustomerStatusDescription(status: string, text: OrderDetailText) {
+  return text.statusDescriptions[status] || "-";
 }
 
-function getCustomerStatusDescription(status: string) {
-  if (status === "partial_refunded") {
-    return "Siparişinizin büyük kısmı tamamlandı. Teslim edilemeyen kısım için bakiye iadesi yapılmıştır.";
+function getPaymentMethodText(method: string | null | undefined, text: OrderDetailText) {
+  const safeMethod = String(method || "").trim();
+
+  return text.paymentMethods[safeMethod] || safeMethod || "-";
+}
+
+function getDeliverySpeedText(
+  status: string,
+  speed: string | null | undefined,
+  locale: Locale,
+  text: OrderDetailText
+) {
+  if (speed && speed.trim()) {
+    return localizeCommonText(speed, locale);
   }
 
-  return getOrderStatusDescription(status);
+  return text.deliverySpeedFallbacks[status] || "-";
 }
 
-function getDeliverySpeedText(status: string, speed: string | null | undefined) {
-  if (status === "pending_payment") return "Ödeme onayı bekleniyor";
-  if (status === "pending") return speed && speed.trim() ? speed : "Sipariş sıraya alındı";
-  if (status === "processing") return speed && speed.trim() ? speed : "Gönderim hazırlanıyor";
-  if (status === "in_progress") return speed && speed.trim() ? speed : "Gönderim devam ediyor";
-  if (status === "completed") return speed && speed.trim() ? speed : "Gönderim tamamlandı";
-  if (status === "refunded") return "Sipariş tutarı iade edildi";
-  if (status === "partial_refunded") return "Sipariş kısmi olarak tamamlandı";
-  if (status === "cancelled") return "Sipariş iptal edildi";
-  if (status === "failed") return "İşlem başarısız oldu";
-
-  return speed && speed.trim() ? speed : "-";
-}
-
-function getRefundBoxText(status: string, refundedTotal: number) {
+function getRefundBoxText(
+  status: string,
+  refundedTotal: number,
+  text: OrderDetailText
+) {
   if (refundedTotal <= 0) {
-    return "Bu sipariş için henüz iade kaydı bulunmuyor.";
+    return text.refundBox.none;
   }
 
   if (status === "refunded") {
-    return "Bu sipariş için tam iade kaydı oluşturulmuş.";
+    return text.refundBox.full;
   }
 
   if (status === "partial_refunded") {
-    return "Sipariş kısmi olarak tamamlandı ve eksik kalan kısım için iade yapıldı.";
+    return text.refundBox.partial;
   }
 
-  return "Bu sipariş için iade kaydı bulunuyor.";
+  return text.refundBox.exists;
 }
 
 export default async function OrderDetailPage({
@@ -136,6 +540,12 @@ export default async function OrderDetailPage({
   if (!user) {
     redirect("/");
   }
+
+  const cookieStore = await cookies();
+  const selectedLocale = normalizeLocale(
+    cookieStore.get("medyatora_locale")?.value
+  );
+  const text = orderDetailTexts[selectedLocale];
 
   const resolvedParams = await params;
   const orderNumber = decodeURIComponent(resolvedParams.id || "").trim();
@@ -246,7 +656,7 @@ export default async function OrderDetailPage({
     refundSummary?.latest_refund_note &&
     refundSummary.latest_refund_note.trim().length > 0;
 
-  const supportMessage = createSupportMessage(order.order_number);
+  const supportMessage = text.supportMessage(order.order_number);
   const encodedSupportMessage = encodeURIComponent(supportMessage);
 
   const telegramUrl = `https://t.me/medyatora?text=${encodedSupportMessage}`;
@@ -268,7 +678,7 @@ export default async function OrderDetailPage({
               <div className="text-lg font-black tracking-tight text-white">
                 MedyaTora
               </div>
-              <div className="text-xs text-white/45">Sipariş detayı</div>
+              <div className="text-xs text-white/45">{text.brandSubtitle}</div>
             </div>
           </Link>
 
@@ -278,14 +688,14 @@ export default async function OrderDetailPage({
                 href="/hesabim"
                 className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-2 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white"
               >
-                Hesabım
+                {text.account}
               </Link>
 
               <Link
                 href="/hesabim/siparisler"
                 className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-2 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white"
               >
-                Siparişlerim
+                {text.myOrders}
               </Link>
 
               <Link
@@ -308,16 +718,18 @@ export default async function OrderDetailPage({
             <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.24em] text-white/45">
-                  Sipariş Merkezi
+                  {text.orderCenter}
                 </p>
 
                 <h1 className="mt-3 text-4xl font-black tracking-tight md:text-5xl">
-                  Sipariş Detayı
+                  {text.orderDetail}
                 </h1>
 
                 <p className="mt-4 text-sm text-white/55">
-                  Sipariş No:{" "}
-                  <span className="font-bold text-white">{order.order_number}</span>
+                  {text.orderNo}:{" "}
+                  <span className="font-bold text-white">
+                    {order.order_number}
+                  </span>
                 </p>
 
                 <p className="mt-1 text-sm text-white/45">
@@ -330,31 +742,32 @@ export default async function OrderDetailPage({
                       order.status
                     )}`}
                   >
-                    {getCustomerStatusLabel(order.status)}
+                    {getCustomerStatusLabel(order.status, text)}
                   </span>
                 </div>
               </div>
 
               <div className="rounded-3xl border border-white/10 bg-white/[0.045] p-5">
                 <p className="text-xs font-black uppercase tracking-[0.18em] text-white/40">
-                  Toplam Tutar
+                  {text.totalAmount}
                 </p>
                 <p className="mt-3 text-3xl font-black text-white">
                   {formatOrderMoney(order.total_price, order.currency)}
                 </p>
                 <p className="mt-2 text-sm text-white/45">
-                  Ödeme yöntemi: {getPaymentMethodLabel(order.payment_method)}
+                  {text.paymentMethod}:{" "}
+                  {getPaymentMethodText(order.payment_method, text)}
                 </p>
               </div>
             </div>
 
             <div className="relative mt-6 max-w-3xl">
               <h2 className="text-2xl font-black text-white">
-                {order.service_title}
+                {localizeCommonText(order.service_title, selectedLocale)}
               </h2>
 
               <p className="mt-3 text-sm leading-7 text-white/60">
-                {getCustomerStatusDescription(order.status)}
+                {getCustomerStatusDescription(order.status, text)}
               </p>
             </div>
           </div>
@@ -365,25 +778,33 @@ export default async function OrderDetailPage({
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.22em] text-[#e7d9a4]">
-                  Kısmi Tamamlandı
+                  {text.partialCompleted}
                 </p>
 
                 <h2 className="mt-2 text-xl font-black text-white">
-                  Siparişinizin teslim edilemeyen kısmı için iade yapıldı.
+                  {text.partialRefundTitle}
                 </h2>
 
                 <p className="mt-2 max-w-3xl text-sm leading-6 text-white/65">
-                  Siparişinizin büyük kısmı tamamlandı. Eksik kalan bölüm için
-                  ilgili tutar aynı para birimindeki bakiyenize geri yansıtıldı.
+                  {text.partialRefundDesc}
                 </p>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2 md:min-w-[520px]">
-                <InfoCard label="Sipariş Miktarı" value={formatQuantity(order.quantity)} />
-                <InfoCard label="Teslim Edilen" value={formatQuantity(deliveredQuantity)} />
-                <InfoCard label="Eksik Kalan" value={formatQuantity(missingQuantity)} />
                 <InfoCard
-                  label="İade Edilen Tutar"
+                  label={text.orderQuantity}
+                  value={formatQuantity(order.quantity)}
+                />
+                <InfoCard
+                  label={text.delivered}
+                  value={formatQuantity(deliveredQuantity)}
+                />
+                <InfoCard
+                  label={text.missing}
+                  value={formatQuantity(missingQuantity)}
+                />
+                <InfoCard
+                  label={text.refundedAmount}
                   value={formatOrderMoney(refundedTotal, order.currency)}
                 />
               </div>
@@ -391,13 +812,13 @@ export default async function OrderDetailPage({
 
             <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
               <p className="text-xs font-black uppercase tracking-[0.18em] text-white/35">
-                İade Açıklaması
+                {text.refundNote}
               </p>
 
               <p className="mt-2 text-sm leading-6 text-white/70">
                 {hasRefundNote
                   ? refundSummary.latest_refund_note
-                  : "Teslim edilemeyen kısım için ilgili tutar bakiyenize geri yansıtılmıştır."}
+                  : text.refundNoteFallback}
               </p>
             </div>
           </section>
@@ -407,30 +828,29 @@ export default async function OrderDetailPage({
           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.22em] text-white/40">
-                İade Bilgisi
+                {text.refundInfo}
               </p>
 
               <h2 className="mt-2 text-xl font-black text-white">
-                {getRefundBoxText(order.status, refundedTotal)}
+                {getRefundBoxText(order.status, refundedTotal, text)}
               </h2>
 
               <p className="mt-2 text-sm leading-6 text-white/60">
-                İade varsa, iade edilen tutar siparişin para birimiyle gösterilir.
-                TL, USD ve RUB bakiyeleri ayrı ayrı tutulur.
+                {text.refundInfoDesc}
               </p>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3 md:min-w-[520px]">
               <InfoCard
-                label="Sipariş Tutarı"
+                label={text.orderAmount}
                 value={formatOrderMoney(orderTotal, order.currency)}
               />
               <InfoCard
-                label="İade Edilen"
+                label={text.refunded}
                 value={formatOrderMoney(refundedTotal, order.currency)}
               />
               <InfoCard
-                label="Kalan İade"
+                label={text.remainingRefund}
                 value={formatOrderMoney(remainingRefundable, order.currency)}
               />
             </div>
@@ -438,42 +858,59 @@ export default async function OrderDetailPage({
         </section>
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <InfoCard label="Platform" value={order.platform} />
-          <InfoCard label="Kategori" value={order.category} />
-          <InfoCard label="Ürün Kodu" value={order.site_code} />
           <InfoCard
-            label="Miktar"
+            label={text.platform}
+            value={localizeCommonText(order.platform, selectedLocale)}
+          />
+          <InfoCard
+            label={text.category}
+            value={localizeCommonText(order.category, selectedLocale)}
+          />
+          <InfoCard label={text.productCode} value={order.site_code} />
+          <InfoCard
+            label={text.quantity}
             value={Number(order.quantity).toLocaleString("tr-TR")}
           />
           <InfoCard
-            label="Birim Fiyat"
+            label={text.unitPrice}
             value={`${Number(order.unit_price || 0).toFixed(2)} ${
               order.currency
             } / 1000`}
           />
           <InfoCard
-            label="Toplam Fiyat"
+            label={text.totalPrice}
             value={formatOrderMoney(order.total_price, order.currency)}
           />
-          <InfoCard label="Garanti" value={order.guarantee_label || "-"} />
           <InfoCard
-            label="Gönderim Hızı"
-            value={getDeliverySpeedText(order.status, order.speed)}
+            label={text.guarantee}
+            value={localizeCommonText(order.guarantee_label, selectedLocale) || "-"}
           />
           <InfoCard
-            label="Ödeme Yöntemi"
-            value={getPaymentMethodLabel(order.payment_method)}
+            label={text.deliverySpeed}
+            value={getDeliverySpeedText(
+              order.status,
+              order.speed,
+              selectedLocale,
+              text
+            )}
+          />
+          <InfoCard
+            label={text.paymentMethod}
+            value={getPaymentMethodText(order.payment_method, text)}
           />
         </section>
 
         <section className="rounded-[32px] border border-white/10 bg-[#080a0d]/92 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.36)] md:p-6">
-          <h2 className="text-xl font-black text-white">Hedef Bilgileri</h2>
+          <h2 className="text-xl font-black text-white">{text.targetInfo}</h2>
 
           <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <InfoCard label="Hedef Kullanıcı" value={order.target_username || "-"} />
+            <InfoCard
+              label={text.targetUser}
+              value={order.target_username || "-"}
+            />
 
             <InfoCard
-              label="Hedef Link"
+              label={text.targetLink}
               value={
                 order.target_link ? (
                   <a
@@ -493,20 +930,19 @@ export default async function OrderDetailPage({
 
           <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-white/35">
-              Sipariş Notu
+              {text.orderNote}
             </p>
             <p className="mt-2 text-sm leading-6 text-white/65">
-              {order.order_note || "Not eklenmemiş."}
+              {order.order_note || text.noNote}
             </p>
           </div>
         </section>
 
         <section className="rounded-[32px] border border-white/10 bg-[#080a0d]/92 p-5 shadow-[0_20px_90px_rgba(0,0,0,0.36)] md:p-6">
-          <h2 className="text-xl font-black text-white">Desteğe Ulaş</h2>
+          <h2 className="text-xl font-black text-white">{text.supportTitle}</h2>
 
           <p className="mt-2 text-sm leading-6 text-white/65">
-            Bu siparişle ilgili destek almak istersen aşağıdaki butonlardan bize
-            ulaşabilirsin.
+            {text.supportDesc}
           </p>
 
           <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -516,7 +952,7 @@ export default async function OrderDetailPage({
               rel="noreferrer"
               className="rounded-2xl border border-white/10 bg-white/[0.055] px-5 py-3 text-center text-sm font-black text-white transition hover:bg-white/[0.09]"
             >
-              Telegram ile Destek Al
+              {text.telegramSupport}
             </a>
 
             <a
@@ -525,11 +961,13 @@ export default async function OrderDetailPage({
               rel="noreferrer"
               className="rounded-2xl bg-white px-5 py-3 text-center text-sm font-black text-black transition hover:bg-white/90"
             >
-              WhatsApp ile Destek Al
+              {text.whatsappSupport}
             </a>
           </div>
 
-          <p className="mt-3 text-xs text-white/40">Hazır mesaj: {supportMessage}</p>
+          <p className="mt-3 text-xs text-white/40">
+            {text.readyMessage}: {supportMessage}
+          </p>
         </section>
       </div>
     </main>

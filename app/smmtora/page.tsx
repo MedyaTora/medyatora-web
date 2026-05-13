@@ -656,7 +656,13 @@ function getLocalizedServiceTitle(title: string, locale: Locale) {
 }
 
 function getLocalizedServiceDescription(description: string, locale: Locale) {
-  return localizeCommonServiceText(description, locale);
+  if (locale === "tr") return description;
+
+  if (locale === "en") {
+    return "This service is processed according to the selected platform, target and quantity. Delivery speed, quality and guarantee conditions may vary depending on the selected service. Please make sure the target profile, post or link is public and accessible before ordering.";
+  }
+
+  return "Эта услуга обрабатывается в соответствии с выбранной платформой, целью и количеством. Скорость выполнения, качество и условия гарантии могут отличаться в зависимости от выбранной услуги. Перед заказом убедитесь, что профиль, публикация или ссылка открыты и доступны.";
 }
 
 function getLocalizedGuaranteeLabel(label: string, locale: Locale) {
@@ -1535,6 +1541,118 @@ export default function SmmToraPage() {
       }
     };
   
+    const paymentPolicyText = {
+      tr: {
+        securityTitle: "Ödeme Güvenliği",
+        securityText:
+          "Ödeme yapacak kişinin adı soyadı, dekonttaki gönderen adı soyadı ile aynı olmalıdır. Banka transferi yaparken açıklama kısmını boş bırakın. Eşleşmeyen ödemeler onaylanmaz.",
+        privacyText:
+          "Kişisel bilgileriniz yalnızca ödeme doğrulama amacıyla kullanılır ve üçüncü kişilerle paylaşılmaz.",
+        refundTitle: "İade Koşulları",
+        refundText1:
+          "İşlem başlamadan önce iade talep edebilirsiniz. İşlem başladıktan sonra iptal/iade yapılamaz.",
+        refundText2:
+          "İşlem bizden kaynaklı bir sebeple tamamen veya kısmen tamamlanamazsa, tamamlanamayan kısma ait tutar siparişinizin ödeme yöntemi ve hesap durumuna göre iade edilir veya hesabınıza bakiye olarak yansıtılır.",
+        acceptText:
+          "Okudum, ödeme güvenliği ve iade koşullarını kabul ediyorum.",
+      },
+      en: {
+        securityTitle: "Payment Security",
+        securityText:
+          "The payer's full name must match the sender name on the receipt. Leave the payment description field empty when making a bank transfer. Payments with mismatched information may not be approved.",
+        privacyText:
+          "Your personal information is used only for payment verification and is not shared with third parties.",
+        refundTitle: "Refund Conditions",
+        refundText1:
+          "You may request a refund before the process starts. Once the process has started, cancellation/refund is not available.",
+        refundText2:
+          "If the service cannot be completed fully or partially due to a reason caused by us, the amount for the incomplete part may be refunded according to your payment method and account status, or added to your account balance.",
+        acceptText:
+          "I have read and accept the payment security and refund conditions.",
+      },
+      ru: {
+        securityTitle: "Безопасность оплаты",
+        securityText:
+          "Имя плательщика должно совпадать с именем отправителя в чеке. При банковском переводе оставьте поле комментария к платежу пустым. Платежи с несовпадающими данными могут быть не подтверждены.",
+        privacyText:
+          "Ваши персональные данные используются только для проверки оплаты и не передаются третьим лицам.",
+        refundTitle: "Условия возврата",
+        refundText1:
+          "Вы можете запросить возврат до начала обработки заказа. После начала обработки отмена/возврат невозможны.",
+        refundText2:
+          "Если услуга полностью или частично не может быть выполнена по нашей причине, сумма за невыполненную часть может быть возвращена в соответствии со способом оплаты и статусом аккаунта либо зачислена на баланс аккаунта.",
+        acceptText:
+          "Я прочитал(а) и принимаю условия безопасности оплаты и возврата.",
+      },
+    }[selectedLocale];
+
+    const smmFixedText = {
+      tr: {
+        completeFormHint:
+          "Hizmeti seç, hedef kullanıcı adını yaz ve geçerli miktar gir. Sonra satın alma veya sepete ekleme aktif olur.",
+        selectedPaymentCurrency: "Seçili ödeme birimi",
+        balanceLoginRequired: "Bakiye ile ödeme için giriş yapmalısın.",
+        balancePaymentTitle: "Bakiye ile ödeme",
+        balancePaymentDesc:
+          "TL, USD ve RUB bakiyeleri ayrı ayrı tutulur. Sipariş hangi para birimiyle oluşturuluyorsa ödeme sadece o para birimindeki bakiyeden düşülür.",
+        orderInfoTitle: "Sipariş Bilgisi",
+        balancePaymentCompleted: "Bakiye ile ödeme tamamlandı",
+        orderTrackingAccountText:
+          "Sipariş durumunu Hesabım sayfasındaki Siparişlerim bölümünden takip edebilirsin.",
+        goAccount: "Hesabıma Git",
+        viewOrders: "Siparişlerimi Gör",
+        paymentDoneTitle: "Ödemeyi yaptıysan",
+        paymentDoneDesc:
+          "Dekontu Telegram veya WhatsApp üzerinden gönderdikten sonra aşağıdaki butona bas. Siparişin ödeme kontrolüne alınacak.",
+        paymentReviewLoading: "Kontrole Alınıyor...",
+        paymentReviewDone: "Ödeme Kontrolüne Alındı",
+        paymentCompletedButton: "Ödemeyi Tamamladım",
+      },
+      en: {
+        completeFormHint:
+          "Select a service, enter the target username, and enter a valid quantity. Then checkout or add to cart will become active.",
+        selectedPaymentCurrency: "Selected payment currency",
+        balanceLoginRequired: "You need to log in to pay with balance.",
+        balancePaymentTitle: "Pay with balance",
+        balancePaymentDesc:
+          "TL, USD, and RUB balances are kept separately. The order amount is deducted only from the balance in the selected order currency.",
+        orderInfoTitle: "Order Information",
+        balancePaymentCompleted: "Balance payment completed",
+        orderTrackingAccountText:
+          "You can track the order status from the My Orders section in your account.",
+        goAccount: "Go to My Account",
+        viewOrders: "View My Orders",
+        paymentDoneTitle: "If you have completed the payment",
+        paymentDoneDesc:
+          "After sending the receipt via Telegram or WhatsApp, press the button below. Your order will be sent for payment review.",
+        paymentReviewLoading: "Sending for Review...",
+        paymentReviewDone: "Payment Sent for Review",
+        paymentCompletedButton: "I Completed the Payment",
+      },
+      ru: {
+        completeFormHint:
+          "Выберите услугу, укажите целевой username и введите корректное количество. После этого покупка или добавление в корзину станет доступным.",
+        selectedPaymentCurrency: "Выбранная валюта оплаты",
+        balanceLoginRequired: "Для оплаты с баланса необходимо войти в аккаунт.",
+        balancePaymentTitle: "Оплата с баланса",
+        balancePaymentDesc:
+          "Балансы TL, USD и RUB хранятся отдельно. Сумма заказа списывается только с баланса в выбранной валюте заказа.",
+        orderInfoTitle: "Информация о заказе",
+        balancePaymentCompleted: "Оплата с баланса завершена",
+        orderTrackingAccountText:
+          "Статус заказа можно отслеживать в разделе «Мои заказы» в аккаунте.",
+        goAccount: "Перейти в аккаунт",
+        viewOrders: "Мои заказы",
+        paymentDoneTitle: "Если вы уже оплатили",
+        paymentDoneDesc:
+          "После отправки чека через Telegram или WhatsApp нажмите кнопку ниже. Заказ будет отправлен на проверку оплаты.",
+        paymentReviewLoading: "Отправляется на проверку...",
+        paymentReviewDone: "Оплата отправлена на проверку",
+        paymentCompletedButton: "Я оплатил",
+      },
+    }[selectedLocale];
+
+
     return (
       <main className="mt-premium-page px-3 py-4 text-white sm:px-6 sm:py-6">
         <div className="mt-top-fade" />
@@ -2475,7 +2593,7 @@ export default function SmmToraPage() {
 
     {!canUseCurrentForm && (
       <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-xs leading-5 text-amber-100/80">
-        Hizmeti seç, hedef kullanıcı adını yaz ve geçerli miktar gir. Sonra satın alma veya sepete ekleme aktif olur.
+        {smmFixedText.completeFormHint}
       </div>
     )}
   </div>
@@ -2753,7 +2871,7 @@ export default function SmmToraPage() {
                   {authUser ? (
                     <>
                       <p className="mt-1 text-xs leading-5 text-white/52">
-                        Seçili ödeme birimi:{" "}
+                        {smmFixedText.selectedPaymentCurrency}:{" "}
                         <span className="font-bold text-white/82">
                           {selectedCurrency}
                         </span>
@@ -2772,7 +2890,7 @@ export default function SmmToraPage() {
                     </>
                   ) : (
                     <p className="mt-1 text-xs leading-5 text-white/52">
-                      Bakiye ile ödeme için giriş yapmalısın.
+                      {smmFixedText.balanceLoginRequired}
                     </p>
                   )}
                 </button>
@@ -2851,12 +2969,10 @@ export default function SmmToraPage() {
 
               {paymentMethod === "balance" && (
                 <div className="mt-4 rounded-2xl border border-white/14 bg-white/[0.055] p-4 text-sm leading-6 text-white/78">
-                  <p className="font-bold text-white">Bakiye ile ödeme</p>
+                  <p className="font-bold text-white">{smmFixedText.balancePaymentTitle}</p>
 
                   <p className="mt-2 text-white/64">
-                    TL, USD ve RUB bakiyeleri ayrı ayrı tutulur. Sipariş hangi
-                    para birimiyle oluşturuluyorsa ödeme sadece o para
-                    birimindeki bakiyeden düşülür.
+                    {smmFixedText.balancePaymentDesc}
                   </p>
 
                   {authUser && (
@@ -2898,7 +3014,7 @@ export default function SmmToraPage() {
                   )}
 
                   <p className="mt-3 text-xs leading-5 text-white/52">
-                    Seçili ödeme birimi:{" "}
+                    {smmFixedText.selectedPaymentCurrency}:{" "}
                     <span className="font-bold text-white">
                       {selectedCurrency}
                     </span>
@@ -2910,30 +3026,28 @@ export default function SmmToraPage() {
             </div>
 
             <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm leading-6 text-amber-50">
-              <p className="font-bold text-white">Ödeme Güvenliği</p>
-
-              <p className="mt-2 text-white/75">
-                Ödeme yapacak kişinin adı soyadı, dekonttaki gönderen adı soyadı
-                ile aynı olmalıdır. Eşleşmeyen ödemeler onaylanmaz.
+              <p className="font-bold text-white">
+                {paymentPolicyText.securityTitle}
               </p>
 
               <p className="mt-2 text-white/75">
-                Kişisel bilgileriniz yalnızca ödeme doğrulama amacıyla
-                kullanılır ve üçüncü kişilerle paylaşılmaz.
-              </p>
-
-              <p className="mt-4 font-bold text-white">İade Koşulları</p>
-
-              <p className="mt-2 text-white/75">
-                İşlem başlamadan önce iade talep edebilirsiniz. İşlem başladıktan
-                sonra iptal/iade yapılamaz.
+                {paymentPolicyText.securityText}
               </p>
 
               <p className="mt-2 text-white/75">
-                İşlem bizden kaynaklı bir sebeple tamamen veya kısmen
-                tamamlanamazsa, tamamlanamayan kısma ait tutar siparişinizin
-                ödeme yöntemi ve hesap durumuna göre iade edilir veya hesabınıza
-                bakiye olarak yansıtılır.
+                {paymentPolicyText.privacyText}
+              </p>
+
+              <p className="mt-4 font-bold text-white">
+                {paymentPolicyText.refundTitle}
+              </p>
+
+              <p className="mt-2 text-white/75">
+                {paymentPolicyText.refundText1}
+              </p>
+
+              <p className="mt-2 text-white/75">
+                {paymentPolicyText.refundText2}
               </p>
 
               <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-black/20 p-3">
@@ -2947,7 +3061,7 @@ export default function SmmToraPage() {
                 />
 
                 <span className="text-sm font-semibold text-white">
-                  Okudum, ödeme güvenliği ve iade koşullarını kabul ediyorum.
+                  {paymentPolicyText.acceptText}
                 </span>
               </label>
             </div>
@@ -2996,7 +3110,7 @@ export default function SmmToraPage() {
           <div className="flex max-h-[calc(100dvh-24px)] w-full max-w-2xl flex-col overflow-hidden rounded-[28px] border border-white/10 bg-[#080a0d]/96 shadow-[0_28px_120px_rgba(0,0,0,0.58)] ring-1 ring-white/[0.035] backdrop-blur-xl sm:max-h-[92vh] sm:rounded-[32px]">
             <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 py-3 sm:px-5">
               <p className="text-sm font-black text-white/80">
-                Sipariş Bilgisi
+                {smmFixedText.orderInfoTitle}
               </p>
 
               <button
@@ -3036,7 +3150,7 @@ export default function SmmToraPage() {
               {createdPaymentInfo?.paymentMethod === "balance" ? (
                 <div className="mt-5 rounded-2xl border border-white/14 bg-white/[0.055] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
                   <p className="text-sm font-bold text-white">
-                    Bakiye ile ödeme tamamlandı
+                    {smmFixedText.balancePaymentCompleted}
                   </p>
 
                   <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm leading-6 text-white/72">
@@ -3052,8 +3166,7 @@ export default function SmmToraPage() {
                     </p>
 
                     <p className="mt-2 text-white/64">
-                      Sipariş durumunu Hesabım sayfasındaki Siparişlerim
-                      bölümünden takip edebilirsin.
+                      {smmFixedText.orderTrackingAccountText}
                     </p>
                   </div>
 
@@ -3062,14 +3175,14 @@ export default function SmmToraPage() {
                       href="/hesabim"
                       className="rounded-2xl bg-white px-5 py-3 text-center text-sm font-black text-black shadow-[0_16px_38px_rgba(255,255,255,0.10)] transition hover:bg-white/90"
                     >
-                      Hesabıma Git
+                      {smmFixedText.goAccount}
                     </a>
 
                     <a
                       href="/hesabim/siparisler"
                       className="rounded-2xl border border-white/10 bg-white/[0.06] px-5 py-3 text-center text-sm font-bold text-white transition hover:bg-white/[0.1]"
                     >
-                      Siparişlerimi Gör
+                      {smmFixedText.viewOrders}
                     </a>
                   </div>
                 </div>
@@ -3147,12 +3260,11 @@ export default function SmmToraPage() {
               {createdPaymentInfo?.paymentMethod === "turkey_bank" && (
                 <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4">
                   <p className="text-sm font-bold text-white">
-                    Ödemeyi yaptıysan
+                    {smmFixedText.paymentDoneTitle}
                   </p>
 
                   <p className="mt-2 text-sm leading-6 text-amber-50/80">
-                    Dekontu Telegram veya WhatsApp üzerinden gönderdikten sonra
-                    aşağıdaki butona bas. Siparişin ödeme kontrolüne alınacak.
+                    {smmFixedText.paymentDoneDesc}
                   </p>
 
                   <button
@@ -3164,10 +3276,10 @@ export default function SmmToraPage() {
                     className="mt-4 w-full rounded-2xl bg-white px-4 py-3 text-sm font-black text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-60 sm:px-5"
                   >
                     {paymentReviewLoading
-                      ? "Kontrole Alınıyor..."
+                      ? smmFixedText.paymentReviewLoading
                       : paymentReviewMessage
-                        ? "Ödeme Kontrolüne Alındı"
-                        : "Ödemeyi Tamamladım"}
+                        ? smmFixedText.paymentReviewDone
+                        : smmFixedText.paymentCompletedButton}
                   </button>
 
                   {paymentReviewMessage && (
