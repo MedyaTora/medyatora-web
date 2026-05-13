@@ -153,76 +153,80 @@ type Dictionary = {
 export const dictionaries: Record<Locale, Dictionary> = {
   tr: {
     newOrder: "Yeni Sipariş",
-    newOrderDesc: "Platform seç, ürün detaylarını gir ve tekli veya toplu sipariş oluştur.",
+    newOrderDesc:
+      "Platform seç, hizmet detaylarını gir ve tekli ya da toplu siparişini güvenle oluştur.",
     currency: "Para Birimi",
     selectPlatform: "Platform Seç",
     category: "Kategori",
-    products: "Ürünler",
+    products: "Hizmetler",
     orderInfo: "Sipariş Bilgileri",
-    productDescription: "Ürün Açıklaması",
+    productDescription: "Hizmet Açıklaması",
     quantity: "Miktar",
     fullName: "Ad Soyad",
-    contact: "İletişim bilgisi",
-    totalSalePrice: "Toplam Satış Fiyatı",
+    contact: "İletişim Bilgisi",
+    totalSalePrice: "Toplam Tutar",
     createOrder: "Sipariş Oluştur",
     sending: "Gönderiliyor...",
     servicesLoading: "Servisler yükleniyor...",
-    productsLoading: "Ürünler yükleniyor...",
+    productsLoading: "Hizmetler yükleniyor...",
     noCategoryFound: "Bu platform için henüz kategori bulunamadı.",
-    noProductsFound: "Bu kategori için henüz ürün yok.",
-    selectProductFirst: "Önce bir ürün seç.",
-    minMax: "Min",
+    noProductsFound: "Seçili kategori için uygun hizmet bulunamadı.",
+    selectProductFirst: "Devam etmek için önce bir hizmet seç.",
+    minMax: "Min / Max",
     speed: "Hız",
-    serviceNo: "Servis No",
+    serviceNo: "Hizmet Kodu",
     per1000: "1000 adet",
-    up: "↑ Yukarı",
-    down: "↓ Aşağı",
-    successOrder: "Sipariş başarıyla oluşturuldu.",
+    up: "Yukarı",
+    down: "Aşağı",
+    successOrder: "Hizmet sepete eklendi.",
     addToCart: "Sepete Ekle",
     goToCart: "Sepete Git",
     cart: "Sepet",
     cartEmpty: "Sepet henüz boş.",
     remove: "Sil",
     edit: "Düzenle",
-    buyNow: "Satın Al",
-    bulkBuy: "Toplu Satın Al",
+    buyNow: "Hemen Satın Al",
+    bulkBuy: "Sepeti Satın Al",
     targetUsername: "Hedef kullanıcı adı",
-    targetLink: "Hedef link",
+    targetLink: "Hedef bağlantı",
     orderNote: "Sipariş notu",
-    cartSaleTotal: "Sepet Satış Toplamı",
-    cartCostTotal: "Sepet Alış Toplamı",
+    cartSaleTotal: "Sepet Toplamı",
+    cartCostTotal: "Sepet Maliyet Toplamı",
     orderNumber: "Sipariş No",
-    batchCode: "Batch Kodu",
+    batchCode: "Toplu İşlem Kodu",
 
-    smmHeroBadge: "SMMTora tekli sosyal medya hizmetleri",
+    smmHeroBadge: "SMMTora sosyal medya hizmet paneli",
     smmHeroTitle: "Tekli Sosyal Medya Hizmetleri",
     smmHeroDesc:
-      "Platform, kategori ve hizmet seçerek tekli sipariş oluşturabilirsiniz. Takipçi, beğeni, izlenme, yorum ve diğer sosyal medya destekleri burada listelenir.",
+      "Platform, kategori ve hizmet seçerek sipariş oluşturabilirsiniz. Takipçi, beğeni, izlenme, yorum, kaydetme ve diğer sosyal medya destekleri bu panelde listelenir.",
     smmTaxIncluded: "KDV + vergiler dahil",
     smmOrderTracking: "Sipariş numarası ile takip",
     smmSupport: "WhatsApp / Telegram destek",
-    smmDataUse: "Bilgiler işlem için kullanılır",
+    smmDataUse: "Bilgiler yalnızca işlem için kullanılır",
 
     language: "Dil",
-    platformSelection: "Platform seçimi",
-    platformSelectionDesc: "Satışa açık platformlardan birini seçin.",
+    platformSelection: "Platform Seçimi",
+    platformSelectionDesc:
+      "Sipariş vermek istediğiniz sosyal medya platformunu seçin.",
     platformLoading: "Platformlar yükleniyor...",
-    noActivePlatform: "Şu anda aktif satışa açık platform bulunmamaktadır.",
+    noActivePlatform: "Şu anda satışa açık aktif platform bulunmamaktadır.",
     singleServices: "Tekli hizmetler",
     selected: "Seçili",
     showMorePlatforms: "Tüm Platformları Göster",
     showLessPlatforms: "Daha Az Platform Göster",
     moreCount: "daha",
 
-    categorySelection: "Kategori seçimi",
-    noActiveServiceForPlatform: "Bu platformda aktif satışa açık hizmet bulunmamaktadır.",
+    categorySelection: "Kategori Seçimi",
+    noActiveServiceForPlatform:
+      "Bu platform için satışa açık aktif hizmet bulunmamaktadır.",
 
     serviceListTitle: "Hizmetler",
-    serviceListDesc: "Ürün kodu, panel ID veya hizmet adıyla arama yapabilirsiniz.",
+    serviceListDesc:
+      "Hizmet adı, hizmet kodu, panel ID veya bölge bilgisiyle arama yapabilirsiniz.",
     filter: "Filtrele",
     servicesShown: "hizmet gösteriliyor",
-    searchPlaceholder: "Ürün kodu, panel ID veya hizmet adı ara... Örn: 9059",
-    searchResultText: "sonuç",
+    searchPlaceholder: "Hizmet adı, hizmet kodu veya panel ID ara... Örn: 9059",
+    searchResultText: "sonuç bulundu",
     quality: "Kalite",
     guarantee: "Garanti",
     region: "Bölge",
@@ -242,83 +246,95 @@ export const dictionaries: Record<Locale, Dictionary> = {
     beforeOrder: "Sipariş Öncesi",
     importantNotes: "Önemli Notlar",
     serviceInfoP1:
-      "Satın alacağınız hizmet, seçtiğiniz platform ve kategoriye göre işleme alınır. Her hizmet için minimum ve maksimum sipariş limiti vardır.",
+      "Satın alacağınız hizmet, seçtiğiniz platform ve kategoriye göre işleme alınır. Her hizmetin minimum ve maksimum sipariş limiti bulunur.",
     serviceInfoP2:
-      "Garantili hizmetlerde belirtilen süre içinde destek sağlanır. Garantisiz hizmetlerde teslimat sonrası ek koruma bulunmaz.",
-    serviceInfoP3: "Sipariş yoğunluğa bağlı olarak genellikle 0-24 saat içerisinde başlar.",
+      "Garantili hizmetlerde belirtilen garanti süresi içinde destek sağlanır. Garantisiz hizmetlerde teslimat sonrası ek koruma taahhüdü bulunmaz.",
+    serviceInfoP3:
+      "Siparişlerin başlangıç süresi hizmet yoğunluğuna göre değişebilir; çoğu işlem genellikle 0-24 saat içinde başlar.",
     beforeOrderP1:
-      "Kullanıcı adı, bağlantı ve miktar bilgilerini dikkatli giriniz. Yanlış bilgi girilmesi siparişin gecikmesine veya başlatılamamasına neden olabilir.",
+      "Kullanıcı adı, bağlantı ve miktar bilgilerini dikkatli girin. Hatalı bilgi siparişin gecikmesine veya başlatılamamasına neden olabilir.",
     beforeOrderP2:
-      "Link isteyen hizmetlerde doğru profil, gönderi, video, kanal veya grup bağlantısı verilmesi gerekir.",
-    note1: "• Siparişten sonra kullanıcı adı veya bağlantıyı değiştirmemeniz önerilir.",
-    note2: "• Aynı hedefe aynı anda birden fazla benzer sipariş verilmesi önerilmez.",
-    note3: "• Profilin veya içeriğin erişilebilir olması gerekir.",
-    note4: "• Destek talebinde bulunurken sipariş numaranız ile yazınız.",
+      "Bağlantı isteyen hizmetlerde doğru profil, gönderi, video, kanal veya grup linki girilmelidir.",
+    note1:
+      "• Sipariş oluşturulduktan sonra kullanıcı adı veya bağlantıyı değiştirmemeniz önerilir.",
+    note2:
+      "• Aynı hedefe aynı anda birden fazla benzer sipariş verilmesi önerilmez.",
+    note3: "• Profil, gönderi, video veya kanal herkese açık ve erişilebilir olmalıdır.",
+    note4:
+      "• Destek talebi oluştururken sipariş numaranızı iletmeniz işlemi hızlandırır.",
 
     orderBeforeBadge: "MedyaTora Bilgilendirme Sistemi",
     orderBeforeTitle: "Sipariş Öncesi Önemli Bilgilendirme",
     orderBeforeDesc:
-      "Sipariş oluşturmadan önce hedef hesabın, bağlantının ve miktarın doğru olduğundan emin olun.",
+      "Sipariş oluşturmadan önce hedef hesabın, bağlantının, miktarın ve hizmet limitlerinin doğru olduğundan emin olun.",
     noticePriceTitle: "Fiyat Bilgisi",
     noticePriceText:
-      "Tüm fiyatlara KDV + vergiler dahildir. Gördüğünüz tutar nihai ödeme tutarıdır.",
+      "Tüm fiyatlara KDV + vergiler dahildir. Ekranda gördüğünüz tutar nihai ödeme tutarıdır.",
     noticeProfileTitle: "Profil Durumu",
     noticeProfileText:
-      "İşlem yapılacak profil, gönderi, video veya kanal herkese açık olmalıdır.",
+      "İşlem yapılacak profil, gönderi, video, kanal veya grup herkese açık olmalıdır.",
     noticeStartTitle: "Başlangıç Süresi",
     noticeStartText:
-      "Başlangıç süresi servise göre değişebilir. Genellikle işlemler 0-24 saat içinde başlar.",
+      "Başlangıç süresi seçilen hizmete ve yoğunluğa göre değişebilir. İşlemler genellikle 0-24 saat içinde başlar.",
     noticeSupportTitle: "Destek",
     noticeSupportText:
-      "Ödeme sonrası dekontu WhatsApp veya Telegram üzerinden iletebilirsiniz.",
+      "Ödeme sonrası dekontu sipariş numaranızla birlikte WhatsApp veya Telegram üzerinden iletebilirsiniz.",
 
-    checkoutTitle: "İletişim ve Onay",
-    checkoutDesc: "Siparişinizi onaylamak için aşağıdaki alanları eksiksiz doldurunuz.",
+    checkoutTitle: "İletişim ve Ödeme Onayı",
+    checkoutDesc:
+      "Siparişinizi oluşturmak ve ödeme adımına geçmek için aşağıdaki bilgileri eksiksiz doldurun.",
     close: "Kapat",
     phoneNumber: "Telefon Numarası",
     contactTypeSelect: "İletişim Türü Seç",
     contactValue: "İletişim Bilgisi",
-    contactWarning1: "Lütfen yalnızca WhatsApp, Instagram, Telegram veya E-posta bilgisi giriniz.",
-    contactWarning2: "Önerilen iletişim yöntemi Telegram’dır.",
+    contactWarning1:
+      "Lütfen ulaşılabilir WhatsApp, Instagram, Telegram veya e-posta bilginizi girin.",
+    contactWarning2:
+      "En hızlı destek ve ödeme kontrolü için önerilen iletişim yöntemi Telegram’dır.",
     paymentMethod: "Ödeme Yöntemi",
-    paymentMethodDesc: "Siparişinizi onaylamadan önce ödeme yöntemi seçiniz.",
+    paymentMethodDesc:
+      "Siparişinizi onaylamadan önce kullanmak istediğiniz ödeme yöntemini seçin.",
     turkeyBankTransfer: "Türkiye Banka Havalesi / EFT",
-    turkeyBankTransferDesc: "Türkiye içi ödemeler için banka hesabı bilgileri gösterilir.",
-    otherPaymentMethods: "Diğer Ödeme Yöntemleri",
-    otherPaymentMethodsDesc: "Aktif ödeme yöntemi görülmemektedir. Lütfen destek ile iletişime geçiniz.",
+    turkeyBankTransferDesc:
+      "Türkiye içi ödemeler için banka hesabı bilgileri gösterilir.",
+    otherPaymentMethods: "Destek ile Ödeme",
+    otherPaymentMethodsDesc:
+      "Alternatif ödeme seçenekleri için WhatsApp veya Telegram üzerinden destek alın.",
     turkeyBankInfo: "Türkiye Banka Bilgileri",
     receiverName: "Alıcı Adı",
     iban: "IBAN",
     paymentDescription: "Açıklama",
-    digitalServiceOrderNo: "Dijital Hizmet - Sipariş No",
+    digitalServiceOrderNo: "Açıklama kısmını boş bırakın",
     receiptInfo:
-      "Ödeme sonrası dekontu Telegram veya WhatsApp üzerinden sipariş numaranızla birlikte iletiniz.",
+      "Ödeme yaparken açıklama kısmına hiçbir şey yazmayın. Ödeme sonrası dekontu Telegram veya WhatsApp üzerinden sipariş numaranızla birlikte iletin.",
     otherPaymentInfoText:
-      "Ödeme bilgisi almak için lütfen Telegram veya WhatsApp üzerinden destek ile iletişime geçiniz.",
+      "Alternatif ödeme bilgisi almak için Telegram veya WhatsApp üzerinden destek ekibimizle iletişime geçin. Ödeme yaparken açıklama kısmını boş bırakın.",
     servicesToConfirm: "Onaylanacak Hizmet Sayısı",
     confirmPurchase: "Alımı Onayla",
 
-    orderConfirmedTitle: "Siparişiniz Onaylandı",
+    orderConfirmedTitle: "Siparişiniz Oluşturuldu",
     orderConfirmedDesc:
-      "Siparişiniz başarıyla oluşturuldu. Aşağıdaki sipariş numarası veya numaraları ile bize ulaşabilirsiniz.",
+      "Siparişiniz başarıyla oluşturuldu. Aşağıdaki sipariş numarası veya numaraları ile ödeme ve destek adımlarını takip edebilirsiniz.",
     yourOrderNumber: "Sipariş Numaranız",
-    paymentStepTitle: "Ödeme ve işlem adımı için bize yazın",
+    paymentStepTitle: "Ödeme ve İşlem Adımı",
     paymentStepDesc:
-      "Sipariş numaranız otomatik mesajın içine eklenecek. Ödeme ve işlem adımları için Telegram veya WhatsApp üzerinden bize ulaşabilirsiniz.",
+      "Ödeme yaparken açıklama kısmını boş bırakın. Ödeme bildirimi ve işlem takibi için Telegram veya WhatsApp üzerinden bize ulaşabilirsiniz.",
     telegramPaymentInfo: "Telegram’dan Ödeme Bilgisi Al",
     whatsappPaymentInfo: "WhatsApp’tan Ödeme Bilgisi Al",
     ok: "Tamam",
 
     cartTotal: "Sepet Toplamı",
     cartTotalDesc:
-      "Tüm fiyatlara KDV + vergiler dahildir. Ödeme sonrası sipariş numaranız ile destek alabilirsiniz.",
+      "Tüm fiyatlara KDV + vergiler dahildir. Ödeme yaparken açıklama kısmını boş bırakın. Ödeme sonrası sipariş numaranızla destek alabilirsiniz.",
 
-    minQuantityText: "Bu hizmet için minimum {min}, maksimum {max} adet sipariş verilebilir.",
+    minQuantityText:
+      "Bu hizmet için minimum {min}, maksimum {max} adet sipariş verilebilir.",
   },
 
   en: {
     newOrder: "New Order",
-    newOrderDesc: "Choose a platform, enter service details, and create single or bulk orders.",
+    newOrderDesc:
+      "Choose a platform, enter the service details, and create a single or bulk order securely.",
     currency: "Currency",
     selectPlatform: "Select Platform",
     category: "Category",
@@ -327,22 +343,22 @@ export const dictionaries: Record<Locale, Dictionary> = {
     productDescription: "Service Description",
     quantity: "Quantity",
     fullName: "Full Name",
-    contact: "Contact information",
-    totalSalePrice: "Total Price",
+    contact: "Contact Information",
+    totalSalePrice: "Total Amount",
     createOrder: "Create Order",
     sending: "Sending...",
     servicesLoading: "Loading services...",
     productsLoading: "Loading services...",
-    noCategoryFound: "No category found for this platform yet.",
-    noProductsFound: "No services found for this category yet.",
-    selectProductFirst: "Select a service first.",
-    minMax: "Min",
+    noCategoryFound: "No category has been found for this platform yet.",
+    noProductsFound: "No suitable service was found for the selected category.",
+    selectProductFirst: "Select a service first to continue.",
+    minMax: "Min / Max",
     speed: "Speed",
-    serviceNo: "Service No",
+    serviceNo: "Service Code",
     per1000: "per 1000",
-    up: "↑ Up",
-    down: "↓ Down",
-    successOrder: "Order created successfully.",
+    up: "Up",
+    down: "Down",
+    successOrder: "Service added to cart.",
     addToCart: "Add to Cart",
     goToCart: "Go to Cart",
     cart: "Cart",
@@ -359,35 +375,40 @@ export const dictionaries: Record<Locale, Dictionary> = {
     orderNumber: "Order No",
     batchCode: "Batch Code",
 
-    smmHeroBadge: "SMMTora single social media services",
+    smmHeroBadge: "SMMTora social media service panel",
     smmHeroTitle: "Single Social Media Services",
     smmHeroDesc:
-      "Choose a platform, category, and service to create a single order. Followers, likes, views, comments, and other social media support services are listed here.",
+      "Create an order by selecting a platform, category, and service. Followers, likes, views, comments, saves, and other social media support services are listed in this panel.",
     smmTaxIncluded: "VAT + taxes included",
     smmOrderTracking: "Track with order number",
     smmSupport: "WhatsApp / Telegram support",
-    smmDataUse: "Information is used for processing only",
+    smmDataUse: "Information is used only for processing",
 
     language: "Language",
-    platformSelection: "Platform selection",
-    platformSelectionDesc: "Choose one of the available platforms.",
+    platformSelection: "Platform Selection",
+    platformSelectionDesc:
+      "Choose the social media platform you want to order for.",
     platformLoading: "Loading platforms...",
-    noActivePlatform: "There are currently no active platforms available for sale.",
+    noActivePlatform:
+      "There are currently no active platforms available for sale.",
     singleServices: "Single services",
     selected: "Selected",
     showMorePlatforms: "Show All Platforms",
     showLessPlatforms: "Show Fewer Platforms",
     moreCount: "more",
 
-    categorySelection: "Category selection",
-    noActiveServiceForPlatform: "There are currently no active services for this platform.",
+    categorySelection: "Category Selection",
+    noActiveServiceForPlatform:
+      "There are currently no active services available for this platform.",
 
     serviceListTitle: "Services",
-    serviceListDesc: "Search by service code, panel ID, or service name.",
+    serviceListDesc:
+      "You can search by service name, service code, panel ID, or region.",
     filter: "Filter",
     servicesShown: "services shown",
-    searchPlaceholder: "Search service code, panel ID, or service name... Example: 9059",
-    searchResultText: "results",
+    searchPlaceholder:
+      "Search service name, service code, or panel ID... Example: 9059",
+    searchResultText: "results found",
     quality: "Quality",
     guarantee: "Guarantee",
     region: "Region",
@@ -397,93 +418,106 @@ export const dictionaries: Record<Locale, Dictionary> = {
     plusQuality: "Plus Quality",
     primeQuality: "Prime Quality",
     guaranteed: "Guaranteed",
-    noGuarantee: "No guarantee",
+    noGuarantee: "No Guarantee",
     recommendedSort: "Recommended Sort",
-    priceAsc: "Price Low to High",
-    priceDesc: "Price High to Low",
+    priceAsc: "Price: Low to High",
+    priceDesc: "Price: High to Low",
     clearFilters: "Clear Filters",
 
     serviceInfo: "Service Info",
-    beforeOrder: "Before Order",
+    beforeOrder: "Before Ordering",
     importantNotes: "Important Notes",
     serviceInfoP1:
       "The service you purchase is processed according to the selected platform and category. Each service has minimum and maximum order limits.",
     serviceInfoP2:
-      "For guaranteed services, support is provided within the specified guarantee period. Non-guaranteed services do not include extra protection after delivery.",
-    serviceInfoP3: "Orders usually start within 0-24 hours depending on service load.",
+      "For guaranteed services, support is provided within the stated guarantee period. Non-guaranteed services do not include additional protection after delivery.",
+    serviceInfoP3:
+      "Order start times may vary depending on service load; most orders usually begin within 0-24 hours.",
     beforeOrderP1:
-      "Please enter the username, link, and quantity carefully. Incorrect information may delay or prevent the order from starting.",
+      "Please enter the username, link, and quantity carefully. Incorrect information may delay the order or prevent it from starting.",
     beforeOrderP2:
       "For services that require a link, the correct profile, post, video, channel, or group link must be provided.",
-    note1: "• It is recommended not to change the username or link after placing the order.",
-    note2: "• Avoid placing multiple similar orders for the same target at the same time.",
-    note3: "• The profile or content must be accessible.",
-    note4: "• Please include your order number when requesting support.",
+    note1:
+      "• It is recommended not to change the username or link after creating the order.",
+    note2:
+      "• It is not recommended to place multiple similar orders for the same target at the same time.",
+    note3:
+      "• The profile, post, video, or channel must be public and accessible.",
+    note4:
+      "• Providing your order number when contacting support helps us assist you faster.",
 
     orderBeforeBadge: "MedyaTora Information System",
     orderBeforeTitle: "Important Information Before Ordering",
     orderBeforeDesc:
-      "Before creating an order, make sure the target account, link, and quantity are correct.",
+      "Before creating an order, make sure the target account, link, quantity, and service limits are correct.",
     noticePriceTitle: "Price Information",
     noticePriceText:
-      "All prices include VAT + taxes. The amount shown is the final payment amount.",
+      "All prices include VAT + taxes. The amount shown on the screen is the final payment amount.",
     noticeProfileTitle: "Profile Status",
     noticeProfileText:
-      "The target profile, post, video, or channel must be public and accessible.",
+      "The target profile, post, video, channel, or group must be public and accessible.",
     noticeStartTitle: "Start Time",
     noticeStartText:
-      "Start time may vary by service. Orders usually start within 0-24 hours.",
+      "Start time may vary depending on the selected service and current load. Orders usually start within 0-24 hours.",
     noticeSupportTitle: "Support",
     noticeSupportText:
-      "After payment, you can send your receipt via WhatsApp or Telegram.",
+      "After payment, you can send your receipt together with your order number via WhatsApp or Telegram.",
 
-    checkoutTitle: "Contact and Confirmation",
-    checkoutDesc: "Fill in the fields below completely to confirm your order.",
+    checkoutTitle: "Contact and Payment Confirmation",
+    checkoutDesc:
+      "Fill in the information below completely to create your order and continue to the payment step.",
     close: "Close",
     phoneNumber: "Phone Number",
     contactTypeSelect: "Select Contact Type",
     contactValue: "Contact Information",
-    contactWarning1: "Please enter only WhatsApp, Instagram, Telegram, or email information.",
-    contactWarning2: "Telegram is the recommended contact method.",
+    contactWarning1:
+      "Please enter reachable WhatsApp, Instagram, Telegram, or email information.",
+    contactWarning2:
+      "Telegram is the recommended contact method for faster support and payment review.",
     paymentMethod: "Payment Method",
-    paymentMethodDesc: "Please select a payment method before confirming your order.",
+    paymentMethodDesc:
+      "Select the payment method you want to use before confirming your order.",
     turkeyBankTransfer: "Turkey Bank Transfer / EFT",
-    turkeyBankTransferDesc: "Bank account details are shown for payments within Turkey.",
-    otherPaymentMethods: "Other Payment Methods",
-    otherPaymentMethodsDesc: "No active payment method is visible. Please contact support.",
+    turkeyBankTransferDesc:
+      "Bank account details are displayed for payments within Turkey.",
+    otherPaymentMethods: "Payment via Support",
+    otherPaymentMethodsDesc:
+      "Contact us via WhatsApp or Telegram for alternative payment options.",
     turkeyBankInfo: "Turkey Bank Details",
     receiverName: "Receiver Name",
     iban: "IBAN",
-    paymentDescription: "Description",
-    digitalServiceOrderNo: "Digital Service - Order No",
+    paymentDescription: "Payment Description",
+    digitalServiceOrderNo: "Leave the payment description field empty",
     receiptInfo:
-      "After payment, please send your receipt via Telegram or WhatsApp together with your order number.",
+      "Do not write anything in the payment description field. After payment, send your receipt together with your order number via Telegram or WhatsApp.",
     otherPaymentInfoText:
-      "To get payment information, please contact support via Telegram or WhatsApp.",
+      "To receive alternative payment information, contact our support team via Telegram or WhatsApp. Leave the payment description field empty when making the payment.",
     servicesToConfirm: "Number of Services to Confirm",
     confirmPurchase: "Confirm Purchase",
 
-    orderConfirmedTitle: "Your Order Has Been Confirmed",
+    orderConfirmedTitle: "Your Order Has Been Created",
     orderConfirmedDesc:
-      "Your order has been created successfully. You can contact us with the order number or numbers below.",
+      "Your order has been created successfully. You can follow the payment and support steps using the order number or numbers below.",
     yourOrderNumber: "Your Order Number",
-    paymentStepTitle: "Message us for payment and processing steps",
+    paymentStepTitle: "Payment and Processing Step",
     paymentStepDesc:
-      "Your order number will be added to the automatic message. You can contact us via Telegram or WhatsApp for payment and processing steps.",
+      "Leave the payment description field empty when making the payment. Contact us via Telegram or WhatsApp for payment notification and order tracking.",
     telegramPaymentInfo: "Get Payment Info on Telegram",
     whatsappPaymentInfo: "Get Payment Info on WhatsApp",
     ok: "OK",
 
     cartTotal: "Cart Total",
     cartTotalDesc:
-      "All prices include VAT + taxes. You can receive support with your order number after payment.",
+      "All prices include VAT + taxes. Leave the payment description field empty when making the payment. After payment, you can receive support with your order number.",
 
-    minQuantityText: "For this service, the minimum is {min} and the maximum is {max}.",
+    minQuantityText:
+      "For this service, the minimum order quantity is {min} and the maximum is {max}.",
   },
 
   ru: {
     newOrder: "Новый заказ",
-    newOrderDesc: "Выберите платформу, укажите данные услуги и оформите один или несколько заказов.",
+    newOrderDesc:
+      "Выберите платформу, укажите детали услуги и безопасно оформите один или несколько заказов.",
     currency: "Валюта",
     selectPlatform: "Выберите платформу",
     category: "Категория",
@@ -493,25 +527,25 @@ export const dictionaries: Record<Locale, Dictionary> = {
     quantity: "Количество",
     fullName: "Имя и фамилия",
     contact: "Контактная информация",
-    totalSalePrice: "Итоговая цена",
-    createOrder: "Оформить заказ",
+    totalSalePrice: "Итоговая сумма",
+    createOrder: "Создать заказ",
     sending: "Отправка...",
     servicesLoading: "Загрузка услуг...",
     productsLoading: "Загрузка услуг...",
-    noCategoryFound: "Для этой платформы пока нет категорий.",
-    noProductsFound: "Для этой категории пока нет услуг.",
-    selectProductFirst: "Сначала выберите услугу.",
-    minMax: "Мин",
+    noCategoryFound: "Для этой платформы пока не найдены категории.",
+    noProductsFound: "Для выбранной категории подходящие услуги не найдены.",
+    selectProductFirst: "Чтобы продолжить, сначала выберите услугу.",
+    minMax: "Мин / Макс",
     speed: "Скорость",
-    serviceNo: "№ услуги",
+    serviceNo: "Код услуги",
     per1000: "за 1000",
-    up: "↑ Вверх",
-    down: "↓ Вниз",
-    successOrder: "Заказ успешно создан.",
-    addToCart: "В корзину",
-    goToCart: "К корзине",
+    up: "Вверх",
+    down: "Вниз",
+    successOrder: "Услуга добавлена в корзину.",
+    addToCart: "Добавить в корзину",
+    goToCart: "Перейти в корзину",
     cart: "Корзина",
-    cartEmpty: "Корзина пуста.",
+    cartEmpty: "Корзина пока пуста.",
     remove: "Удалить",
     edit: "Изменить",
     buyNow: "Купить сейчас",
@@ -522,22 +556,24 @@ export const dictionaries: Record<Locale, Dictionary> = {
     cartSaleTotal: "Итог корзины",
     cartCostTotal: "Себестоимость корзины",
     orderNumber: "№ заказа",
-    batchCode: "Batch код",
+    batchCode: "Код пакетной операции",
 
-    smmHeroBadge: "SMMTora — отдельные услуги для социальных сетей",
+    smmHeroBadge: "SMMTora — панель услуг для социальных сетей",
     smmHeroTitle: "Отдельные услуги для социальных сетей",
     smmHeroDesc:
-      "Выберите платформу, категорию и услугу, чтобы оформить отдельный заказ. Подписчики, лайки, просмотры, комментарии и другие услуги поддержки социальных сетей доступны здесь.",
+      "Оформите заказ, выбрав платформу, категорию и услугу. Подписчики, лайки, просмотры, комментарии, сохранения и другие услуги поддержки социальных сетей доступны в этой панели.",
     smmTaxIncluded: "НДС + налоги включены",
     smmOrderTracking: "Отслеживание по номеру заказа",
     smmSupport: "Поддержка WhatsApp / Telegram",
-    smmDataUse: "Данные используются только для обработки",
+    smmDataUse: "Данные используются только для обработки заказа",
 
     language: "Язык",
     platformSelection: "Выбор платформы",
-    platformSelectionDesc: "Выберите одну из доступных платформ.",
+    platformSelectionDesc:
+      "Выберите социальную платформу, для которой хотите оформить заказ.",
     platformLoading: "Загрузка платформ...",
-    noActivePlatform: "Сейчас нет активных платформ, доступных для заказа.",
+    noActivePlatform:
+      "Сейчас нет активных платформ, доступных для оформления заказа.",
     singleServices: "Отдельные услуги",
     selected: "Выбрано",
     showMorePlatforms: "Показать все платформы",
@@ -545,14 +581,17 @@ export const dictionaries: Record<Locale, Dictionary> = {
     moreCount: "ещё",
 
     categorySelection: "Выбор категории",
-    noActiveServiceForPlatform: "Для этой платформы сейчас нет активных услуг.",
+    noActiveServiceForPlatform:
+      "Для этой платформы сейчас нет активных услуг, доступных для заказа.",
 
     serviceListTitle: "Услуги",
-    serviceListDesc: "Поиск по коду услуги, panel ID или названию услуги.",
+    serviceListDesc:
+      "Вы можете искать по названию услуги, коду услуги, panel ID или региону.",
     filter: "Фильтр",
     servicesShown: "услуг показано",
-    searchPlaceholder: "Поиск по коду услуги, panel ID или названию... Например: 9059",
-    searchResultText: "результатов",
+    searchPlaceholder:
+      "Поиск по названию, коду услуги или panel ID... Например: 9059",
+    searchResultText: "результатов найдено",
     quality: "Качество",
     guarantee: "Гарантия",
     region: "Регион",
@@ -564,86 +603,98 @@ export const dictionaries: Record<Locale, Dictionary> = {
     guaranteed: "С гарантией",
     noGuarantee: "Без гарантии",
     recommendedSort: "Рекомендуемая сортировка",
-    priceAsc: "Цена по возрастанию",
-    priceDesc: "Цена по убыванию",
+    priceAsc: "Цена: по возрастанию",
+    priceDesc: "Цена: по убыванию",
     clearFilters: "Очистить фильтры",
 
     serviceInfo: "Информация об услуге",
     beforeOrder: "Перед заказом",
-    importantNotes: "Важные заметки",
+    importantNotes: "Важные примечания",
     serviceInfoP1:
-      "Покупаемая услуга обрабатывается в соответствии с выбранной платформой и категорией. У каждой услуги есть минимальный и максимальный лимит заказа.",
+      "Покупаемая услуга обрабатывается в соответствии с выбранной платформой и категорией. У каждой услуги есть минимальные и максимальные лимиты заказа.",
     serviceInfoP2:
-      "Для услуг с гарантией поддержка предоставляется в течение указанного гарантийного срока. Для услуг без гарантии дополнительная защита после выполнения не предусмотрена.",
-    serviceInfoP3: "Обычно заказы запускаются в течение 0-24 часов в зависимости от нагрузки.",
+      "Для услуг с гарантией поддержка предоставляется в течение указанного гарантийного срока. Услуги без гарантии не включают дополнительную защиту после выполнения.",
+    serviceInfoP3:
+      "Время запуска заказа может отличаться в зависимости от нагрузки; большинство заказов обычно запускается в течение 0-24 часов.",
     beforeOrderP1:
-      "Внимательно укажите username, ссылку и количество. Неверные данные могут задержать запуск заказа или сделать его невозможным.",
+      "Внимательно укажите username, ссылку и количество. Неверные данные могут задержать заказ или помешать его запуску.",
     beforeOrderP2:
       "Для услуг, где требуется ссылка, необходимо указать правильную ссылку на профиль, пост, видео, канал или группу.",
-    note1: "• После оформления заказа рекомендуется не менять username или ссылку.",
-    note2: "• Не рекомендуется одновременно оформлять несколько похожих заказов на одну и ту же цель.",
-    note3: "• Профиль или контент должен быть доступен.",
-    note4: "• При обращении в поддержку указывайте номер заказа.",
+    note1:
+      "• После создания заказа рекомендуется не менять username или ссылку.",
+    note2:
+      "• Не рекомендуется одновременно оформлять несколько похожих заказов на одну и ту же цель.",
+    note3:
+      "• Профиль, пост, видео или канал должны быть открытыми и доступными.",
+    note4:
+      "• При обращении в поддержку указывайте номер заказа — это ускорит обработку.",
 
     orderBeforeBadge: "Информационная система MedyaTora",
     orderBeforeTitle: "Важная информация перед заказом",
     orderBeforeDesc:
-      "Перед созданием заказа убедитесь, что аккаунт, ссылка и количество указаны правильно.",
+      "Перед созданием заказа убедитесь, что аккаунт, ссылка, количество и лимиты услуги указаны правильно.",
     noticePriceTitle: "Информация о цене",
     noticePriceText:
-      "Все цены включают НДС + налоги. Указанная сумма является окончательной суммой оплаты.",
+      "Все цены включают НДС + налоги. Сумма, указанная на экране, является окончательной суммой оплаты.",
     noticeProfileTitle: "Статус профиля",
     noticeProfileText:
-      "Целевой профиль, пост, видео или канал должны быть открытыми и доступными.",
+      "Целевой профиль, пост, видео, канал или группа должны быть открытыми и доступными.",
     noticeStartTitle: "Время запуска",
     noticeStartText:
-      "Время запуска зависит от услуги. Обычно заказы запускаются в течение 0-24 часов.",
+      "Время запуска зависит от выбранной услуги и текущей нагрузки. Обычно заказы запускаются в течение 0-24 часов.",
     noticeSupportTitle: "Поддержка",
     noticeSupportText:
-      "После оплаты вы можете отправить чек через WhatsApp или Telegram.",
+      "После оплаты вы можете отправить чек вместе с номером заказа через WhatsApp или Telegram.",
 
-    checkoutTitle: "Контакты и подтверждение",
-    checkoutDesc: "Заполните поля ниже, чтобы подтвердить заказ.",
+    checkoutTitle: "Контакты и подтверждение оплаты",
+    checkoutDesc:
+      "Заполните данные ниже, чтобы создать заказ и перейти к этапу оплаты.",
     close: "Закрыть",
     phoneNumber: "Номер телефона",
-    contactTypeSelect: "Выберите тип связи",
+    contactTypeSelect: "Выберите способ связи",
     contactValue: "Контактные данные",
-    contactWarning1: "Укажите только WhatsApp, Instagram, Telegram или e-mail.",
-    contactWarning2: "Рекомендуемый способ связи — Telegram.",
+    contactWarning1:
+      "Укажите доступный WhatsApp, Instagram, Telegram или e-mail.",
+    contactWarning2:
+      "Telegram — рекомендуемый способ связи для более быстрой поддержки и проверки оплаты.",
     paymentMethod: "Способ оплаты",
-    paymentMethodDesc: "Выберите способ оплаты перед подтверждением заказа.",
+    paymentMethodDesc:
+      "Выберите способ оплаты перед подтверждением заказа.",
     turkeyBankTransfer: "Банковский перевод / EFT в Турции",
-    turkeyBankTransferDesc: "Для оплат внутри Турции показываются банковские реквизиты.",
-    otherPaymentMethods: "Другие способы оплаты",
-    otherPaymentMethodsDesc: "Активный способ оплаты не отображается. Свяжитесь с поддержкой.",
+    turkeyBankTransferDesc:
+      "Для оплат внутри Турции отображаются банковские реквизиты.",
+    otherPaymentMethods: "Оплата через поддержку",
+    otherPaymentMethodsDesc:
+      "Для альтернативных способов оплаты свяжитесь с нами через WhatsApp или Telegram.",
     turkeyBankInfo: "Банковские реквизиты в Турции",
     receiverName: "Получатель",
     iban: "IBAN",
-    paymentDescription: "Описание",
-    digitalServiceOrderNo: "Digital Service - Order No",
+    paymentDescription: "Комментарий к платежу",
+    digitalServiceOrderNo: "Оставьте поле комментария к платежу пустым",
     receiptInfo:
-      "После оплаты отправьте чек через Telegram или WhatsApp вместе с номером заказа.",
+      "Не пишите ничего в поле комментария к платежу. После оплаты отправьте чек вместе с номером заказа через Telegram или WhatsApp.",
     otherPaymentInfoText:
-      "Чтобы получить информацию об оплате, свяжитесь с поддержкой через Telegram или WhatsApp.",
+      "Чтобы получить альтернативную информацию об оплате, свяжитесь с нашей поддержкой через Telegram или WhatsApp. При оплате оставьте поле комментария пустым.",
     servicesToConfirm: "Количество услуг для подтверждения",
     confirmPurchase: "Подтвердить покупку",
 
-    orderConfirmedTitle: "Ваш заказ подтверждён",
+    orderConfirmedTitle: "Ваш заказ создан",
     orderConfirmedDesc:
-      "Ваш заказ успешно создан. Вы можете связаться с нами, используя номер или номера заказа ниже.",
+      "Ваш заказ успешно создан. Вы можете отслеживать оплату и поддержку по номеру или номерам заказа ниже.",
     yourOrderNumber: "Ваш номер заказа",
-    paymentStepTitle: "Напишите нам для оплаты и дальнейших шагов",
+    paymentStepTitle: "Этап оплаты и обработки",
     paymentStepDesc:
-      "Номер заказа будет автоматически добавлен в сообщение. Для оплаты и дальнейших шагов свяжитесь с нами через Telegram или WhatsApp.",
+      "При оплате оставьте поле комментария пустым. Для уведомления об оплате и отслеживания заказа свяжитесь с нами через Telegram или WhatsApp.",
     telegramPaymentInfo: "Получить информацию об оплате в Telegram",
     whatsappPaymentInfo: "Получить информацию об оплате в WhatsApp",
     ok: "ОК",
 
     cartTotal: "Итог корзины",
     cartTotalDesc:
-      "Все цены включают НДС + налоги. После оплаты вы можете получить поддержку по номеру заказа.",
+      "Все цены включают НДС + налоги. При оплате оставьте поле комментария пустым. После оплаты вы можете получить поддержку по номеру заказа.",
 
-    minQuantityText: "Для этой услуги минимум {min}, максимум {max}.",
+    minQuantityText:
+      "Для этой услуги минимальное количество — {min}, максимальное — {max}.",
   },
 };
 

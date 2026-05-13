@@ -1642,11 +1642,11 @@ export default function SmmToraPage() {
         })}
       </div>
 
-      <div className="flex min-w-0 justify-start xl:justify-end">
-        <div className="max-w-full rounded-2xl border border-white/10 bg-black/20 p-1.5">
-          <UserMenu showLocaleSwitcher={false} />
-        </div>
-      </div>
+      <div className="relative z-[9999] flex w-full justify-end sm:w-auto xl:justify-end">
+  <div className="flex max-w-full items-center justify-end">
+    <UserMenu showLocaleSwitcher={false} />
+  </div>
+</div>
     </div>
   </div>
 </header>

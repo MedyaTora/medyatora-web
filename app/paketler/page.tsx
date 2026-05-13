@@ -296,7 +296,8 @@ const pageText: Record<LocaleCode, PackagePageText> = {
     paymentDesc:
       "Paketler seçtiğin para birimi üzerinden gösterilir. Bakiye ödemesi yalnızca seçili para birimindeki bakiyeden düşer.",
     bankTransfer: "Havale / EFT",
-    bankTransferDesc: "Dekont sonrası ödeme kontrol edilir.",
+    bankTransferDesc:
+      "Banka transferi yaparken açıklama kısmını boş bırakın. Dekont sonrası ödeme kontrol edilir.",
     tlBalance: "Bakiye",
     balanceLoginRequired: "Bakiye ile ödeme için giriş yapmalısın.",
     supportPayment: "Destek ile ödeme",
@@ -305,10 +306,10 @@ const pageText: Record<LocaleCode, PackagePageText> = {
     receiver: "Alıcı",
     iban: "IBAN",
     description: "Açıklama",
-    yourOrderNumber: "Sipariş numaranız",
+    yourOrderNumber: "Açıklama kısmını boş bırakın",
     paymentSecurity: "Ödeme Güvenliği",
     paymentSecurityText:
-      "Ödeme yapacak kişinin adı soyadı, dekonttaki gönderen adı soyadı ile aynı olmalıdır. Eşleşmeyen ödemeler onaylanmaz.",
+      "Ödeme yapacak kişinin adı soyadı, dekonttaki gönderen adı soyadı ile aynı olmalıdır. Banka transferi yaparken açıklama kısmını boş bırakın. Eşleşmeyen ödemeler onaylanmaz.",
     refundContractApproval: "İade ve Sözleşme Onayı",
     refundContractText:
       "İşlem başlamadan önce iade talep edebilirsiniz. İşlem başladıktan sonra iptal/iade yapılamaz. Bizden kaynaklı eksik işlem olursa eksik kalan kısım için iade yapılabilir.",
@@ -703,11 +704,11 @@ const pageText: Record<LocaleCode, PackagePageText> = {
     bankInfo: "Bank details",
     receiver: "Receiver",
     iban: "IBAN",
-    description: "Description",
-    yourOrderNumber: "Your order number",
+    description: "Payment Description",
+    yourOrderNumber: "Leave the payment description field empty",
     paymentSecurity: "Payment Security",
     paymentSecurityText:
-      "The full name of the person making the payment must match the sender name on the receipt. Payments that do not match will not be approved.",
+    "The payer's full name must match the sender name on the receipt. Leave the payment description field empty when making a bank transfer. Payments with mismatched information may not be approved.",
     refundContractApproval: "Refund and Contract Approval",
     refundContractText:
       "You may request a refund before the process starts. Once the process has started, cancellation/refund is not possible. If a delivery issue is caused by us, a refund may be issued for the missing part.",
@@ -1098,11 +1099,11 @@ const pageText: Record<LocaleCode, PackagePageText> = {
     bankInfo: "Банковские реквизиты",
     receiver: "Получатель",
     iban: "IBAN",
-    description: "Описание",
-    yourOrderNumber: "Ваш номер заказа",
+    description: "Комментарий к платежу",
+    yourOrderNumber: "Оставьте поле комментария к платежу пустым",
     paymentSecurity: "Безопасность оплаты",
     paymentSecurityText:
-      "Имя и фамилия плательщика должны совпадать с именем отправителя в чеке. Платежи без совпадения не подтверждаются.",
+    "Имя плательщика должно совпадать с именем отправителя в чеке. При банковском переводе оставьте поле комментария к платежу пустым. Платежи с несовпадающими данными могут быть не подтверждены.",
     refundContractApproval: "Подтверждение возврата и договора",
     refundContractText:
       "Вы можете запросить возврат до начала процесса. После начала процесса отмена/возврат невозможны. Если недоставка произошла по нашей причине, за недостающую часть может быть выполнен возврат.",
