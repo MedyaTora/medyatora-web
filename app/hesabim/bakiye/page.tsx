@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { RowDataPacket } from "mysql2";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { getMysqlPool } from "@/lib/mysql";
 import UserMenu from "@/app/components/auth/UserMenu";
+import { normalizeAppLocale } from "@/lib/localized-text";
 
 type BalanceTransactionRow = RowDataPacket & {
   id: number;
@@ -29,8 +31,8 @@ const transactionTypeLabels: Record<string, string> = {
   welcome_google_bonus: "Google Kayıt Bonusu",
   contact_verification_bonus: "Hesap Bonusu",
   email_verification_bonus: "E-posta Doğrulama Bonusu",
-  admin_add: "Admin Bakiye Ekleme",
-  admin_remove: "Admin Bakiye Düşme",
+  admin_add: "Admin {t.balance} Ekleme",
+  admin_remove: "Admin {t.balance} Düşme",
   analysis_payment: "Analiz Ödemesi",
 };
 
@@ -146,7 +148,84 @@ function getAmountClass(value: string | number | null | undefined) {
   return "text-white/70";
 }
 
+
+const balancePageText = {
+  tr: {
+    balanceHistory: "Bakiye işlem geçmişi",
+    home: "Ana Sayfa",
+    balance: "Bakiye",
+    transactionHistory: "İşlem geçmişi",
+    balancePageDesc:
+      "Bu sayfada hesabına ait bakiye yüklemeleri, sipariş ödemeleri, bonuslar ve iade hareketleri listelenir.",
+    backToAccount: "Hesabıma Dön",
+    createNewOrder: "Yeni Sipariş Oluştur",
+    tlBalance: "TL Bakiye",
+    usdBalance: "USD Bakiye",
+    rubBalance: "RUB Bakiye",
+    latestTransactions: "Son bakiye işlemleri",
+    latestTransactionsDesc: "Son 100 işlem listelenir.",
+    noTransactions: "Henüz bakiye işlemin yok.",
+    noTransactionsDesc:
+      "Bakiye yükleme, sipariş ödemesi veya iade oluştuğunda burada görünür.",
+    transaction: "İşlem",
+    amount: "Tutar",
+    after: "Sonra",
+    description: "Açıklama",
+    date: "Tarih",
+  },
+  en: {
+    balanceHistory: "Balance history",
+    home: "Home",
+    balance: "Balance",
+    transactionHistory: "Transaction history",
+    balancePageDesc:
+      "This page lists your balance top-ups, order payments, bonuses, and refund movements.",
+    backToAccount: "Back to Account",
+    createNewOrder: "Create New Order",
+    tlBalance: "TL Balance",
+    usdBalance: "USD Balance",
+    rubBalance: "RUB Balance",
+    latestTransactions: "Latest balance transactions",
+    latestTransactionsDesc: "The latest 100 transactions are listed.",
+    noTransactions: "You do not have any balance transactions yet.",
+    noTransactionsDesc:
+      "Balance top-ups, order payments, or refunds will appear here when they happen.",
+    transaction: "Transaction",
+    amount: "Amount",
+    after: "After",
+    description: "Description",
+    date: "Date",
+  },
+  ru: {
+    balanceHistory: "История баланса",
+    home: "Главная",
+    balance: "Баланс",
+    transactionHistory: "История операций",
+    balancePageDesc:
+      "На этой странице отображаются пополнения баланса, оплаты заказов, бонусы и возвраты.",
+    backToAccount: "Назад в аккаунт",
+    createNewOrder: "Создать новый заказ",
+    tlBalance: "Баланс TL",
+    usdBalance: "Баланс USD",
+    rubBalance: "Баланс RUB",
+    latestTransactions: "Последние операции по балансу",
+    latestTransactionsDesc: "Показаны последние 100 операций.",
+    noTransactions: "У вас пока нет операций по балансу.",
+    noTransactionsDesc:
+      "Пополнения баланса, оплаты заказов и возвраты будут отображаться здесь.",
+    transaction: "Операция",
+    amount: "Сумма",
+    after: "После",
+    description: "Описание",
+    date: "Дата",
+  },
+} as const;
+
 export default async function BalancePage() {
+  const cookieStore = await cookies();
+  const selectedLocale = normalizeAppLocale(cookieStore.get("medyatora_locale")?.value);
+  const t = balancePageText[selectedLocale];
+
   const user = await getCurrentUser();
 
   if (!user) {
@@ -196,7 +275,7 @@ export default async function BalancePage() {
                 MedyaTora
               </div>
               <div className="text-xs text-white/45">
-                Bakiye işlem geçmişi
+                {t.balanceHistory}
               </div>
             </div>
           </Link>
@@ -207,7 +286,7 @@ export default async function BalancePage() {
                 href="/"
                 className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-2 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white"
               >
-                Ana Sayfa
+                {t.home}
               </Link>
 
               <Link
@@ -244,16 +323,15 @@ export default async function BalancePage() {
             <div className="relative grid gap-6 lg:grid-cols-[1fr_1.1fr] lg:items-center">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.24em] text-white/45">
-                  Bakiye
+                  {t.balance}
                 </p>
 
                 <h1 className="mt-3 text-4xl font-black tracking-tight md:text-5xl">
-                  İşlem geçmişi
+                  {t.transactionHistory}
                 </h1>
 
                 <p className="mt-4 max-w-2xl text-sm leading-7 text-white/60 md:text-base">
-                  Bu sayfada hesabına ait bakiye yüklemeleri, sipariş
-                  ödemeleri, bonuslar ve iade hareketleri listelenir.
+                  {t.balancePageDesc}
                 </p>
 
                 <div className="mt-6 flex flex-wrap gap-3">
@@ -261,14 +339,14 @@ export default async function BalancePage() {
                     href="/hesabim"
                     className="rounded-2xl border border-white/10 bg-white/[0.05] px-5 py-3 text-sm font-bold text-white/80 transition hover:-translate-y-0.5 hover:bg-white/[0.1] hover:text-white"
                   >
-                    Hesabıma Dön
+                    {t.backToAccount}
                   </Link>
 
                   <Link
                     href="/smmtora"
                     className="rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:-translate-y-0.5 hover:bg-white/90"
                   >
-                    Yeni Sipariş Oluştur
+                    {t.createNewOrder}
                   </Link>
                 </div>
               </div>
@@ -276,7 +354,7 @@ export default async function BalancePage() {
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="rounded-3xl border border-white/10 bg-white/[0.045] p-5">
                   <p className="text-xs font-black uppercase tracking-[0.18em] text-white/40">
-                    TL Bakiye
+                    TL {t.balance}
                   </p>
                   <p className="mt-3 text-2xl font-black text-white">
                     {formatMoney(user.balance_tl || 0, "TL")}
@@ -285,7 +363,7 @@ export default async function BalancePage() {
 
                 <div className="rounded-3xl border border-white/10 bg-white/[0.045] p-5">
                   <p className="text-xs font-black uppercase tracking-[0.18em] text-white/40">
-                    USD Bakiye
+                    USD {t.balance}
                   </p>
                   <p className="mt-3 text-2xl font-black text-white">
                     {formatMoney(user.balance_usd || 0, "USD")}
@@ -294,7 +372,7 @@ export default async function BalancePage() {
 
                 <div className="rounded-3xl border border-white/10 bg-white/[0.045] p-5">
                   <p className="text-xs font-black uppercase tracking-[0.18em] text-white/40">
-                    RUB Bakiye
+                    RUB {t.balance}
                   </p>
                   <p className="mt-3 text-2xl font-black text-white">
                     {formatMoney(user.balance_rub || 0, "RUB")}
@@ -312,33 +390,33 @@ export default async function BalancePage() {
                 Hareketler
               </p>
               <h2 className="mt-2 text-2xl font-black text-white">
-                Son bakiye işlemleri
+                {t.latestTransactions}
               </h2>
             </div>
 
-            <p className="text-sm text-white/45">Son 100 işlem listelenir.</p>
+            <p className="text-sm text-white/45">{t.latestTransactionsDesc}</p>
           </div>
 
           {transactions.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-white/15 bg-white/[0.04] p-8 text-center">
               <p className="text-lg font-bold text-white">
-                Henüz bakiye işlemin yok.
+                {t.noTransactions}
               </p>
               <p className="mt-2 text-sm leading-6 text-white/55">
-                Bakiye yükleme, sipariş ödemesi veya iade oluştuğunda burada
+                {t.balance} yükleme, sipariş ödemesi veya iade oluştuğunda burada
                 görünecek.
               </p>
             </div>
           ) : (
             <div className="overflow-hidden rounded-3xl border border-white/10">
               <div className="hidden grid-cols-[0.8fr_0.75fr_0.85fr_0.85fr_0.85fr_1.4fr_0.9fr] gap-4 border-b border-white/10 bg-white/[0.035] px-4 py-3 text-xs font-bold uppercase tracking-wide text-white/40 xl:grid">
-                <div>İşlem</div>
+                <div>{t.transaction}</div>
                 <div>Para</div>
-                <div>Tutar</div>
+                <div>{t.amount}</div>
                 <div>Önce</div>
-                <div>Sonra</div>
-                <div>Açıklama</div>
-                <div>Tarih</div>
+                <div>{t.after}</div>
+                <div>{t.description}</div>
+                <div>{t.date}</div>
               </div>
 
               <div className="divide-y divide-white/10">
@@ -352,7 +430,7 @@ export default async function BalancePage() {
                     >
                       <div>
                         <p className="text-xs text-white/40 xl:hidden">
-                          İşlem
+                          {t.transaction}
                         </p>
                         <span
                           className={`mt-1 inline-flex rounded-full border px-3 py-1 text-xs font-bold ${getTransactionClass(
@@ -374,7 +452,7 @@ export default async function BalancePage() {
 
                       <div>
                         <p className="text-xs text-white/40 xl:hidden">
-                          Tutar
+                          {t.amount}
                         </p>
                         <p
                           className={`mt-1 text-sm font-black ${getAmountClass(
@@ -396,7 +474,7 @@ export default async function BalancePage() {
 
                       <div>
                         <p className="text-xs text-white/40 xl:hidden">
-                          Sonra
+                          {t.after}
                         </p>
                         <p className="mt-1 text-sm font-semibold text-white/75">
                           {formatMoney(display.after, display.currency)}
@@ -405,7 +483,7 @@ export default async function BalancePage() {
 
                       <div>
                         <p className="text-xs text-white/40 xl:hidden">
-                          Açıklama
+                          {t.description}
                         </p>
                         <p className="mt-1 line-clamp-2 text-sm leading-6 text-white/60">
                           {transaction.description || "-"}
@@ -414,7 +492,7 @@ export default async function BalancePage() {
 
                       <div>
                         <p className="text-xs text-white/40 xl:hidden">
-                          Tarih
+                          {t.date}
                         </p>
                         <p className="mt-1 text-sm text-white/60">
                           {formatDate(transaction.created_at)}
