@@ -1,7 +1,5 @@
 "use client";
 
-
-import { getLocalizedCategory as getSharedLocalizedCategory, getLocalizedGuarantee as getSharedLocalizedGuarantee, getLocalizedQualityDescription as getSharedLocalizedQualityDescription, getLocalizedSpeed as getSharedLocalizedSpeed } from "@/lib/localized-text";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import type { IconType } from "react-icons";
 import type { OrderServiceItem } from "@/lib/services";
@@ -489,7 +487,77 @@ function normalizeSearchText(value: unknown) {
 }
 
 function getCategoryLabel(name: string, locale: Locale) {
-  return getSharedLocalizedCategory(name, locale);
+  const map: Record<string, Record<Locale, string>> = {
+    Takipçi: { tr: "Takipçi", en: "Followers", ru: "Подписчики" },
+    Beğeni: { tr: "Beğeni", en: "Likes", ru: "Лайки" },
+    Yorum: { tr: "Yorum", en: "Comments", ru: "Комментарии" },
+    İzlenme: { tr: "İzlenme", en: "Views", ru: "Просмотры" },
+    Kaydetme: { tr: "Kaydetme", en: "Saves", ru: "Сохранения" },
+    Paylaşım: { tr: "Paylaşım", en: "Shares", ru: "Репосты" },
+    Repost: { tr: "Repost", en: "Repost", ru: "Репост" },
+    Retweet: { tr: "Retweet", en: "Retweet", ru: "Ретвит" },
+    Abone: { tr: "Abone", en: "Subscribers", ru: "Подписчики" },
+    Üye: { tr: "Üye", en: "Members", ru: "Участники" },
+    Reaksiyon: { tr: "Reaksiyon", en: "Reactions", ru: "Реакции" },
+    Story: { tr: "Story", en: "Story", ru: "История" },
+    "Story İzlenme": {
+      tr: "Story İzlenme",
+      en: "Story Views",
+      ru: "Просмотры историй",
+    },
+    Reels: { tr: "Reels", en: "Reels", ru: "Reels" },
+    "Reels İzlenme": {
+      tr: "Reels İzlenme",
+      en: "Reels Views",
+      ru: "Просмотры Reels",
+    },
+    "Reels Beğeni": {
+      tr: "Reels Beğeni",
+      en: "Reels Likes",
+      ru: "Лайки Reels",
+    },
+    "Reels Yorum": {
+      tr: "Reels Yorum",
+      en: "Reels Comments",
+      ru: "Комментарии Reels",
+    },
+    Shorts: { tr: "Shorts", en: "Shorts", ru: "Shorts" },
+    "Shorts İzlenme": {
+      tr: "Shorts İzlenme",
+      en: "Shorts Views",
+      ru: "Просмотры Shorts",
+    },
+    "Shorts Beğeni": {
+      tr: "Shorts Beğeni",
+      en: "Shorts Likes",
+      ru: "Лайки Shorts",
+    },
+    "Canlı Yayın": {
+      tr: "Canlı Yayın",
+      en: "Live Stream",
+      ru: "Прямой эфир",
+    },
+    "Profil Ziyareti": {
+      tr: "Profil Ziyareti",
+      en: "Profile Visits",
+      ru: "Посещения профиля",
+    },
+    "Sayfa Beğenisi": {
+      tr: "Sayfa Beğenisi",
+      en: "Page Likes",
+      ru: "Лайки страницы",
+    },
+    "Grup Üyesi": {
+      tr: "Grup Üyesi",
+      en: "Group Members",
+      ru: "Участники группы",
+    },
+    Oylama: { tr: "Oylama", en: "Poll / Votes", ru: "Голосования" },
+    Dinlenme: { tr: "Dinlenme", en: "Plays / Streams", ru: "Прослушивания" },
+    Diğer: { tr: "Diğer", en: "Other", ru: "Другое" },
+  };
+
+  return map[name]?.[locale] || name;
 }
 
 function localizeCommonServiceText(value: string, locale: Locale) {
@@ -598,11 +666,11 @@ function getLocalizedServiceDescription(description: string, locale: Locale) {
 }
 
 function getLocalizedGuaranteeLabel(label: string, locale: Locale) {
-  return getSharedLocalizedGuarantee(label, locale);
+  return localizeCommonServiceText(label, locale);
 }
 
 function getLocalizedSpeed(speed: string, locale: Locale) {
-  return getSharedLocalizedSpeed(speed, locale);
+  return localizeCommonServiceText(speed, locale);
 }
 
 function getContactTypeLabel(type: ContactType, locale: Locale) {
@@ -1539,13 +1607,6 @@ export default function SmmToraPage() {
         paymentReviewLoading: "Kontrole Alınıyor...",
         paymentReviewDone: "Ödeme Kontrolüne Alındı",
         paymentCompletedButton: "Ödemeyi Tamamladım",
-        receiptNameWarning: "Dekonttaki gönderen adı soyadı ile aynı olmalıdır.",
-        payerFullName: "Gönderen Ad Soyad",
-        payableAmount: "Ödenecek Tutar",
-        paymentMethodLabel: "Ödeme Yöntemi",
-        medyatoraBalance: "MedyaTora Bakiyesi",
-        balanceDeductPrefix: "Bu sipariş",
-        balanceDeductSuffix: "bakiyenden düşer.",
       },
       en: {
         completeFormHint:
@@ -1567,13 +1628,6 @@ export default function SmmToraPage() {
         paymentReviewLoading: "Sending for Review...",
         paymentReviewDone: "Payment Sent for Review",
         paymentCompletedButton: "I Completed the Payment",
-        receiptNameWarning: "The sender full name on the receipt must match.",
-        payerFullName: "Sender Full Name",
-        payableAmount: "Amount to Pay",
-        paymentMethodLabel: "Payment Method",
-        medyatoraBalance: "MedyaTora Balance",
-        balanceDeductPrefix: "This order will be deducted from your",
-        balanceDeductSuffix: "balance.",
       },
       ru: {
         completeFormHint:
@@ -1595,13 +1649,6 @@ export default function SmmToraPage() {
         paymentReviewLoading: "Отправляется на проверку...",
         paymentReviewDone: "Оплата отправлена на проверку",
         paymentCompletedButton: "Я оплатил",
-        receiptNameWarning: "Имя отправителя в чеке должно совпадать.",
-        payerFullName: "Имя отправителя",
-        payableAmount: "Сумма к оплате",
-        paymentMethodLabel: "Способ оплаты",
-        medyatoraBalance: "Баланс MedyaTora",
-        balanceDeductPrefix: "Этот заказ будет списан с вашего",
-        balanceDeductSuffix: "баланса.",
       },
     }[selectedLocale];
 
@@ -2700,7 +2747,7 @@ export default function SmmToraPage() {
                 />
 
                 <p className="mt-2 text-xs leading-5 text-amber-100/80">
-                  {smmFixedText.receiptNameWarning}
+                  Dekonttaki gönderen adı soyadı ile aynı olmalıdır.
                 </p>
               </div>
 
@@ -3304,5 +3351,3 @@ function SectionEyebrow({
     </div>
   );
 }
-
-
