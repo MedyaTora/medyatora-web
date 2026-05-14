@@ -1607,6 +1607,13 @@ export default function SmmToraPage() {
         paymentReviewLoading: "Kontrole Alınıyor...",
         paymentReviewDone: "Ödeme Kontrolüne Alındı",
         paymentCompletedButton: "Ödemeyi Tamamladım",
+        receiptNameWarning: "Dekonttaki gönderen adı soyadı ile aynı olmalıdır.",
+        payerFullName: "Gönderen Ad Soyad",
+        payableAmount: "Ödenecek Tutar",
+        paymentMethodLabel: "Ödeme Yöntemi",
+        medyatoraBalance: "MedyaTora Bakiyesi",
+        balanceDeductPrefix: "Bu sipariş",
+        balanceDeductSuffix: "bakiyenden düşer.",
       },
       en: {
         completeFormHint:
@@ -1628,6 +1635,13 @@ export default function SmmToraPage() {
         paymentReviewLoading: "Sending for Review...",
         paymentReviewDone: "Payment Sent for Review",
         paymentCompletedButton: "I Completed the Payment",
+        receiptNameWarning: "The sender full name on the receipt must match.",
+        payerFullName: "Sender Full Name",
+        payableAmount: "Amount to Pay",
+        paymentMethodLabel: "Payment Method",
+        medyatoraBalance: "MedyaTora Balance",
+        balanceDeductPrefix: "This order will be deducted from your",
+        balanceDeductSuffix: "balance.",
       },
       ru: {
         completeFormHint:
@@ -1649,6 +1663,13 @@ export default function SmmToraPage() {
         paymentReviewLoading: "Отправляется на проверку...",
         paymentReviewDone: "Оплата отправлена на проверку",
         paymentCompletedButton: "Я оплатил",
+        receiptNameWarning: "Имя отправителя в чеке должно совпадать.",
+        payerFullName: "Имя отправителя",
+        payableAmount: "Сумма к оплате",
+        paymentMethodLabel: "Способ оплаты",
+        medyatoraBalance: "Баланс MedyaTora",
+        balanceDeductPrefix: "Этот заказ будет списан с вашего",
+        balanceDeductSuffix: "баланса.",
       },
     }[selectedLocale];
 
@@ -2747,7 +2768,7 @@ export default function SmmToraPage() {
                 />
 
                 <p className="mt-2 text-xs leading-5 text-amber-100/80">
-                  Dekonttaki gönderen adı soyadı ile aynı olmalıdır.
+                  {smmFixedText.receiptNameWarning}
                 </p>
               </div>
 
