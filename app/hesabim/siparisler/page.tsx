@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import type { RowDataPacket } from "mysql2";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { getMysqlPool } from "@/lib/mysql";
 import UserMenu from "@/app/components/auth/UserMenu";
+import { normalizeAppLocale } from "@/lib/localized-text";
 import {
   formatOrderDate,
   formatOrderMoney,
@@ -37,11 +39,85 @@ function getPageNumber(value: string | string[] | undefined) {
   return Math.floor(page);
 }
 
+
+const accountOrdersText = {
+  tr: {
+    orderHistory: "Sipariş geçmişi",
+    home: "Ana Sayfa",
+    myOrders: "Siparişlerim",
+    myOrdersDesc:
+      "Tüm siparişlerini, durumlarını, tarihlerini ve detaylarını tek yerden takip edebilirsin.",
+    totalOrders: "Toplam sipariş",
+    page: "Sayfa",
+    backToAccount: "Hesabıma Dön",
+    createNewOrder: "Yeni Sipariş Oluştur",
+    noOrders: "Henüz siparişin yok.",
+    noOrdersDesc:
+      "SMMTora veya paketler sayfasından giriş yapmış halde sipariş oluşturduğunda burada görünür.",
+    firstOrderButton: "İlk Siparişi Oluştur",
+    order: "Sipariş",
+    service: "Hizmet",
+    amount: "Tutar",
+    status: "Durum",
+    date: "Tarih",
+    detail: "Detay",
+    orderNo: "Sipariş No",
+  },
+  en: {
+    orderHistory: "Order history",
+    home: "Home",
+    myOrders: "My Orders",
+    myOrdersDesc:
+      "You can track all your orders, statuses, dates, and details in one place.",
+    totalOrders: "Total orders",
+    page: "Page",
+    backToAccount: "Back to Account",
+    createNewOrder: "Create New Order",
+    noOrders: "You do not have any orders yet.",
+    noOrdersDesc:
+      "Orders you create while logged in from SMMTora or the packages page will appear here.",
+    firstOrderButton: "Create First Order",
+    order: "Order",
+    service: "Service",
+    amount: "Amount",
+    status: "Status",
+    date: "Date",
+    detail: "Details",
+    orderNo: "Order No",
+  },
+  ru: {
+    orderHistory: "История заказов",
+    home: "Главная",
+    myOrders: "Мои заказы",
+    myOrdersDesc:
+      "Здесь можно отслеживать все заказы, их статусы, даты и детали.",
+    totalOrders: "Всего заказов",
+    page: "Страница",
+    backToAccount: "Назад в аккаунт",
+    createNewOrder: "Создать новый заказ",
+    noOrders: "У вас пока нет заказов.",
+    noOrdersDesc:
+      "Заказы, созданные после входа в аккаунт через SMMTora или страницу пакетов, будут отображаться здесь.",
+    firstOrderButton: "Создать первый заказ",
+    order: "Заказ",
+    service: "Услуга",
+    amount: "Сумма",
+    status: "Статус",
+    date: "Дата",
+    detail: "Детали",
+    orderNo: "№ заказа",
+  },
+} as const;
+
 export default async function OrdersPage({
   searchParams,
 }: {
   searchParams?: Promise<{ page?: string }>;
 }) {
+  const cookieStore = await cookies();
+  const selectedLocale = normalizeAppLocale(cookieStore.get("medyatora_locale")?.value);
+  const t = accountOrdersText[selectedLocale];
+
   const user = await getCurrentUser();
 
   if (!user) {
@@ -103,7 +179,7 @@ export default async function OrdersPage({
               <div className="text-lg font-black tracking-tight text-white">
                 MedyaTora
               </div>
-              <div className="text-xs text-white/45">Sipariş geçmişi</div>
+              <div className="text-xs text-white/45">{t.orderHistory}</div>
             </div>
           </Link>
 
@@ -113,7 +189,7 @@ export default async function OrdersPage({
                 href="/"
                 className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-2 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white"
               >
-                Ana Sayfa
+                {t.home}
               </Link>
 
               <Link
@@ -154,7 +230,7 @@ export default async function OrdersPage({
                 </p>
 
                 <h1 className="mt-3 text-4xl font-black tracking-tight md:text-5xl">
-                  Siparişlerim
+                  {t.myOrders}
                 </h1>
 
                 <p className="mt-4 max-w-2xl text-sm leading-7 text-white/60 md:text-base">
@@ -166,7 +242,7 @@ export default async function OrdersPage({
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-3xl border border-white/10 bg-white/[0.045] p-5">
                   <p className="text-xs font-black uppercase tracking-[0.18em] text-white/40">
-                    Toplam sipariş
+                    {t.totalOrders}
                   </p>
                   <p className="mt-3 text-3xl font-black text-white">
                     {totalOrders}
@@ -175,7 +251,7 @@ export default async function OrdersPage({
 
                 <div className="rounded-3xl border border-white/10 bg-white/[0.045] p-5">
                   <p className="text-xs font-black uppercase tracking-[0.18em] text-white/40">
-                    Sayfa
+                    {t.page}
                   </p>
                   <p className="mt-3 text-3xl font-black text-white">
                     {page} / {totalPages}
@@ -189,14 +265,14 @@ export default async function OrdersPage({
                 href="/hesabim"
                 className="rounded-2xl border border-white/10 bg-white/[0.05] px-5 py-3 text-sm font-bold text-white/80 transition hover:-translate-y-0.5 hover:bg-white/[0.1] hover:text-white"
               >
-                Hesabıma Dön
+                {t.backToAccount}
               </Link>
 
               <Link
                 href="/smmtora"
                 className="rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:-translate-y-0.5 hover:bg-white/90"
               >
-                Yeni Sipariş Oluştur
+                {t.createNewOrder}
               </Link>
             </div>
           </div>
@@ -206,7 +282,7 @@ export default async function OrdersPage({
           {orders.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-white/15 bg-white/[0.04] p-8 text-center">
               <p className="text-lg font-bold text-white">
-                Henüz siparişin yok.
+                {t.noOrders}
               </p>
               <p className="mt-2 text-sm leading-6 text-white/55">
                 SMMTora veya paketler sayfasından giriş yapmış halde sipariş
@@ -216,18 +292,18 @@ export default async function OrdersPage({
                 href="/smmtora"
                 className="mt-5 inline-flex rounded-2xl bg-white px-5 py-3 text-sm font-black text-black transition hover:-translate-y-0.5 hover:bg-white/90"
               >
-                İlk Siparişi Oluştur
+                {t.firstOrderButton}
               </Link>
             </div>
           ) : (
             <div className="overflow-hidden rounded-3xl border border-white/10">
               <div className="hidden grid-cols-[1.1fr_1.55fr_0.8fr_0.85fr_0.9fr_0.6fr] gap-4 border-b border-white/10 bg-white/[0.035] px-4 py-3 text-xs font-bold uppercase tracking-wide text-white/40 lg:grid">
-                <div>Sipariş</div>
-                <div>Hizmet</div>
-                <div>Tutar</div>
-                <div>Durum</div>
-                <div>Tarih</div>
-                <div>Detay</div>
+                <div>{t.order}</div>
+                <div>{t.service}</div>
+                <div>{t.amount}</div>
+                <div>{t.status}</div>
+                <div>{t.date}</div>
+                <div>{t.detail}</div>
               </div>
 
               <div className="divide-y divide-white/10">
@@ -237,7 +313,7 @@ export default async function OrdersPage({
                     className="grid gap-4 px-4 py-4 transition hover:bg-white/[0.035] lg:grid-cols-[1.1fr_1.55fr_0.8fr_0.85fr_0.9fr_0.6fr] lg:items-center"
                   >
                     <div>
-                      <p className="text-xs text-white/40">Sipariş No</p>
+                      <p className="text-xs text-white/40">{t.orderNo}</p>
                       <p className="mt-1 font-black text-white">
                         {order.order_number}
                       </p>
@@ -257,14 +333,14 @@ export default async function OrdersPage({
                     </div>
 
                     <div>
-                      <p className="text-xs text-white/40 lg:hidden">Tutar</p>
+                      <p className="text-xs text-white/40 lg:hidden">{t.amount}</p>
                       <p className="mt-1 text-sm font-black text-white">
                         {formatOrderMoney(order.total_price, order.currency)}
                       </p>
                     </div>
 
                     <div>
-                      <p className="text-xs text-white/40 lg:hidden">Durum</p>
+                      <p className="text-xs text-white/40 lg:hidden">{t.status}</p>
                       <span
                         className={`mt-1 inline-flex rounded-full border px-3 py-1 text-xs font-bold ${getOrderStatusClass(
                           order.status
@@ -275,7 +351,7 @@ export default async function OrdersPage({
                     </div>
 
                     <div>
-                      <p className="text-xs text-white/40 lg:hidden">Tarih</p>
+                      <p className="text-xs text-white/40 lg:hidden">{t.date}</p>
                       <p className="mt-1 text-sm text-white/60">
                         {formatOrderDate(order.created_at)}
                       </p>
@@ -286,7 +362,7 @@ export default async function OrdersPage({
                         href={`/hesabim/siparisler/${order.order_number}`}
                         className="inline-flex rounded-2xl bg-white px-4 py-2 text-center text-xs font-black text-black transition hover:bg-white/90"
                       >
-                        Detay
+                        {t.detail}
                       </Link>
                     </div>
                   </div>
