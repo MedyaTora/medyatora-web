@@ -180,6 +180,17 @@ async function sendVerificationCode({
 
 export async function POST(req: Request) {
   try {
+    const enabled = String(process.env.PHONE_VERIFICATION_ENABLED || "").toLowerCase();
+    if (!(enabled === "1" || enabled === "true")) {
+      return NextResponse.json(
+        {
+          success: false,
+          ok: false,
+          error: "Telefon doğrulama şu anda devre dışı.",
+        },
+        { status: 403 }
+      );
+    }
     const user = await getCurrentUser();
 
     if (!user?.id) {

@@ -257,6 +257,7 @@ export default function AuthModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [mounted, setMounted] = useState(false);
+  const [googleEnabled, setGoogleEnabled] = useState<boolean | null>(null);
 
   const isRegister = mode === "register";
 
@@ -299,6 +300,29 @@ export default function AuthModal({
       setLocale(detectBrowserLocale());
     }
   }, [open, initialMode]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function probe() {
+      try {
+        const res = await fetch("/api/__feature-flags");
+        const json = await res.json().catch(() => null);
+
+        if (!active) return;
+
+        setGoogleEnabled(Boolean(json?.features?.google_oauth_enabled));
+      } catch (e) {
+        if (active) setGoogleEnabled(false);
+      }
+    }
+
+    probe();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -523,22 +547,26 @@ export default function AuthModal({
               </div>
 
               <div className="mb-4">
-                <button
-                  type="button"
-                  onClick={handleGoogleLogin}
-                  className="flex w-full items-center justify-center gap-3 rounded-2xl border border-white/15 bg-white px-5 py-3 text-sm font-black text-black shadow-[0_16px_44px_rgba(255,255,255,0.10)] transition hover:-translate-y-0.5 hover:bg-white/90"
-                >
-                  <FaGoogle className="text-base" />
-                  {t.googleButton}
-                </button>
+                {(googleEnabled === null || googleEnabled === true) ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleGoogleLogin}
+                      className="flex w-full items-center justify-center gap-3 rounded-2xl border border-white/15 bg-white px-5 py-3 text-sm font-black text-black shadow-[0_16px_44px_rgba(255,255,255,0.10)] transition hover:-translate-y-0.5 hover:bg-white/90"
+                    >
+                      <FaGoogle className="text-base" />
+                      {t.googleButton}
+                    </button>
 
-                <div className="mt-3 flex items-center gap-3">
-                  <div className="h-px flex-1 bg-white/10" />
-                  <span className="text-center text-[10px] font-bold uppercase tracking-[0.16em] text-white/35">
-                    {t.orText}
-                  </span>
-                  <div className="h-px flex-1 bg-white/10" />
-                </div>
+                    <div className="mt-3 flex items-center gap-3">
+                      <div className="h-px flex-1 bg-white/10" />
+                      <span className="text-center text-[10px] font-bold uppercase tracking-[0.16em] text-white/35">
+                        {t.orText}
+                      </span>
+                      <div className="h-px flex-1 bg-white/10" />
+                    </div>
+                  </>
+                ) : null}
               </div>
 
               <div className="space-y-2.5">

@@ -33,9 +33,10 @@ export async function GET(request: Request) {
       {
         success: false,
         ok: false,
-        error: "GOOGLE_CLIENT_ID eksik.",
+        error: "Google OAuth yapılandırılmamış (GOOGLE_CLIENT_ID eksik).",
+        disabled: true,
       },
-      { status: 500 }
+      { status: 400 }
     );
   }
 

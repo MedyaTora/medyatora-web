@@ -77,6 +77,8 @@ type PaymentText = {
   footerPoint1: string;
   footerPoint2: string;
   footerPoint3: string;
+  missingRequestNotice: string;
+  missingCurrencyNotice: string;
 };
 
 const WHATSAPP_NUMBER = "905530739292";
@@ -165,6 +167,11 @@ const texts: Record<LocaleCode, PaymentText> = {
     importantNotes: "Önemli notlar",
     whatsappSupport: "WhatsApp destek",
     goAccountPanel: "Hesabım paneline git",
+
+    missingRequestNotice:
+      "Talep numarası eksik görünüyor. Ödeme sayfasına yönlenmeden önce analiz talebinizin oluşturulduğundan emin olun.",
+    missingCurrencyNotice:
+      "Para birimi bilgisi eksik. Lütfen tekrar deneyin veya analiz sayfasına geri dönün.",
 
     footerPoint1: "Talep numarası korunur",
     footerPoint2: "Ödeme sonrası manuel kontrol yapılır",
@@ -255,6 +262,13 @@ const texts: Record<LocaleCode, PaymentText> = {
     whatsappSupport: "WhatsApp support",
     goAccountPanel: "Go to account panel",
 
+    missingRequestNotice:
+      "The request number appears to be missing. Make sure the analysis request was created before proceeding to payment.",
+    missingCurrencyNotice:
+      "Currency information is missing. Please retry or return to the analysis page.",
+
+    
+
     footerPoint1: "Request number is preserved",
     footerPoint2: "Manual verification is done after payment",
     footerPoint3: "The analysis result is shared through your contact channel",
@@ -343,6 +357,11 @@ const texts: Record<LocaleCode, PaymentText> = {
     importantNotes: "Важные заметки",
     whatsappSupport: "Поддержка WhatsApp",
     goAccountPanel: "Перейти в аккаунт",
+
+    missingRequestNotice:
+      "Похоже, отсутствует номер заявки. Убедитесь, что заявка создана перед оплатой.",
+    missingCurrencyNotice:
+      "Отсутствует информация о валюте. Пожалуйста, повторите попытку или вернитесь на страницу анализа.",
 
     footerPoint1: "Номер заявки сохраняется",
     footerPoint2: "После оплаты проводится ручная проверка",
@@ -516,6 +535,9 @@ export default async function AnalysisPaymentPage({ searchParams }: PageProps) {
   const requestId = getSafeText(params.request_id, t.requestNotCreated);
   const referenceText = `${t.paymentDescriptionValue} - ${requestId}`;
 
+  const missingRequest = !params.request_id;
+  const missingCurrency = !params.currency;
+
   const whatsappSupportLink = buildWhatsappSupportLink({
     requestId,
     price,
@@ -547,6 +569,17 @@ export default async function AnalysisPaymentPage({ searchParams }: PageProps) {
         <div className="overflow-hidden rounded-[36px] border border-white/10 bg-[#080a0d]/95 p-5 shadow-[0_28px_100px_rgba(0,0,0,0.55)] ring-1 ring-white/[0.025] md:p-8">
           <div className="grid gap-7 lg:grid-cols-[1fr_0.82fr]">
             <div>
+              {(missingRequest || missingCurrency) && (
+                <div className="mb-4 rounded-2xl border border-yellow-400/20 bg-yellow-400/8 p-4 text-sm text-yellow-200">
+                  {missingRequest && <div>{t.missingRequestNotice}</div>}
+                  {missingCurrency && <div className="mt-1">{t.missingCurrencyNotice}</div>}
+                  <div className="mt-2">
+                    <Link href="/analiz" className="font-black underline">
+                      {t.backToAnalysis}
+                    </Link>
+                  </div>
+                </div>
+              )}
               <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-white/72">
                 <span className="h-1.5 w-1.5 rounded-full bg-white/85" />
                 {t.badge}

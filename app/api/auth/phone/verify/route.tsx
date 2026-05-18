@@ -108,6 +108,18 @@ function getChannelLabel(channel: Channel) {
 }
 
 export async function POST(request: NextRequest) {
+  const enabled = String(process.env.PHONE_VERIFICATION_ENABLED || "").toLowerCase();
+  if (!(enabled === "1" || enabled === "true")) {
+    return NextResponse.json(
+      {
+        ok: false,
+        success: false,
+        error: "Telefon doğrulama şu anda devre dışı.",
+      },
+      { status: 403 }
+    );
+  }
+
   const currentUser = await getCurrentUser();
 
   if (!currentUser) {

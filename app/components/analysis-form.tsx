@@ -1413,6 +1413,12 @@ export default function AnalysisForm() {
         params.set("request_id", String(requestId));
       }
 
+      // Basic validation to avoid navigating to payment page with missing params
+      if (!paymentCurrency || !paymentPrice || !selectedPlatformTitle) {
+        setError(t.errorGeneric);
+        return;
+      }
+
       router.push(`${ANALYSIS_PAYMENT_PATH}?${params.toString()}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : t.errorGeneric);

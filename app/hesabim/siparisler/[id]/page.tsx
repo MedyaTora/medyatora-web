@@ -69,6 +69,7 @@ type OrderDetailText = {
   refundNoteFallback: string;
   refundInfo: string;
   refundInfoDesc: string;
+  partialRefundExtra: string;
   orderAmount: string;
   refunded: string;
   remainingRefund: string;
@@ -118,6 +119,8 @@ const orderDetailTexts: Record<Locale, OrderDetailText> = {
       "Siparişinizin teslim edilemeyen kısmı için iade yapıldı.",
     partialRefundDesc:
       "Siparişinizin büyük kısmı tamamlandı. Eksik kalan bölüm için ilgili tutar aynı para birimindeki bakiyenize geri yansıtıldı.",
+    partialRefundExtra:
+      "İade bakiyenize yansıtıldı; görünmesi birkaç dakika sürebilir.",
     orderQuantity: "Sipariş Miktarı",
     delivered: "Teslim Edilen",
     missing: "Eksik Kalan",
@@ -213,6 +216,8 @@ const orderDetailTexts: Record<Locale, OrderDetailText> = {
       "A refund has been issued for the undelivered part of your order.",
     partialRefundDesc:
       "Most of your order has been completed. The amount for the missing part has been returned to your balance in the same currency.",
+    partialRefundExtra:
+      "The refund has been credited to your balance; it may take a few minutes to appear.",
     orderQuantity: "Order Quantity",
     delivered: "Delivered",
     missing: "Missing",
@@ -309,6 +314,8 @@ const orderDetailTexts: Record<Locale, OrderDetailText> = {
       "За недоставленную часть заказа был выполнен возврат.",
     partialRefundDesc:
       "Большая часть заказа выполнена. Сумма за недостающую часть возвращена на ваш баланс в той же валюте.",
+    partialRefundExtra:
+      "Возврат зачислен на ваш баланс; это может занять несколько минут.",
     orderQuantity: "Количество в заказе",
     delivered: "Доставлено",
     missing: "Недостает",
@@ -787,6 +794,9 @@ export default async function OrderDetailPage({
 
                 <p className="mt-2 max-w-3xl text-sm leading-6 text-white/65">
                   {text.partialRefundDesc}
+                </p>
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-white/60">
+                  {text.partialRefundExtra}
                 </p>
               </div>
 
